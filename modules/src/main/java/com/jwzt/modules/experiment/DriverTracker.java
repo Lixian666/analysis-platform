@@ -106,7 +106,8 @@ public class DriverTracker {
         for (Map.Entry<Integer, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
             List<LocationPoint> pointsByCardId = entry.getValue();
             System.out.println("Card ID: " + entry.getKey());
-            for (LocationPoint point : pointsByCardId) {
+            List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
+            for (LocationPoint point : newPoints) {
                 tracker.handleNewRawPoint(tracker, point);
             }
         }
