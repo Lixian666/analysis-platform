@@ -11,8 +11,16 @@ public class LocationPoint {
     private String acceptTime;
     private Long timestamp;
     private Double speed;
-    private String state;
+    private MovementAnalyzer.MovementState state;
     private String event;
+
+    public LocationPoint(Integer cardId, Double longitude, Double latitude, String acceptTime, Long timestamp) {
+        this.cardId = cardId;
+        this.longitude = longitude;
+        this.latitude = latitude;
+        this.acceptTime = acceptTime;
+        this.timestamp = timestamp;
+    }
 
     public LocationPoint(double avgX, double avgY, String acceptTime, Long timestamp, Double speed) {
         this.longitude = avgX;
