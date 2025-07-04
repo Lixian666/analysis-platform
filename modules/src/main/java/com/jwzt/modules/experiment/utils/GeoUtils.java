@@ -321,6 +321,23 @@ public class GeoUtils {
     }
 
     /**
+     * 计算中心点（经纬度平均值）
+     */
+    public static LocationPoint calculateCenter(List<LocationPoint> points) {
+        double sumLng = 0.0;
+        double sumLat = 0.0;
+        for (LocationPoint p : points) {
+            sumLng += p.getLongitude();
+            sumLat += p.getLatitude();
+        }
+        return new LocationPoint(
+                points.get(0).getCardId(),
+                sumLng / points.size(),
+                sumLat / points.size());
+
+    }
+
+    /**
      * 处理一秒内多个点的情况（使用中位数）
      */
     public static List<LocationPoint> processMultiplePointsPerSecond(List<LocationPoint> points) {
