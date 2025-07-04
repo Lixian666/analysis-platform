@@ -1,6 +1,11 @@
 package com.jwzt.modules.experiment.config;
 
 public class FilterConfig {
+
+    // 功能开关
+    public static final boolean IS_STAY_VERIFY = false;         // 是否进行停留点验证
+
+    // 行为识别配置
     public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
     public static final double MIN_SPEED_MPS = 0.0; // 最小速度，单位 m/s（比如步行 < 2，驾驶 < 17）
     public static final double MIN_WALKING_SPEED = 0.3; // 最小步行速度，单位 m/s
@@ -9,19 +14,22 @@ public class FilterConfig {
     public static final double MAX_LOW_DRIVING_SPEED = 7.0; // 最大低速驾驶速度，单位 m/s
     public static final double MAX_JUMP_DISTANCE = 20.0; // 每点最大跳变距离（米）
     public static final int MIN_TIME_INTERVAL_MS = 1000; // 最小时间间隔 （毫秒）
+    public static final int WINDOW_STATE_SIZE = 2;      // 行为状态识别窗口大小
 
-    public static final int WINDOW_SIZE = 5; // 数据缓存大小（判断5组连续点位平均数）
-    public static final int ARRIVED_BeforeUp_STATE_SIZE = 7;
-    public static final int ARRIVED_AfterUp_STATE_SIZE = 7;
-    public static final int WINDOW_STATE_SIZE = 2;
-    public static final int RECORD_POINTS_SIZE = 21;
+    // 上下车识别配置
+    public static final int WINDOW_SIZE = 5; // 数据缓存大小
+    public static final int ARRIVED_BeforeUp_STATE_SIZE = 7;        // 到达上车识别判定标签数
+    public static final int ARRIVED_AfterUp_STATE_SIZE = 7;     // 到达下车识别判定标签数
+    public static final int RECORD_POINTS_SIZE = 21;        // 上下车识别窗口大小
 
-    // 最大合理速度（m/s），按120km/h计算
-    public static final double MAX_SPEED = 120 * 1000 / 3600.0;
-    // 距离阈值（米），超过则视为漂移
-    public static final double DISTANCE_THRESHOLD = MAX_SPEED * 1.5;
-    // 基础距离阈值（米）
-    public static final double BASE_DISTANCE_THRESHOLD = 50.0;
-    // 最大合理加速度（m/s²）
-    public static final double MAX_ACCELERATION = 5.0;
+    // 停留检测配置
+    public static final int STAY_WINDOW_SIZE = 5;       // 停留检测窗口大小
+    public static final double STAY_RADIUS = 10.0;      // 停留区域半径（米）
+    public static final long STAY_DURATION_THRESHOLD = 30 * 1000; // 最小停留时长（毫秒）
+
+    //  运动检测配置
+    public static final double MAX_SPEED = 120 * 1000 / 3600.0;         // 最大合理速度（m/s），按120km/h计算
+    public static final double DISTANCE_THRESHOLD = MAX_SPEED * 1.5;            // 距离阈值（米），超过则视为漂移
+    public static final double BASE_DISTANCE_THRESHOLD = 50.0;          // 基础距离阈值（米）
+    public static final double MAX_ACCELERATION = 5.0;          // 最大合理加速度（m/s²）
 }

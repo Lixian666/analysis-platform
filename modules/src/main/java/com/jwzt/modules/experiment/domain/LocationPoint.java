@@ -14,6 +14,10 @@ public class LocationPoint {
     private MovementAnalyzer.MovementState state;
     private String event;
 
+    private Boolean isStay = false;
+
+
+
     public LocationPoint(Integer cardId, Double longitude, Double latitude, String acceptTime, Long timestamp) {
         this.cardId = cardId;
         this.longitude = longitude;
@@ -28,6 +32,12 @@ public class LocationPoint {
         this.acceptTime = acceptTime;
         this.timestamp = timestamp;
         this.speed = speed;
+    }
+
+    public LocationPoint(Integer cardId, double longitude, double latitude) {
+        this.cardId = cardId;
+        this.longitude = longitude;
+        this.latitude = latitude;
     }
 
     // 可扩展字段：速度、方向等

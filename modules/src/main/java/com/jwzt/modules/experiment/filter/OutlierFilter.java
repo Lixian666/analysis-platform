@@ -10,6 +10,8 @@ import com.jwzt.modules.experiment.utils.geo.CoordinateUtils;
 
 import java.util.*;
 
+import static com.jwzt.modules.experiment.utils.GeoUtils.calculateCenter;
+
 
 /**
  * 坐标点滤波器
@@ -56,6 +58,12 @@ public class OutlierFilter {
     public List<LocationPoint> fixTheData(List<LocationPoint> sortPoints) {
         // 处理一秒内多个点的情况（使用中位数）
         List<LocationPoint> newPoints = GeoUtils.processMultiplePointsPerSecond(sortPoints);
+        if (FilterConfig.IS_STAY_VERIFY){
+            // 检测停留点
+            detectStayPoints(newPoints);
+            // 修正停留区
+            newPoints = correctStayPoints(newPoints);
+        }
         // 修正运动点（带速度自适应阈值）
         List<LocationPoint> newLocationPoints = correctMovingPoints(newPoints);
 //        List<LocationPoint> newLocationPoints = new ArrayList<>();
@@ -178,7 +186,9 @@ public class OutlierFilter {
             hasDrift = false;
             for (int i = 1; i < corrected.size() - 1; i++) {
                 System.out.println(i);
-//                if (corrected.get(i).isStay) continue; // 跳过停留点
+                if (FilterConfig.IS_STAY_VERIFY){
+                    if (corrected.get(i).getIsStay()) continue; // 跳过停留点
+                }
                 LocationPoint prev = corrected.get(i - 1);
                 LocationPoint curr = corrected.get(i);
                 LocationPoint next = corrected.get(i + 1);
@@ -245,6 +255,107 @@ public class OutlierFilter {
         } while (hasDrift);
 
         return corrected;
+    }
+
+    /**
+     * 停留点检测（使用滑动窗口）
+     */
+    private static void detectStayPoints(List<LocationPoint> points) {
+        if (points.size() < FilterConfig.STAY_WINDOW_SIZE) return;
+
+        // 存储停留段信息: <开始索引, 结束索引, 中心点>
+        List<Object[]> staySegments = new ArrayList<>();
+
+        int start = 0;
+        while (start <= points.size() - FilterConfig.STAY_WINDOW_SIZE) {
+            // 获取当前窗口
+            List<LocationPoint> window = points.subList(start, start + FilterConfig.STAY_WINDOW_SIZE);
+
+            // 计算窗口中心
+            LocationPoint center = calculateCenter(window);
+
+            // 检查窗口内所有点是否都在停留半径内
+            boolean allInRadius = true;
+            for (LocationPoint p : window) {
+                if (distance(center, p) > FilterConfig.STAY_RADIUS) {
+                    allInRadius = false;
+                    break;
+                }
+            }
+
+            // 发现停留窗口
+            if (allInRadius) {
+                int end = start + FilterConfig.STAY_WINDOW_SIZE - 1;
+
+                // 尝试扩展停留段
+                while (end < points.size() - 1) {
+                    LocationPoint next = points.get(end + 1);
+                    if (distance(center, next) <= FilterConfig.STAY_RADIUS) {
+                        end++;
+                        // 更新中心点（动态计算）
+                        center = calculateCenter(points.subList(start, end + 1));
+                    } else {
+                        break;
+                    }
+                }
+
+                // 检查停留时长是否满足阈值
+                long duration = points.get(end).getTimestamp() - points.get(start).getTimestamp();
+                if (duration >= FilterConfig.STAY_DURATION_THRESHOLD) {
+                    staySegments.add(new Object[]{start, end, center});
+                }
+
+                start = end; // 跳过已处理的停留段
+            }
+            start++;
+        }
+
+        // 标记停留点
+        for (Object[] seg : staySegments) {
+            int segStart = (int) seg[0];
+            int segEnd = (int) seg[1];
+            for (int i = segStart; i <= segEnd; i++) {
+                points.get(i).setIsStay(true);
+            }
+        }
+    }
+
+    /**
+     * 修正停留区域的点
+     */
+    private static List<LocationPoint> correctStayPoints(List<LocationPoint> points) {
+        // 获取所有停留段
+        List<int[]> staySegments = new ArrayList<>();
+        int i = 0;
+        while (i < points.size()) {
+            if (points.get(i).getIsStay()) {
+                int start = i;
+                while (i < points.size() && points.get(i).getIsStay()) i++;
+                staySegments.add(new int[]{start, i - 1});
+            } else {
+                i++;
+            }
+        }
+
+        // 对每个停留段进行修正
+        for (int[] seg : staySegments) {
+            int start = seg[0];
+            int end = seg[1];
+            LocationPoint center = calculateCenter(points.subList(start, end + 1));
+
+            // 替换停留段内所有点为停留中心
+            for (int j = start; j <= end; j++) {
+                points.set(j, new LocationPoint(
+                        points.get(j).getCardId(),
+                        center.getLongitude(),
+                        center.getLatitude(),
+                        points.get(j).getAcceptTime(),
+                        points.get(j).getTimestamp()));
+                points.get(j).setIsStay(true);
+            }
+        }
+
+        return points;
     }
 
     /**
