@@ -1,6 +1,7 @@
 package com.jwzt.modules.experiment.utils;
 
 import com.jwzt.modules.experiment.domain.Coordinate;
+import com.jwzt.modules.experiment.domain.LocationPoint;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.data.FileDataStore;
@@ -15,7 +16,8 @@ import java.awt.geom.Point2D;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class GeoUtils {
 
@@ -61,6 +63,31 @@ public class GeoUtils {
         // 获取地理距离（单位：米）
         double distance = calc.getOrthodromicDistance(); // 也叫大圆距离
         return distance;
+    }
+
+    /**
+     * 计算方向变化角度（度）
+     */
+    public static double calculateDirectionChange(Coordinate p0, Coordinate p1, Coordinate p2, Coordinate p3, Coordinate p4) {
+        // 前向向量 (p1->p2)
+        double vec1x = p2.getLongitude() - p1.getLongitude();
+        double vec1y = p2.getLatitude() - p1.getLatitude();
+
+        // 后向向量 (p2->p3)
+        double vec2x = p3.getLongitude() - p2.getLongitude();
+        double vec2y = p3.getLatitude() - p2.getLatitude();
+
+        // 计算点积
+        double dot = vec1x * vec2x + vec1y * vec2y;
+        double mag1 = Math.sqrt(vec1x * vec1x + vec1y * vec1y);
+        double mag2 = Math.sqrt(vec2x * vec2x + vec2y * vec2y);
+
+        // 避免除零
+        if (mag1 < 1e-6 || mag2 < 1e-6) return 0.0;
+
+        // 计算角度（度）
+        double angle = Math.toDegrees(Math.acos(dot / (mag1 * mag2)));
+        return angle;
     }
 
     public static double calculateDistance(Coordinate coordinate1, Coordinate coordinate2) {
@@ -221,5 +248,152 @@ public class GeoUtils {
         }
         return false;
     }
+
+    /**
+     * 判断点是否在多个shp文件中的任意一个多边形内，支持缓冲区
+     * @param coordinate 点坐标
+     * @param shpFilePaths shp文件路径列表
+     * @param bufferDistance 缓冲距离（米）
+     * @return 是否在任意一个多边形（或缓冲区）内
+     */
+    public static boolean isInsideShp(Coordinate coordinate, List<String> shpFilePaths, double bufferDistance) {
+        boolean enableBuffer = bufferDistance > 0;
+        if (coordinate == null) return false;
+
+        // 创建 Point 对象
+        Point point = geometryFactory.createPoint(
+                new org.locationtech.jts.geom.Coordinate(coordinate.getLongitude(), coordinate.getLatitude())
+        );
+
+        // 将缓冲距离从米转换为经纬度（大致估算）
+        double bufferDegree = enableBuffer ? metersToDegrees(bufferDistance) : 0;
+
+        for (String path : shpFilePaths) {
+            File file = new File(path);
+            if (!file.exists()) {
+                System.out.println("文件不存在：" + path);
+                continue;
+            }
+
+            try {
+                ShapefileDataStore store = (ShapefileDataStore) FileDataStoreFinder.getDataStore(file);
+                if (store == null) {
+                    System.out.println("无法创建 FileDataStore，请检查文件格式或依赖配置。");
+                    continue;
+                }
+
+                SimpleFeatureSource featureSource = store.getFeatureSource();
+                try (SimpleFeatureIterator features = featureSource.getFeatures().features()) {
+                    while (features.hasNext()) {
+                        SimpleFeature feature = features.next();
+                        Object geomObj = feature.getDefaultGeometry();
+                        if (geomObj instanceof Geometry) {
+                            Geometry geom = (Geometry) geomObj;
+
+                            // 若开启缓冲则生成缓冲区
+                            if (enableBuffer) {
+                                geom = geom.buffer(bufferDegree);
+                            }
+
+                            if (geom.covers(point)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                store.dispose(); // 主动释放资源
+            } catch (Exception e) {
+                System.err.println("处理shp文件失败：" + path);
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 将米转为近似经纬度（1度约等于111km）
+     * @param meters 米
+     * @return 近似度数
+     */
+    private static double metersToDegrees(double meters) {
+        return meters / 111000.0; // 近似换算
+    }
+
+    /**
+     * 处理一秒内多个点的情况（使用中位数）
+     */
+    public static List<LocationPoint> processMultiplePointsPerSecond(List<LocationPoint> points) {
+        points.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
+        Map<Long, List<LocationPoint>> perSecond = points.stream()
+                .collect(Collectors.groupingBy(p -> p.getTimestamp() / 1000));
+
+        List<LocationPoint> result = new ArrayList<>();
+        for (List<LocationPoint> secondPoints : perSecond.values()) {
+            if (secondPoints.isEmpty()) continue;
+
+            if (secondPoints.size() == 1) {
+                result.add(secondPoints.get(0));
+            } else {
+                double medianLng = calculateMedian(
+                        secondPoints.stream().mapToDouble(LocationPoint::getLongitude).toArray());
+                double medianLat = calculateMedian(
+                        secondPoints.stream().mapToDouble(LocationPoint::getLatitude).toArray());
+
+                LocationPoint medianPoint = new LocationPoint(
+                        secondPoints.get(0).getCardId(),
+                        medianLng,
+                        medianLat,
+                        secondPoints.get(0).getAcceptTime(),
+                        secondPoints.get(0).getTimestamp());
+                result.add(medianPoint);
+            }
+        }
+
+        result.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
+        return result;
+    }
+
+//    /**
+//     * 处理一秒内多个点的情况（使用中位数）
+//     */
+//    private static List<Coordinate> processMultiplePointsPerSecond(List<Coordinate> points) {
+//        points.sort(Comparator.comparingLong(Coordinate::getTimestamp));
+//        Map<Long, List<Coordinate>> perSecond = points.stream()
+//                .collect(Collectors.groupingBy(p -> p.getTimestamp() / 1000));
+//
+//        List<Coordinate> result = new ArrayList<>();
+//        for (List<Coordinate> secondPoints : perSecond.values()) {
+//            if (secondPoints.isEmpty()) continue;
+//
+//            if (secondPoints.size() == 1) {
+//                result.add(secondPoints.get(0));
+//            } else {
+//                double medianLng = calculateMedian(
+//                        secondPoints.stream().mapToDouble(Coordinate::getLongitude).toArray());
+//                double medianLat = calculateMedian(
+//                        secondPoints.stream().mapToDouble(Coordinate::getLatitude).toArray());
+//
+//                Coordinate medianPoint = new Coordinate(
+//                        medianLng, medianLat, secondPoints.get(0).getTimestamp());
+//                result.add(medianPoint);
+//            }
+//        }
+//
+//        result.sort(Comparator.comparingLong(Coordinate::getTimestamp));
+//        return result;
+//    }
+
+    /**
+     * 计算中位数
+     */
+    private static double calculateMedian(double[] values) {
+        Arrays.sort(values);
+        int mid = values.length / 2;
+        return (values.length % 2 == 0) ?
+                (values[mid - 1] + values[mid]) / 2.0 :
+                values[mid];
+    }
+
 
 }

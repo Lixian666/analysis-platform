@@ -15,6 +15,11 @@ import java.util.List;
  */
 public class ZoneChecker {
 
+    /**
+     * 是否在货场驾驶区域
+     * @param p
+     * @return
+     */
     public static boolean isInDrivingZone(LocationPoint p) {
         Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
         List<String> shpPaths = Arrays.asList(
@@ -25,6 +30,24 @@ public class ZoneChecker {
         return GeoUtils.isInsideShp(newCoordinate, shpPaths);
     }
 
+    /**
+     * 是否在货场货运线区域
+     * @param p
+     * @return
+     */
+    public static boolean isInHuoyunxinZone(LocationPoint p) {
+        Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
+        List<String> shpPaths = Collections.singletonList(
+                "D:\\work\\data\\shp\\minhang\\货运线\\huoyunxin.shp"
+        );
+        return GeoUtils.isInsideShp(newCoordinate, shpPaths, 1.0);
+    }
+
+    /**
+     * 是否在货场停车区域
+     * @param p
+     * @return
+     */
     public static boolean isInParkingZone(LocationPoint p) {
         Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
         List<String> shpPaths = Collections.singletonList(
@@ -33,6 +56,11 @@ public class ZoneChecker {
         return GeoUtils.isInsideShp(newCoordinate, shpPaths);
     }
 
+    /**
+     * 是否在货场道路区域
+     * @param p
+     * @return
+     */
     public boolean isInRoadZone(LocationPoint p) {
         Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
         List<String> shpPaths = Collections.singletonList(
