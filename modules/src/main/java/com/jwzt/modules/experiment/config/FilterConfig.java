@@ -18,8 +18,18 @@ public class FilterConfig {
 
     // 上下车识别配置
     public static final int WINDOW_SIZE = 5; // 数据缓存大小
-    public static final int ARRIVED_BeforeUp_STATE_SIZE = 7;        // 到达上车识别判定标签数
-    public static final int ARRIVED_AfterUp_STATE_SIZE = 7;     // 到达下车识别判定标签数
+
+    public static final int NUMBER = 3;
+    public static final int ARRIVED_BEFORE_UP_STATE_SIZE = NUMBER;        // 到达上车识别判定标签数
+    public static final int ARRIVED_AFTER_UP_STATE_SIZE = NUMBER;     // 到达下车识别判定标签数
+    public static final int ARRIVED_BEFORE_DOWN_STATE_SIZE = NUMBER;        // 到达上车识别判定标签数
+    public static final int ARRIVED_AFTER_DOWN_STATE_SIZE = NUMBER;     // 到达下车识别判定标签数
+
+    public static final int SEND_BEFORE_UP_STATE_SIZE = NUMBER;        // 发运上车识别判定标签数
+    public static final int SEND_AFTER_UP_STATE_SIZE = NUMBER;     // 发运下车识别判定标签数
+    public static final int SEND_BEFORE_DOWN_STATE_SIZE = NUMBER;        // 发运上车识别判定标签数
+    public static final int SEND_AFTER_DOWN_STATE_SIZE = NUMBER;     // 发运下车识别判定标签数
+
     public static final int RECORD_POINTS_SIZE = 21;        // 上下车识别窗口大小
 
     // 停留检测配置
