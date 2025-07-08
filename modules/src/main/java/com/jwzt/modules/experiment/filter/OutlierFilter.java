@@ -1,5 +1,6 @@
 package com.jwzt.modules.experiment.filter;
 
+import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.Coordinate;
 import com.jwzt.modules.experiment.domain.LocationPoint;
@@ -22,6 +23,7 @@ public class OutlierFilter {
     private final Deque<LocationPoint> history = new ArrayDeque<>();
     private static final double MAX_DEVIATION_SPEEDUP = 7.0;  //允许的偏差
     private static final double ANGLE_THRESHOLD = 150.0; //角度阈值
+    private static final String HUOCHANG = FilePathConfig.YUZUI;
 
     public int isValid(LocationPoint newPoint) {
         if (lastPoint == null) {
@@ -34,13 +36,14 @@ public class OutlierFilter {
         double distance = GeoUtils.distanceM(newCoordinate, lastCoordinate);
         long timeDiff = newPoint.getTimestamp() - lastPoint.getTimestamp();
 
+        ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
 //         时间间隔太小
         if (timeDiff < FilterConfig.MIN_TIME_INTERVAL_MS) {
             lastPoint = newPoint;
             return 1;
         }
 
-        if (!ZoneChecker.isInDrivingZone(newPoint)){
+        if (!zoneChecker.isInDrivingZone(newPoint)){
             lastPoint = newPoint;
             return 3;
         }
@@ -77,7 +80,7 @@ public class OutlierFilter {
 //                newLocationPoints.add(newPoint);
 //            }
 //            long timeDiff = (newPoint.getTimestamp() - lastPoint.getTimestamp());
-//            if (!ZoneChecker.isInDrivingZone(newPoint)){
+//            if (!zoneChecker.isInDrivingZone(newPoint)){
 ////                lastPoint = newPoint;
 //                System.out.println("⚠️  区域异常定位点已剔除：" + newPoint);
 //                continue;
@@ -239,6 +242,9 @@ public class OutlierFilter {
 
                 // 修正漂移点
                 if (isDrift) {
+                    if (!isValidCoordinate(prev) || !isValidCoordinate(next)) {
+                        continue; // 不修正，让它保留原始值
+                    }
                     LocationPoint fixedPoint = interpolate(prev, next);
                     corrected.set(i, fixedPoint);
                     hasDrift = true;
@@ -371,4 +377,13 @@ public class OutlierFilter {
                 timestamp
         );
     }
+
+    private static boolean isValidCoordinate(LocationPoint p) {
+        return p != null &&
+                p.getLatitude() != 0.0 &&
+                p.getLongitude() != 0.0 &&
+                Math.abs(p.getLatitude()) <= 90 &&
+                Math.abs(p.getLongitude()) <= 180;
+    }
+
 }
