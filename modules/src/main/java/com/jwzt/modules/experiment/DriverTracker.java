@@ -2,11 +2,9 @@ package com.jwzt.modules.experiment;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
-import com.jwzt.modules.experiment.domain.BoardingDetector;
-import com.jwzt.modules.experiment.domain.Coordinate;
-import com.jwzt.modules.experiment.domain.LocationPoint;
-import com.jwzt.modules.experiment.domain.MovementAnalyzer;
+import com.jwzt.modules.experiment.domain.*;
 import com.jwzt.modules.experiment.filter.LocationSmoother;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
@@ -97,17 +95,48 @@ public class DriverTracker {
     }
 
     public static void main(String[] args) {
+        String data = FilePathConfig.YUZUI;
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
-        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
+//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
+        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
         JSONObject jsonObject = JsonUtils.loadJson(file);
         JSONArray points = jsonObject.getJSONArray("data");
         List<LocationPoint> LocationPoints = new ArrayList<>();
-        for (int i = 0; i < points.size(); i++) {
-            LocationPoint point = points.getObject(i, LocationPoint.class);
-            point.setTimestamp(DateTimeUtils.convertToTimestamp(point.getAcceptTime()));
-            LocationPoints.add(point);
+        if (data.equals("minhang")){
+            for (int i = 0; i < points.size(); i++) {
+                LocationPoint point = points.getObject(i, LocationPoint.class);
+                point.setTimestamp(DateTimeUtils.convertToTimestamp(point.getAcceptTime()));
+                LocationPoints.add(point);
+            }
+        } else if (data.equals("yuzui")){
+            for (int i = 0; i < points.size(); i++) {
+                LocationPoint1 point = points.getObject(i, LocationPoint1.class);
+                LocationPoint locationPoint = new LocationPoint();
+                locationPoint.setCardUUID(point.getRecordThirdId());
+                locationPoint.setLongitude(point.getThrough());
+                locationPoint.setLatitude(point.getWeft());
+                String dateTimeStr = point.getRecordTime();
+                int lastColonIndex = dateTimeStr.lastIndexOf(':');
+                if (lastColonIndex != -1) {
+                    dateTimeStr = dateTimeStr.substring(0, lastColonIndex) + "." + dateTimeStr.substring(lastColonIndex + 1);
+                }
+                locationPoint.setAcceptTime(dateTimeStr);
+                locationPoint.setTimestamp(point.getRecordTimeLength());
+                LocationPoints.add(locationPoint);
+            }
         }
 
+//        // 生成原始shp文件
+//        List<Coordinate> coordinates2 = new ArrayList<>();
+//        for (int i = 0; i < LocationPoints.size(); i++){
+//            LocationPoint point = LocationPoints.get(i);
+//            coordinates2.add(new Coordinate(point.getLongitude(), point.getLatitude(), DateTimeUtils.convertToTimestamp(point.getAcceptTime())));
+//        }
+//        // 写入shp文件 输出坐标点图层
+//        String shpFilePath1 = "D:\\work\\output\\yuzui\\points.shp";
+//        ShapefileWriter.writeCoordinatesToShapefile(coordinates2, shpFilePath1);
+//
+//
 //        // 生成同时间间点清洗数据shp文件
 //        List<LocationPoint> shpPoints = GeoUtils.processMultiplePointsPerSecond(LocationPoints);
 //        List<Coordinate> coordinates1 = new ArrayList<>();
@@ -121,13 +150,14 @@ public class DriverTracker {
 
         DriverTracker tracker = new DriverTracker();
         // 按卡号分组
-        Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
-                .collect(Collectors.groupingBy(LocationPoint::getCardId));
-        for (Map.Entry<Integer, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
-            // 取出一个卡号的所有点
-            List<LocationPoint> pointsByCardId = entry.getValue();
-            // 再次根据点位、是否时间一样、是否漂移清洗数据
-            List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
+        if (data.equals("minhang")){
+            Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
+                    .collect(Collectors.groupingBy(LocationPoint::getCardId));
+            for (Map.Entry<Integer, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
+                // 取出一个卡号的所有点
+                List<LocationPoint> pointsByCardId = entry.getValue();
+                // 再次根据点位、是否时间一样、是否漂移清洗数据
+                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
 
 //            //清洗过异常数据后生成shp文件
 //            List<Coordinate> coordinates = new ArrayList<>();
@@ -138,9 +168,33 @@ public class DriverTracker {
 //            // 写入shp文件 输出坐标点图层
 //            String shpFilePath = "D:\\work\\output\\points1.shp";
 //            ShapefileWriter.writeCoordinatesToShapefile(coordinates, shpFilePath);
-            // 开始行为分析
-            for (LocationPoint point : newPoints) {
-                tracker.handleNewRawPoint(tracker, point);
+                // 开始行为分析
+                for (LocationPoint point : newPoints) {
+                    tracker.handleNewRawPoint(tracker, point);
+                }
+            }
+        } else if (data.equals("yuzui")){
+            Map<String, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
+                    .collect(Collectors.groupingBy(LocationPoint::getCardUUID));
+            for (Map.Entry<String, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
+                // 取出一个卡号的所有点
+                List<LocationPoint> pointsByCardId = entry.getValue();
+                // 再次根据点位、是否时间一样、是否漂移清洗数据
+                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
+
+//            //清洗过异常数据后生成shp文件
+//            List<Coordinate> coordinates = new ArrayList<>();
+//            for (int i = 0; i < newPoints.size(); i++){
+//                LocationPoint point = newPoints.get(i);
+//                coordinates.add(new Coordinate(point.getLongitude(), point.getLatitude(), DateTimeUtils.convertToTimestamp(point.getAcceptTime())));
+//            }
+//            // 写入shp文件 输出坐标点图层
+//            String shpFilePath = "D:\\work\\output\\yuzui\\points2.shp";
+//            ShapefileWriter.writeCoordinatesToShapefile(coordinates, shpFilePath);
+                // 开始行为分析
+                for (LocationPoint point : newPoints) {
+                    tracker.handleNewRawPoint(tracker, point);
+                }
             }
         }
     }

@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class LocationPoint {
     private Integer cardId;
+    private String cardUUID;
     private Double longitude;
     private Double latitude;
     private String acceptTime;
@@ -38,6 +39,10 @@ public class LocationPoint {
         this.cardId = cardId;
         this.longitude = longitude;
         this.latitude = latitude;
+    }
+
+    public LocationPoint() {
+
     }
 
     // 可扩展字段：速度、方向等
