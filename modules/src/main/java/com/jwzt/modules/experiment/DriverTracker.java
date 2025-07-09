@@ -11,6 +11,7 @@ import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.GeoUtils;
 import com.jwzt.modules.experiment.utils.JsonUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
+import com.jwzt.modules.experiment.vo.EventState;
 import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 
 
@@ -26,6 +27,9 @@ public class DriverTracker {
     private Deque<MovementAnalyzer.MovementState> states = new ArrayDeque<>();
     private int windowSize = FilterConfig.WINDOW_STATE_SIZE;
     private int recordPointsSize = FilterConfig.RECORD_POINTS_SIZE;
+
+    private Long boardingTime = null;
+    private Long droppingTime = null;
 
     private BoardingDetector detector = new BoardingDetector();
 
@@ -53,28 +57,51 @@ public class DriverTracker {
         if (recordPoints.size() > recordPointsSize){
             recordPoints.remove(0);
         }
-        BoardingDetector.Event event = detector.updateState(recordPoints);
-//        BoardingDetector.Event event = detector.updateState(new ArrayList<>(window), state);
-//        states.addLast(state);
-//        BoardingDetector.Event event = detector.updateState(new ArrayList<>(window), new ArrayList<>(states));
-//        if (states.size() >= 5){
-//            states.clear();
-//        }
+        EventState eventState = detector.updateState(recordPoints);
 
-        switch (event) {
+        switch (eventState.getEvent()) {
             case ARRIVED_BOARDING:
+                if (boardingTime == 0L){
+                    boardingTime = eventState.getTimestamp();
+                }
                 System.out.println("📥 检测到到达上车事件");
                 break;
             case ARRIVED_DROPPING:
+
                 System.out.println("📤 检测到到达下车事件");
                 break;
             case SEND_BOARDING:
+                if (boardingTime == 0L){
+                    boardingTime = eventState.getTimestamp();
+                }
                 System.out.println("📥 检测到发运上车事件");
                 break;
             case SEND_DROPPING:
                 System.out.println("📤 检测到发运下车事件");
                 break;
         }
+//        BoardingDetector.Event event = detector.updateState(recordPoints);
+////        BoardingDetector.Event event = detector.updateState(new ArrayList<>(window), state);
+////        states.addLast(state);
+////        BoardingDetector.Event event = detector.updateState(new ArrayList<>(window), new ArrayList<>(states));
+////        if (states.size() >= 5){
+////            states.clear();
+////        }
+//
+//        switch (event) {
+//            case ARRIVED_BOARDING:
+//                System.out.println("📥 检测到到达上车事件");
+//                break;
+//            case ARRIVED_DROPPING:
+//                System.out.println("📤 检测到到达下车事件");
+//                break;
+//            case SEND_BOARDING:
+//                System.out.println("📥 检测到发运上车事件");
+//                break;
+//            case SEND_DROPPING:
+//                System.out.println("📤 检测到发运下车事件");
+//                break;
+//        }
     }
     public void handleNewRawPoint(DriverTracker tracker, LocationPoint rawPoint) {
         int state = outlierFilter.isValid(rawPoint);
