@@ -4,6 +4,7 @@ public class FilterConfig {
 
     // 功能开关
     public static final boolean IS_STAY_VERIFY = false;         // 是否进行停留点验证
+    public static final boolean IS_OUTPUT_SHP = false;       // 是否输出定位点shp文件
 
     // 行为识别配置
     public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
