@@ -10,6 +10,7 @@ import com.jwzt.modules.experiment.map.ZoneChecker;
 import com.jwzt.modules.experiment.utils.geo.CoordinateUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.jwzt.modules.experiment.utils.GeoUtils.calculateCenter;
 
@@ -59,6 +60,9 @@ public class OutlierFilter {
     }
 
     public List<LocationPoint> fixTheData(List<LocationPoint> sortPoints) {
+        sortPoints = sortPoints.stream()
+                .filter(OutlierFilter::isValidCoordinate)
+                .collect(Collectors.toList());
         // 处理一秒内多个点的情况（使用中位数）
         List<LocationPoint> newPoints = GeoUtils.processMultiplePointsPerSecond(sortPoints);
         if (FilterConfig.IS_STAY_VERIFY){
@@ -169,99 +173,154 @@ public class OutlierFilter {
      * 修正运动点（带速度自适应阈值）
      */
     private static List<LocationPoint> correctMovingPoints(List<LocationPoint> points) {
-        if (points.size() < 3) return points;
-
-        // 计算每个点的瞬时速度
-        double[] speeds = new double[points.size()];
-        speeds[0] = 0.0;
-        for (int i = 1; i < points.size(); i++) {
-            LocationPoint prev = points.get(i - 1);
-            LocationPoint curr = points.get(i);
-            double dist = distance(prev, curr);
-            double time = (curr.getTimestamp() - prev.getTimestamp()) / 1000.0;
-            speeds[i] = (time > 0) ? dist / time : 0.0;
-        }
+        if (points.size() < 5) return points;
 
         List<LocationPoint> corrected = new ArrayList<>(points);
         boolean hasDrift;
 
         do {
             hasDrift = false;
-            for (int i = 1; i < corrected.size() - 1; i++) {
-                System.out.println(i);
-                if (FilterConfig.IS_STAY_VERIFY){
-                    if (corrected.get(i).getIsStay()) continue; // 跳过停留点
-                }
-                LocationPoint prev = corrected.get(i - 1);
+            for (int i = 2; i < corrected.size() - 2; i++) {
+                LocationPoint p1 = corrected.get(i - 2);
+                LocationPoint p2 = corrected.get(i - 1);
                 LocationPoint curr = corrected.get(i);
-                LocationPoint next = corrected.get(i + 1);
+                LocationPoint p4 = corrected.get(i + 1);
+                LocationPoint p5 = corrected.get(i + 2);
 
-                // 计算动态阈值（基于前后速度）
-                double dynamicThreshold = Math.max(FilterConfig.BASE_DISTANCE_THRESHOLD,
-                        Math.max(speeds[i], speeds[i + 1]) * 2.0);
+                if (FilterConfig.IS_STAY_VERIFY && curr.getIsStay()) continue;
 
-                //
-                double speed = speeds[i];
-                // 计算加速度
-                double distPrev = distance(prev, curr);
-                double distNext = distance(curr, next);
-                double timePrev = (curr.getTimestamp() - prev.getTimestamp()) / 1000.0;
-                double timeNext = (next.getTimestamp() - curr.getTimestamp()) / 1000.0;
+                double dist1 = distance(p2, curr);
+                double dist2 = distance(curr, p4);
+                double time1 = (curr.getTimestamp() - p2.getTimestamp()) / 1000.0;
+                double time2 = (p4.getTimestamp() - curr.getTimestamp()) / 1000.0;
 
-                double accelPrev = (timePrev > 0) ? (2 * distPrev / (timePrev * timePrev)) : 0;
-                double accelNext = (timeNext > 0) ? (2 * distNext / (timeNext * timeNext)) : 0;
+                double speed1 = (time1 > 0) ? dist1 / time1 : 0.0;
+                double speed2 = (time2 > 0) ? dist2 / time2 : 0.0;
 
-                // 漂移检测条件
+                double dynamicThreshold = Math.max(FilterConfig.BASE_DISTANCE_THRESHOLD, Math.max(speed1, speed2) * 2);
+
+                // 异常检测条件
                 boolean isDrift = false;
+                if (dist1 > dynamicThreshold && dist2 > dynamicThreshold) {
+                    isDrift = true;
+                }
 
-                // 条件1：距离异常（当前点与前后点距离过大）
-                if (distPrev > dynamicThreshold && distNext > dynamicThreshold) {
-                    isDrift = true;
-                }
-                // 条件2：加速度异常
-                else if (accelPrev > FilterConfig.MAX_ACCELERATION || accelNext > FilterConfig.MAX_ACCELERATION) {
-                    isDrift = true;
-                }
-                // 条件3：速度达到驾驶速度判断方向突变
-                if (speed > FilterConfig.MAX_RUNING_SPEED){
-                    // 条件3：方向突变（前后向量夹角大于120度）
-                    if (i > 1 && i < corrected.size() - 2) {
-                        LocationPoint prev2 = corrected.get(i - 2);
-                        LocationPoint next2 = corrected.get(i + 2);
-//                        System.out.println("prev2: " + prev2.getAcceptTime() + " timestamp:" + prev2.getTimestamp());
-//                        System.out.println("prev: " + prev.getAcceptTime() + " timestamp:" + prev.getTimestamp());
-//                        System.out.println("curr: " + curr.getAcceptTime() + " timestamp:" + curr.getTimestamp());
-//                        System.out.println("next: " + next.getAcceptTime() + " timestamp:" + next.getTimestamp());
-//                        System.out.println("next2: " + next2.getAcceptTime() + " timestamp:" + next2.getTimestamp());
-                        double angle = directionChange(prev2, prev, curr, next, next2);
-                        if (angle > 120.0) {
-                            isDrift = true;
-                        }
+                // 方向突变检测
+                if (!isDrift && speed1 > FilterConfig.MAX_RUNING_SPEED) {
+                    double angle = directionChange(p1, p2, curr, p4, p5);
+                    if (angle > 120.0) {
+                        isDrift = true;
                     }
                 }
 
-                // 修正漂移点
                 if (isDrift) {
-                    if (!isValidCoordinate(prev) || !isValidCoordinate(next)) {
-                        continue; // 不修正，让它保留原始值
-                    }
-                    LocationPoint fixedPoint = interpolate(prev, next);
-                    corrected.set(i, fixedPoint);
+                    if (!isValidCoordinate(p2) || !isValidCoordinate(p4)) continue;
+                    LocationPoint fixed = interpolate(p2, p4);
+                    corrected.set(i, fixed);
                     hasDrift = true;
-//                    System.out.println("修正前速度：" + speeds[i]);
-                    // 更新速度
-                    speeds[i] = distance(prev, fixedPoint) /
-                            ((fixedPoint.getTimestamp() - prev.getTimestamp()) / 1000.0);
-//                    System.out.println("修正后速度：" + speeds[i]);
-                }
-                if (i == (corrected.size() - 2)){
-                    hasDrift = false;
                 }
             }
         } while (hasDrift);
 
+        // 后处理：移动平均平滑
+        corrected = smoothWithMovingAverage(corrected, 3);
         return corrected;
     }
+
+//    private static List<LocationPoint> correctMovingPoints(List<LocationPoint> points) {
+//        if (points.size() < 3) return points;
+//
+//        // 计算每个点的瞬时速度
+//        double[] speeds = new double[points.size()];
+//        speeds[0] = 0.0;
+//        for (int i = 1; i < points.size(); i++) {
+//            LocationPoint prev = points.get(i - 1);
+//            LocationPoint curr = points.get(i);
+//            double dist = distance(prev, curr);
+//            double time = (curr.getTimestamp() - prev.getTimestamp()) / 1000.0;
+//            speeds[i] = (time > 0) ? dist / time : 0.0;
+//        }
+//
+//        List<LocationPoint> corrected = new ArrayList<>(points);
+//        boolean hasDrift;
+//
+//        do {
+//            hasDrift = false;
+//            for (int i = 1; i < corrected.size() - 1; i++) {
+//                System.out.println(i);
+//                if (FilterConfig.IS_STAY_VERIFY){
+//                    if (corrected.get(i).getIsStay()) continue; // 跳过停留点
+//                }
+//                LocationPoint prev = corrected.get(i - 1);
+//                LocationPoint curr = corrected.get(i);
+//                LocationPoint next = corrected.get(i + 1);
+//
+//                // 计算动态阈值（基于前后速度）
+//                double dynamicThreshold = Math.max(FilterConfig.BASE_DISTANCE_THRESHOLD,
+//                        Math.max(speeds[i], speeds[i + 1]) * 2.0);
+//
+//                //
+//                double speed = speeds[i];
+//                // 计算加速度
+//                double distPrev = distance(prev, curr);
+//                double distNext = distance(curr, next);
+//                double timePrev = (curr.getTimestamp() - prev.getTimestamp()) / 1000.0;
+//                double timeNext = (next.getTimestamp() - curr.getTimestamp()) / 1000.0;
+//
+//                double accelPrev = (timePrev > 0) ? (2 * distPrev / (timePrev * timePrev)) : 0;
+//                double accelNext = (timeNext > 0) ? (2 * distNext / (timeNext * timeNext)) : 0;
+//
+//                // 漂移检测条件
+//                boolean isDrift = false;
+//
+//                // 条件1：距离异常（当前点与前后点距离过大）
+//                if (distPrev > dynamicThreshold && distNext > dynamicThreshold) {
+//                    isDrift = true;
+//                }
+//                // 条件2：加速度异常
+//                else if (accelPrev > FilterConfig.MAX_ACCELERATION || accelNext > FilterConfig.MAX_ACCELERATION) {
+//                    isDrift = true;
+//                }
+//                // 条件3：速度达到驾驶速度判断方向突变
+//                if (speed > FilterConfig.MAX_RUNING_SPEED){
+//                    // 条件3：方向突变（前后向量夹角大于120度）
+//                    if (i > 1 && i < corrected.size() - 2) {
+//                        LocationPoint prev2 = corrected.get(i - 2);
+//                        LocationPoint next2 = corrected.get(i + 2);
+////                        System.out.println("prev2: " + prev2.getAcceptTime() + " timestamp:" + prev2.getTimestamp());
+////                        System.out.println("prev: " + prev.getAcceptTime() + " timestamp:" + prev.getTimestamp());
+////                        System.out.println("curr: " + curr.getAcceptTime() + " timestamp:" + curr.getTimestamp());
+////                        System.out.println("next: " + next.getAcceptTime() + " timestamp:" + next.getTimestamp());
+////                        System.out.println("next2: " + next2.getAcceptTime() + " timestamp:" + next2.getTimestamp());
+//                        double angle = directionChange(prev2, prev, curr, next, next2);
+//                        if (angle > 120.0) {
+//                            isDrift = true;
+//                        }
+//                    }
+//                }
+//
+//                // 修正漂移点
+//                if (isDrift) {
+//                    if (!isValidCoordinate(prev) || !isValidCoordinate(next)) {
+//                        continue; // 不修正，让它保留原始值
+//                    }
+//                    LocationPoint fixedPoint = interpolate(prev, next);
+//                    corrected.set(i, fixedPoint);
+//                    hasDrift = true;
+////                    System.out.println("修正前速度：" + speeds[i]);
+//                    // 更新速度
+//                    speeds[i] = distance(prev, fixedPoint) /
+//                            ((fixedPoint.getTimestamp() - prev.getTimestamp()) / 1000.0);
+////                    System.out.println("修正后速度：" + speeds[i]);
+//                }
+//                if (i == (corrected.size() - 2)){
+//                    hasDrift = false;
+//                }
+//            }
+//        } while (hasDrift);
+//
+//        return corrected;
+//    }
 
     /**
      * 停留点检测（使用滑动窗口）
@@ -385,5 +444,62 @@ public class OutlierFilter {
                 Math.abs(p.getLatitude()) <= 90 &&
                 Math.abs(p.getLongitude()) <= 180;
     }
+
+    private static List<LocationPoint> smoothWithMovingAverage(List<LocationPoint> points, int windowSize) {
+        List<LocationPoint> smoothed = new ArrayList<>(points);
+        int half = windowSize / 2;
+
+        for (int i = half; i < points.size() - half; i++) {
+            double sumLon = 0.0, sumLat = 0.0;
+            int validCount = 0;
+            LocationPoint center = points.get(i);
+
+            for (int j = i - half; j <= i + half; j++) {
+                LocationPoint p = points.get(j);
+                // 判断是否有效坐标
+                if (!isValidCoordinate(p)) continue;
+                // 判断是否漂移值（比如距离中心点超过100米）
+                if (distance(center, p) > 100.0) continue;
+
+                sumLon += p.getLongitude();
+                sumLat += p.getLatitude();
+                validCount++;
+            }
+
+            // 若有效点数足够才更新
+            if (validCount > 0) {
+                double avgLon = sumLon / validCount;
+                double avgLat = sumLat / validCount;
+                LocationPoint curr = smoothed.get(i);
+                curr.setLongitude(avgLon);
+                curr.setLatitude(avgLat);
+            }
+        }
+
+        return smoothed;
+    }
+
+
+//    private static List<LocationPoint> smoothWithMovingAverage(List<LocationPoint> points, int windowSize) {
+//        List<LocationPoint> smoothed = new ArrayList<>(points);
+//        int half = windowSize / 2;
+//        for (int i = half; i < points.size() - half; i++) {
+//            double sumLon = 0.0, sumLat = 0.0;
+//            for (int j = i - half; j <= i + half; j++) {
+//                if (!isValidCoordinate(points.get(j))) {
+//                         break; // 不修正，让它保留原始值
+//                    }
+//                sumLon += points.get(j).getLongitude();
+//                sumLat += points.get(j).getLatitude();
+//            }
+//            double avgLon = sumLon / windowSize;
+//            double avgLat = sumLat / windowSize;
+//            LocationPoint curr = smoothed.get(i);
+//            curr.setLongitude(avgLon);
+//            curr.setLatitude(avgLat);
+//        }
+//        return smoothed;
+//    }
+
 
 }

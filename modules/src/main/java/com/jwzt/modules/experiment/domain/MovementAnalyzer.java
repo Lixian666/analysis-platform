@@ -32,7 +32,7 @@ public class MovementAnalyzer {
 
         double avgSpeed = totalTime > 0 ? (totalDist / (totalTime / 1000.0)) : 0;
 
-        if (FilterConfig.MIN_SPEED_MPS < avgSpeed && avgSpeed <= FilterConfig.MIN_WALKING_SPEED) return MovementState.STOPPED;
+        if (FilterConfig.MIN_SPEED_MPS <= avgSpeed && avgSpeed <= FilterConfig.MIN_WALKING_SPEED) return MovementState.STOPPED;
         else if (FilterConfig.MIN_WALKING_SPEED < avgSpeed && avgSpeed <= FilterConfig.MAX_WALKING_SPEED) return MovementState.WALKING;
         else if (FilterConfig.MAX_WALKING_SPEED < avgSpeed && avgSpeed <= FilterConfig.MAX_RUNING_SPEED) return MovementState.RUNNING;
         else if (FilterConfig.MAX_RUNING_SPEED < avgSpeed && avgSpeed <= FilterConfig.MAX_LOW_DRIVING_SPEED) return MovementState.LOW_DRIVING;
