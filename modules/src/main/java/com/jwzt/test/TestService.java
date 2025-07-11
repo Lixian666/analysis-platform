@@ -1,0 +1,9 @@
+package com.jwzt.test;
+
+public class TestService
+{
+    public String helloTest()
+    {
+        return "hello";
+    }
+}

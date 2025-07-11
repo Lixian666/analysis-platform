@@ -1,5 +1,8 @@
 package com.ruoyi.common.utils.uuid;
 
+import cn.hutool.core.lang.Snowflake;
+import cn.hutool.core.util.IdUtil;
+
 /**
  * ID生成器工具类
  * 
@@ -45,5 +48,17 @@ public class IdUtils
     public static String fastSimpleUUID()
     {
         return UUID.fastUUID().toString(true);
+    }
+
+    /**
+     * 获取随机雪花ID
+     *
+     * @return 雪花ID
+     */
+    public static long snowflakeId()
+    {
+        Snowflake snowflake = IdUtil.getSnowflake(1, 1);
+        long id = snowflake.nextId();
+        return snowflake.nextId();
     }
 }

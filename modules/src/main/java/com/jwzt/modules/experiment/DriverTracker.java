@@ -7,20 +7,31 @@ import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.*;
 import com.jwzt.modules.experiment.filter.LocationSmoother;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
+import com.jwzt.modules.experiment.service.ITakBehaviorRecordDetailService;
+import com.jwzt.modules.experiment.service.ITakBehaviorRecordsService;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.GeoUtils;
 import com.jwzt.modules.experiment.utils.JsonUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
 import com.jwzt.modules.experiment.vo.EventState;
-import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
+import com.ruoyi.common.utils.uuid.IdUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Service
 public class DriverTracker {
     OutlierFilter outlierFilter = new OutlierFilter();
     LocationSmoother smoother = new LocationSmoother();
+
+    @Autowired
+    private ITakBehaviorRecordsService iTakBehaviorRecordsService;
+    @Autowired
+    private ITakBehaviorRecordDetailService iTakBehaviorRecordDetailService;
+
 
     private Deque<LocationPoint> window = new ArrayDeque<>();
     private List<LocationPoint> recordPoints = new ArrayList<>();
@@ -31,99 +42,133 @@ public class DriverTracker {
     private Long boardingTime = null;
     private Long droppingTime = null;
 
+    private static String UUID;
+    public static String cardId;
+
+    private int boarding_idx = 0;
+    private int dropping_idx = 0;
+
     private BoardingDetector detector = new BoardingDetector();
 
-    public void onNewLocation(LocationPoint point) {
-        window.addLast(point);
-        if (window.size() > windowSize) {
-            window.removeFirst();
-        }
-        // 通过windowSize个点判断当前运动状态
-        MovementAnalyzer.MovementState state = MovementAnalyzer.analyzeState(new ArrayList<>(window));
-        if (state == MovementAnalyzer.MovementState.DRIVING) {
-            System.out.println("🚗 当前正在驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-        } else if (state == MovementAnalyzer.MovementState.LOW_DRIVING) {
-            System.out.println("🚗🐢 当前正在低速驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-        } else if (state == MovementAnalyzer.MovementState.WALKING) {
-            System.out.println("🚶 当前在步行，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-        } else if (state == MovementAnalyzer.MovementState.RUNNING) {
-            System.out.println("🏃 当前在小跑，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-        } else {
-            System.out.println("⛔ 当前静止，时间为：" + point.getAcceptTime());
-        }
 
-        point.setState(state);
-        recordPoints.add(point);
-        if (recordPoints.size() > recordPointsSize){
-            recordPoints.remove(0);
-        }
-        EventState eventState = detector.updateState(recordPoints);
-
-        switch (eventState.getEvent()) {
-            case ARRIVED_BOARDING:
-                if (boardingTime == 0L){
-                    boardingTime = eventState.getTimestamp();
-                }
-                System.out.println("📥 检测到到达上车事件");
-                break;
-            case ARRIVED_DROPPING:
-
-                System.out.println("📤 检测到到达下车事件");
-                break;
-            case SEND_BOARDING:
-                if (boardingTime == 0L){
-                    boardingTime = eventState.getTimestamp();
-                }
-                System.out.println("📥 检测到发运上车事件");
-                break;
-            case SEND_DROPPING:
-                System.out.println("📤 检测到发运下车事件");
-                break;
-        }
-//        BoardingDetector.Event event = detector.updateState(recordPoints);
-////        BoardingDetector.Event event = detector.updateState(new ArrayList<>(window), state);
-////        states.addLast(state);
-////        BoardingDetector.Event event = detector.updateState(new ArrayList<>(window), new ArrayList<>(states));
-////        if (states.size() >= 5){
-////            states.clear();
-////        }
-//
-//        switch (event) {
-//            case ARRIVED_BOARDING:
-//                System.out.println("📥 检测到到达上车事件");
-//                break;
-//            case ARRIVED_DROPPING:
-//                System.out.println("📤 检测到到达下车事件");
-//                break;
-//            case SEND_BOARDING:
-//                System.out.println("📥 检测到发运上车事件");
-//                break;
-//            case SEND_DROPPING:
-//                System.out.println("📤 检测到发运下车事件");
-//                break;
-//        }
-    }
-    public void handleNewRawPoint(DriverTracker tracker, LocationPoint rawPoint) {
-        int state = outlierFilter.isValid(rawPoint);
-        if (!(state == 0)) {
-            if (state == 1){
-                System.out.println("⚠️  时间间隔异常定位点已剔除：" + rawPoint);
-            } else if (state == 2) {
-                System.out.println("⚠️  速度异常定位点已剔除：" + rawPoint);
-            } else if (state == 3) {
-                System.out.println("⚠️  定位异常定位点已剔除：" + rawPoint);
-            } else {
-                System.out.println("⚠️  异常定位点已剔除：" + rawPoint);
+    public void onNewLocation(List<LocationPoint> points) {
+        for (int i = 0; i <= points.size() - recordPointsSize; i++) {
+            System.out.println(i);
+            List<LocationPoint> recordPoints = points.subList(i, i + recordPointsSize);
+            EventState eventState = detector.updateState(recordPoints);
+            switch (eventState.getEvent()) {
+                case ARRIVED_BOARDING:
+                    if (boardingTime == null){
+                        boarding_idx = i + (recordPointsSize / 2);
+                        boardingTime = eventState.getTimestamp();
+                        UUID = IdUtils.fastSimpleUUID();
+                    }
+                    System.out.println("📥 检测到到达上车事件");
+                    break;
+                case ARRIVED_DROPPING:
+                    if (boardingTime != null){
+                        List<TakBehaviorRecordDetail> takBehaviorRecordDetailList = new ArrayList<TakBehaviorRecordDetail>();
+                        List<LocationPoint> subPoints = points.subList(boarding_idx,  i + (recordPointsSize / 2));
+                        for (LocationPoint point : subPoints){
+                            TakBehaviorRecordDetail takBehaviorRecordDetail = new TakBehaviorRecordDetail();
+                            takBehaviorRecordDetail.setTrackId(UUID);
+                            takBehaviorRecordDetail.setRecordTime(new Date(point.getTimestamp()));
+                            takBehaviorRecordDetail.setTimestampMs(point.getTimestamp());
+                            takBehaviorRecordDetail.setLongitude(point.getLongitude());
+                            takBehaviorRecordDetail.setLatitude(point.getLatitude());
+                            takBehaviorRecordDetailList.add(takBehaviorRecordDetail);
+                        }
+                        TakBehaviorRecords takBehaviorRecords = new TakBehaviorRecords();
+                        takBehaviorRecords.setCardId(cardId);
+                        takBehaviorRecords.setYardId("YUZUI");
+                        takBehaviorRecords.setTrackId(UUID);
+                        takBehaviorRecords.setStartTime(new Date(boardingTime));
+                        takBehaviorRecords.setEndTime(new Date(eventState.getTimestamp()));
+                        takBehaviorRecords.setPointCount((long) subPoints.size());
+                        takBehaviorRecords.setType(0L);
+                        takBehaviorRecords.setDuration(DateTimeUtils.calculateTimeDifference(boardingTime, eventState.getTimestamp()));
+                        takBehaviorRecords.setState("完成");
+                        takBehaviorRecords.setTakBehaviorRecordDetailList(takBehaviorRecordDetailList);
+                        iTakBehaviorRecordsService.insertTakBehaviorRecords(takBehaviorRecords);
+                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
+                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
+                        }
+                    }
+                    boardingTime = null;
+                    System.out.println("📤 检测到到达下车事件");
+                    break;
+                case SEND_BOARDING:
+                    if (boardingTime == null){
+                        boarding_idx = i + (recordPointsSize / 2);
+                        boardingTime = eventState.getTimestamp();
+                        UUID = IdUtils.fastSimpleUUID();
+                    }
+                    System.out.println("📥 检测到发运上车事件");
+                    break;
+                case SEND_DROPPING:
+                    if (boardingTime != null){
+                        List<TakBehaviorRecordDetail> takBehaviorRecordDetailList = new ArrayList<TakBehaviorRecordDetail>();
+                        List<LocationPoint> subPoints = points.subList(boarding_idx,  i + (recordPointsSize / 2));
+                        for (LocationPoint point : subPoints){
+                            TakBehaviorRecordDetail takBehaviorRecordDetail = new TakBehaviorRecordDetail();
+                            takBehaviorRecordDetail.setTrackId(UUID);
+                            takBehaviorRecordDetail.setRecordTime(new Date(point.getTimestamp()));
+                            takBehaviorRecordDetail.setTimestampMs(point.getTimestamp());
+                            takBehaviorRecordDetail.setLongitude(point.getLongitude());
+                            takBehaviorRecordDetail.setLatitude(point.getLatitude());
+                            takBehaviorRecordDetailList.add(takBehaviorRecordDetail);
+                        }
+                        TakBehaviorRecords takBehaviorRecords = new TakBehaviorRecords();
+                        takBehaviorRecords.setCardId(cardId);
+                        takBehaviorRecords.setYardId("YUZUI");
+                        takBehaviorRecords.setTrackId(UUID);
+                        takBehaviorRecords.setStartTime(new Date(boardingTime));
+                        takBehaviorRecords.setEndTime(new Date(eventState.getTimestamp()));
+                        takBehaviorRecords.setPointCount((long) subPoints.size());
+                        takBehaviorRecords.setType(1L);
+                        takBehaviorRecords.setDuration(DateTimeUtils.calculateTimeDifference(boardingTime, eventState.getTimestamp()));
+                        takBehaviorRecords.setState("完成");
+                        takBehaviorRecords.setTakBehaviorRecordDetailList(takBehaviorRecordDetailList);
+                        iTakBehaviorRecordsService.insertTakBehaviorRecords(takBehaviorRecords);
+                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
+                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
+                        }
+                    }
+                    boardingTime = null;
+                    System.out.println("📤 检测到发运下车事件");
+                    break;
             }
-            return;
         }
-
-//        LocationPoint smoothed = smoother.smooth(rawPoint);
-        tracker.onNewLocation(rawPoint);
+    }
+    public void handleNewRawPoint(List<LocationPoint> points) {
+        iTakBehaviorRecordsService.deleteByCreationTime("2025-07-09 00:00:00");
+        iTakBehaviorRecordDetailService.deleteByCreationTime("2025-07-09 00:00:00");
+        List<LocationPoint> normalPoints = new ArrayList<>();
+        for (LocationPoint rawPoint : points){
+            int state = outlierFilter.isValid(rawPoint);
+            if (!(state == 0)) {
+                if (state == 1){
+                    System.out.println("⚠️  时间间隔异常定位点已剔除：" + rawPoint);
+                } else if (state == 2) {
+                    System.out.println("⚠️  速度异常定位点已剔除：" + rawPoint);
+                } else if (state == 3) {
+                    System.out.println("⚠️  定位异常定位点已剔除：" + rawPoint);
+                } else {
+                    System.out.println("⚠️  异常定位点已剔除：" + rawPoint);
+                }
+            }else {
+                // 正常点
+                normalPoints.add(rawPoint);
+            }
+        }
+        // 添加运动状态
+        List<LocationPoint> newPoints = outlierFilter.stateAnalysis(normalPoints);
+        // 行为分析
+        this.onNewLocation(newPoints);
     }
 
 
-    private static void outputVectorFiles(List<LocationPoint> LocationPoints, String shpFilePath) {
+    public static void outputVectorFiles(List<LocationPoint> LocationPoints, String shpFilePath) {
         // 生成原始shp文件
         List<Coordinate> coordinates = new ArrayList<>();
         for (int i = 0; i < LocationPoints.size(); i++){
@@ -167,7 +212,49 @@ public class DriverTracker {
             List<LocationPoint> shpPoints = GeoUtils.processMultiplePointsPerSecond(LocationPoints);
             outputVectorFiles(shpPoints,"D:\\work\\output\\time_clean_points.shp");
         }
+        return LocationPoints;
 
+//        // 按卡号分组
+//        if (data.equals("minhang")){
+//            Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
+//                    .collect(Collectors.groupingBy(LocationPoint::getCardId));
+//            for (Map.Entry<Integer, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
+//                // 取出一个卡号的所有点
+//                List<LocationPoint> pointsByCardId = entry.getValue();
+//                // 再次根据点位、是否时间一样、是否漂移清洗数据
+//                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
+//                if (FilterConfig.IS_OUTPUT_SHP){
+//                    //清洗过运动或停留数据后生成shp文件
+//                    outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
+//                }
+//                return newPoints;
+//            }
+//        } else if (data.equals("yuzui")){
+//            Map<String, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
+//                    .collect(Collectors.groupingBy(LocationPoint::getCardUUID));
+//            for (Map.Entry<String, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
+//                // 取出一个卡号的所有点
+//                List<LocationPoint> pointsByCardId = entry.getValue();
+//                // 再次根据点位、是否时间一样、是否漂移清洗数据
+//                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
+//                if (FilterConfig.IS_OUTPUT_SHP){
+//                    //清洗过运动或停留数据后生成shp文件
+//                    outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
+//                }
+//                return newPoints;
+//            }
+//        }
+//        return null;
+    }
+
+    public static void main(String[] args) {
+        String data = FilePathConfig.YUZUI;
+//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
+//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
+        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
+        JSONObject jsonObject = JsonUtils.loadJson(file);
+        JSONArray points = jsonObject.getJSONArray("data");
+        List<LocationPoint> LocationPoints = processWithAnchorData(points, data);
         // 按卡号分组
         if (data.equals("minhang")){
             Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
@@ -181,7 +268,11 @@ public class DriverTracker {
                     //清洗过运动或停留数据后生成shp文件
                     outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
                 }
-                return newPoints;
+                DriverTracker tracker = new DriverTracker();
+                // 开始行为分析
+//                for (LocationPoint point : newPoints) {
+//                    tracker.handleNewRawPoint(tracker, point);
+//                }
             }
         } else if (data.equals("yuzui")){
             Map<String, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
@@ -195,27 +286,15 @@ public class DriverTracker {
                     //清洗过运动或停留数据后生成shp文件
                     outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
                 }
-                return newPoints;
-            }
-        }
-        return null;
-    }
+                DriverTracker tracker = new DriverTracker();
+                cardId = entry.getKey();
+                // 开始行为分析
+                tracker.handleNewRawPoint(newPoints);
+//                for (LocationPoint point : newPoints) {
+//                    tracker.handleNewRawPoint(tracker, point);
+//                }
 
-    public static void main(String[] args) {
-        String data = FilePathConfig.YUZUI;
-//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
-//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
-        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
-        JSONObject jsonObject = JsonUtils.loadJson(file);
-        JSONArray points = jsonObject.getJSONArray("data");
-        List<LocationPoint> newPoints = processWithAnchorData(points, data);
-        if (newPoints == null){
-            return;
-        }
-        DriverTracker tracker = new DriverTracker();
-        // 开始行为分析
-        for (LocationPoint point : newPoints) {
-            tracker.handleNewRawPoint(tracker, point);
+            }
         }
     }
 }
