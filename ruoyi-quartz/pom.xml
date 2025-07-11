@@ -35,6 +35,13 @@
             <artifactId>ruoyi-common</artifactId>
         </dependency>
 
+        <!-- 自定义模块-->
+        <dependency>
+            <groupId>com.ruoyi</groupId>
+            <artifactId>modules</artifactId>
+            <version>${ruoyi.version}</version>
+        </dependency>
+
     </dependencies>
 
 </project>

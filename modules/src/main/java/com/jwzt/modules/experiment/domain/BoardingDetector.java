@@ -93,7 +93,7 @@ public class BoardingDetector {
                 curPoint = currentPoint;
                 lastEvent = Event.ARRIVED_BOARDING;
                 currentEvent = Event.ARRIVED_BOARDING;
-                return new EventState(currentEvent, curPoint.getTimestamp());
+                return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
         // 检测到达下车事件
@@ -138,7 +138,7 @@ public class BoardingDetector {
                 System.out.println("⚠️ 检测到到达已下车");
                 lastEvent = Event.NONE;
                 currentEvent = Event.ARRIVED_DROPPING;
-                return new EventState(currentEvent, curPoint.getTimestamp());
+                return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
         // 检测发运上车事件
@@ -182,7 +182,7 @@ public class BoardingDetector {
                 curPoint = currentPoint;
                 lastEvent = Event.SEND_BOARDING;
                 currentEvent = Event.SEND_BOARDING;
-                return new EventState(currentEvent, curPoint.getTimestamp());
+                return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
         // 检测发运下车事件
@@ -227,7 +227,7 @@ public class BoardingDetector {
                 lastEvent = Event.NONE;
                 currentEvent = Event.SEND_DROPPING;
                 result = currentEvent;
-                return new EventState(currentEvent, curPoint.getTimestamp());
+                return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
         return new EventState();

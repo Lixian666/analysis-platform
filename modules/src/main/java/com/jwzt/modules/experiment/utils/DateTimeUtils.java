@@ -4,9 +4,39 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
+import java.time.Duration;
 import java.util.Date;
 
 public class DateTimeUtils {
+
+    public static String calculateTimeDifference(long timestamp1, long timestamp2) {
+        long diffMillis = Math.abs(timestamp2 - timestamp1);
+        Duration duration = Duration.ofMillis(diffMillis);
+
+        long totalMillis = duration.toMillis();
+        long days = totalMillis / (24 * 60 * 60 * 1000);
+        long hours = (totalMillis / (60 * 60 * 1000)) % 24;
+        long minutes = (totalMillis / (60 * 1000)) % 60;
+        long seconds = (totalMillis / 1000) % 60;
+        long millis = totalMillis % 1000;
+
+        StringBuilder result = new StringBuilder();
+        if (days > 0) {
+            result.append(days).append("天");
+        }
+        if (hours > 0 || days > 0) {
+            result.append(hours).append("小时");
+        }
+        if (minutes > 0 || hours > 0 || days > 0) {
+            result.append(minutes).append("分");
+        }
+        if (seconds > 0 || minutes > 0 || hours > 0 || days > 0) {
+            result.append(seconds).append("秒");
+        }
+        result.append(millis).append("毫秒");
+
+        return result.toString();
+    }
 
     public static long convertToTimestamp(String dateTimeStr) {
         // 先尝试修复错误格式（比如形如 2025-07-05 09:34:14:000）

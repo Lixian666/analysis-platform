@@ -1,4 +1,4 @@
-package com.ruoyi.quartz.task;
+package com.jwzt;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -7,26 +7,30 @@ import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
+import com.jwzt.modules.experiment.runner.TrackProcessorRunner;
 import com.jwzt.modules.experiment.utils.JsonUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ApplicationContext;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * 定时任务调度测试
- * 
- * @author ruoyi
- */
-@Component("ryTask")
-public class RyTask
-{
-    @Autowired
-    private DriverTracker tracker;
-    public void driverTracker()
-    {
+@SpringBootApplication(exclude = { DataSourceAutoConfiguration.class })
+class Application {
+    private static String UUID;
+    private static String cardId;
+    public static void main(String[] args) {
+        SpringApplicationBuilder builder = new SpringApplicationBuilder(Application.class);
+        builder.web(WebApplicationType.NONE).run(args);  // 不启用 Web 容器
+
+        ApplicationContext context = builder.context();
+        DriverTracker tracker = context.getBean(DriverTracker.class);
+
         String data = FilePathConfig.YUZUI;
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
@@ -47,7 +51,6 @@ public class RyTask
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
                 }
-//                DriverTracker tracker = new DriverTracker();
                 // 开始行为分析
 //                for (LocationPoint point : newPoints) {
 //                    tracker.handleNewRawPoint(tracker, point);
@@ -65,7 +68,7 @@ public class RyTask
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
                 }
-                DriverTracker.cardId = entry.getKey();
+                cardId = entry.getKey();
                 // 开始行为分析
                 tracker.handleNewRawPoint(newPoints);
 //                for (LocationPoint point : newPoints) {

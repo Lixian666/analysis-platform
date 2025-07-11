@@ -4,6 +4,7 @@ import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.Coordinate;
 import com.jwzt.modules.experiment.domain.LocationPoint;
+import com.jwzt.modules.experiment.domain.MovementAnalyzer;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.GeoUtils;
 import com.jwzt.modules.experiment.map.ZoneChecker;
@@ -22,9 +23,42 @@ public class OutlierFilter {
     private final int windowSize = 5;    // 滑动窗口大小必须为奇数
     private LocationPoint lastPoint = null;
     private final Deque<LocationPoint> history = new ArrayDeque<>();
+
+    private Deque<LocationPoint> window = new ArrayDeque<>();
     private static final double MAX_DEVIATION_SPEEDUP = 7.0;  //允许的偏差
     private static final double ANGLE_THRESHOLD = 150.0; //角度阈值
     private static final String HUOCHANG = FilePathConfig.YUZUI;
+
+
+
+    public List<LocationPoint> stateAnalysis(List<LocationPoint> points) {
+        List<LocationPoint> result = new ArrayList<>();
+        for (LocationPoint point : points){
+            window.addLast(point);
+            if (window.size() > 2) {
+                window.removeFirst();
+            }
+            // 通过windowSize个点判断当前运动状态
+            MovementAnalyzer.MovementState state = MovementAnalyzer.analyzeState(new ArrayList<>(window));
+            if (state == MovementAnalyzer.MovementState.DRIVING) {
+                System.out.println("🚗 当前正在驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+            } else if (state == MovementAnalyzer.MovementState.LOW_DRIVING) {
+                System.out.println("🚗🐢 当前正在低速驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+            } else if (state == MovementAnalyzer.MovementState.WALKING) {
+                System.out.println("🚶 当前在步行，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+            } else if (state == MovementAnalyzer.MovementState.RUNNING) {
+                System.out.println("🏃 当前在小跑，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+            } else {
+                System.out.println("⛔ 当前静止，时间为：" + point.getAcceptTime());
+            }
+            point.setState(state);
+            result.add(point);
+        }
+        return result;
+    }
+
+
+
 
     public int isValid(LocationPoint newPoint) {
         if (lastPoint == null) {

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwzt.modules.experiment.mapper.TakBehaviorRecordsMapper">
+    
+    <resultMap type="com.jwzt.modules.experiment.domain.TakBehaviorRecords" id="TakBehaviorRecordsResult">
+        <id property="id"    column="id"    />
+        <result property="cardId"    column="card_id"    />
+        <result property="yardId"    column="yard_id"    />
+        <result property="trackId"    column="track_id"    />
+        <result property="startTime"    column="start_time"    />
+        <result property="endTime"    column="end_time"    />
+        <result property="pointCount"    column="point_count"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="type"    column="type"    />
+        <result property="duration"    column="duration"    />
+        <result property="state"    column="state"    />
+    </resultMap>
+
+    <resultMap id="TakBehaviorRecordsTakBehaviorRecordDetailResult" type="com.jwzt.modules.experiment.domain.TakBehaviorRecords" extends="TakBehaviorRecordsResult">
+        <collection property="takBehaviorRecordDetailList" ofType="com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail" column="id" select="selectTakBehaviorRecordDetailList" />
+    </resultMap>
+
+    <resultMap type="com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail" id="TakBehaviorRecordDetailResult">
+        <result property="id"    column="id"    />
+        <result property="trackId"    column="track_id"    />
+        <result property="recordTime"    column="record_time"    />
+        <result property="timestampMs"    column="timestamp_ms"    />
+        <result property="longitude"    column="longitude"    />
+        <result property="latitude"    column="latitude"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTakBehaviorRecordsVo">
+        select id, card_id, yard_id, track_id, start_time, end_time, point_count, create_time, update_time, type, duration, state from tak_behavior_records
+    </sql>
+
+    <select id="selectTakBehaviorRecordsList" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecords" resultMap="TakBehaviorRecordsResult">
+        <include refid="selectTakBehaviorRecordsVo"/>
+        <where>  
+            <if test="cardId != null  and cardId != ''"> and card_id = #{cardId}</if>
+            <if test="yardId != null  and yardId != ''"> and yard_id = #{yardId}</if>
+            <if test="trackId != null  and trackId != ''"> and track_id = #{trackId}</if>
+            <if test="startTime != null "> and start_time = #{startTime}</if>
+            <if test="endTime != null "> and end_time = #{endTime}</if>
+            <if test="pointCount != null "> and point_count = #{pointCount}</if>
+            <if test="type != null "> and type = #{type}</if>
+            <if test="duration != null  and duration != ''"> and duration = #{duration}</if>
+            <if test="state != null  and state != ''"> and state = #{state}</if>
+        </where>
+    </select>
+    
+    <select id="selectTakBehaviorRecordsById" parameterType="Long" resultMap="TakBehaviorRecordsTakBehaviorRecordDetailResult">
+        select id, card_id, yard_id, track_id, start_time, end_time, point_count, create_time, update_time, type, duration, state
+        from tak_behavior_records
+        where id = #{id}
+    </select>
+
+    <select id="selectTakBehaviorRecordDetailList" resultMap="TakBehaviorRecordDetailResult">
+        select id, track_id, record_time, timestamp_ms, longitude, latitude, create_time, update_time
+        from tak_behavior_record_detail
+        where track_id = #{track_id}
+    </select>
+
+    <insert id="insertTakBehaviorRecords" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecords" useGeneratedKeys="true" keyProperty="id">
+        insert into tak_behavior_records
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">id,</if>
+            <if test="cardId != null and cardId != ''">card_id,</if>
+            <if test="yardId != null and yardId != ''">yard_id,</if>
+            <if test="trackId != null and trackId != ''">track_id,</if>
+            <if test="startTime != null">start_time,</if>
+            <if test="endTime != null">end_time,</if>
+            <if test="pointCount != null">point_count,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="type != null">type,</if>
+            <if test="duration != null">duration,</if>
+            <if test="state != null">state,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and cardId != ''">#{id},</if>
+            <if test="cardId != null and cardId != ''">#{cardId},</if>
+            <if test="yardId != null and yardId != ''">#{yardId},</if>
+            <if test="trackId != null and trackId != ''">#{trackId},</if>
+            <if test="startTime != null">#{startTime},</if>
+            <if test="endTime != null">#{endTime},</if>
+            <if test="pointCount != null">#{pointCount},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="type != null">#{type},</if>
+            <if test="duration != null">#{duration},</if>
+            <if test="state != null">#{state},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTakBehaviorRecords" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecords">
+        update tak_behavior_records
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="cardId != null and cardId != ''">card_id = #{cardId},</if>
+            <if test="yardId != null and yardId != ''">yard_id = #{yardId},</if>
+            <if test="trackId != null and trackId != ''">track_id = #{trackId},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="pointCount != null">point_count = #{pointCount},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="duration != null">duration = #{duration},</if>
+            <if test="state != null">state = #{state},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTakBehaviorRecordsById" parameterType="Long">
+        delete from tak_behavior_records where id = #{id}
+    </delete>
+
+    <delete id="deleteTakBehaviorRecordsByIds" parameterType="String">
+        delete from tak_behavior_records where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    
+    <delete id="deleteTakBehaviorRecordDetailByTrackIds" parameterType="String">
+        delete from tak_behavior_record_detail where track_id in 
+        <foreach item="trackId" collection="array" open="(" separator="," close=")">
+            #{trackId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteTakBehaviorRecordDetailByTrackId" parameterType="Long">
+        delete from tak_behavior_record_detail where track_id = #{trackId}
+    </delete>
+    <delete id="deleteByCreationTime">
+        delete from tak_behavior_records where create_time >= #{createTime};
+    </delete>
+
+    <insert id="batchTakBehaviorRecordDetail">
+        insert into tak_behavior_record_detail(track_id, record_time, timestamp_ms, longitude, latitude, create_time, update_time) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.trackId}, #{item.recordTime}, #{item.timestampMs}, #{item.longitude}, #{item.latitude}, #{item.createTime}, #{item.updateTime})
+        </foreach>
+    </insert>
+</mapper>
