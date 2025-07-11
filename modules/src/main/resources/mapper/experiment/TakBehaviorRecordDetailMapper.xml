@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwzt.modules.experiment.mapper.TakBehaviorRecordDetailMapper">
+    
+    <resultMap type="com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail" id="TakBehaviorRecordDetailResult">
+        <id property="id"    column="id"    />
+        <result property="trackId"    column="track_id"    />
+        <result property="recordTime"    column="record_time"    />
+        <result property="timestampMs"    column="timestamp_ms"    />
+        <result property="longitude"    column="longitude"    />
+        <result property="latitude"    column="latitude"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTakBehaviorRecordDetailVo">
+        select id, track_id, record_time, timestamp_ms, longitude, latitude, create_time, update_time from tak_behavior_record_detail
+    </sql>
+
+    <select id="selectTakBehaviorRecordDetailList" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail" resultMap="TakBehaviorRecordDetailResult">
+        <include refid="selectTakBehaviorRecordDetailVo"/>
+        <where>  
+            <if test="trackId != null  and trackId != ''"> and track_id = #{trackId}</if>
+            <if test="recordTime != null "> and record_time = #{recordTime}</if>
+            <if test="timestampMs != null "> and timestamp_ms = #{timestampMs}</if>
+            <if test="longitude != null "> and longitude = #{longitude}</if>
+            <if test="latitude != null "> and latitude = #{latitude}</if>
+        </where>
+    </select>
+    
+    <select id="selectTakBehaviorRecordDetailById" parameterType="Long" resultMap="TakBehaviorRecordDetailResult">
+        <include refid="selectTakBehaviorRecordDetailVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTakBehaviorRecordDetail" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail" useGeneratedKeys="true" keyProperty="id">
+        insert into tak_behavior_record_detail
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">id,</if>
+            <if test="trackId != null and trackId != ''">track_id,</if>
+            <if test="recordTime != null">record_time,</if>
+            <if test="timestampMs != null">timestamp_ms,</if>
+            <if test="longitude != null">longitude,</if>
+            <if test="latitude != null">latitude,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">#{id},</if>
+            <if test="trackId != null and trackId != ''">#{trackId},</if>
+            <if test="recordTime != null">#{recordTime},</if>
+            <if test="timestampMs != null">#{timestampMs},</if>
+            <if test="longitude != null">#{longitude},</if>
+            <if test="latitude != null">#{latitude},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTakBehaviorRecordDetail" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail">
+        update tak_behavior_record_detail
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="trackId != null and trackId != ''">track_id = #{trackId},</if>
+            <if test="recordTime != null">record_time = #{recordTime},</if>
+            <if test="timestampMs != null">timestamp_ms = #{timestampMs},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTakBehaviorRecordDetailById" parameterType="Long">
+        delete from tak_behavior_record_detail where id = #{id}
+    </delete>
+
+    <delete id="deleteTakBehaviorRecordDetailByIds" parameterType="String">
+        delete from tak_behavior_record_detail where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    <delete id="deleteByCreationTime">
+        delete from tak_behavior_record_detail where create_time >= #{createTime}
+    </delete>
+</mapper>
