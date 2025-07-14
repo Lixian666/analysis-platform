@@ -43,7 +43,7 @@ import ImageUpload from "@/components/ImageUpload"
 import ImagePreview from "@/components/ImagePreview"
 // 字典标签组件
 import DictTag from '@/components/DictTag'
-
+import axios from 'axios'
 const app = createApp(App)
 
 // 全局方法挂载
@@ -81,4 +81,24 @@ app.use(ElementPlus, {
   size: Cookies.get('size') || 'default'
 })
 
-app.mount('#app')
+
+axios.get('/config.json').then(response => {
+  const config = response.data
+
+  // 设置全局属性
+  app.config.globalProperties.$modelMapYuzui = config.model_yuzui
+  app.config.globalProperties.$modelCar = config.model_car
+  app.config.globalProperties.$kuquMapYuzui = config.kuqu_yuzui
+  app.config.globalProperties.$kuweiMapYuzui = config.kuwei_yuzui
+  app.config.globalProperties.$tifimg = config.tifimg
+  app.config.globalProperties.$tdt = config.tdt
+  app.config.globalProperties.$isSw_Order = config.isSw_Order
+  app.config.globalProperties.$center = config.center
+  app.config.globalProperties.$zkyxLogout = config.zkyxLogout
+
+  // 挂载应用
+  app.mount('#app')
+})
+
+
+//app.mount('#app')
