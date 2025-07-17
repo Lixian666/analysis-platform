@@ -41,8 +41,20 @@ public class TakBehaviorRecordsController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(TakBehaviorRecords takBehaviorRecords)
     {
-        startPage();
+//        startPage();
         List<TakBehaviorRecords> list = takBehaviorRecordsService.selectTakBehaviorRecordsList(takBehaviorRecords);
+        return getDataTable(list);
+    }
+
+    /**
+     * 查询行为记录列表
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:experiment:list')")
+    @GetMapping("/userList")
+    public TableDataInfo userList(TakBehaviorRecords takBehaviorRecords)
+    {
+//        startPage();
+        List<TakBehaviorRecords> list = takBehaviorRecordsService.selectTakBehaviorRecordsUserList(takBehaviorRecords);
         return getDataTable(list);
     }
 

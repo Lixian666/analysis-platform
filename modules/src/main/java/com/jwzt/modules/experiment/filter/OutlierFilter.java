@@ -97,16 +97,20 @@ public class OutlierFilter {
         sortPoints = sortPoints.stream()
                 .filter(OutlierFilter::isValidCoordinate)
                 .collect(Collectors.toList());
+        System.out.println("开始处理一秒内多个点的情况");
         // 处理一秒内多个点的情况（使用中位数）
         List<LocationPoint> newPoints = GeoUtils.processMultiplePointsPerSecond(sortPoints);
+        System.out.println("完成处理一秒内多个点的情况");
         if (FilterConfig.IS_STAY_VERIFY){
             // 检测停留点
             detectStayPoints(newPoints);
             // 修正停留区
             newPoints = correctStayPoints(newPoints);
         }
+        System.out.println("开始修正运动点（带速度自适应阈值）");
         // 修正运动点（带速度自适应阈值）
         List<LocationPoint> newLocationPoints = correctMovingPoints(newPoints);
+        System.out.println("完成修正运动点（带速度自适应阈值）");
 //        List<LocationPoint> newLocationPoints = new ArrayList<>();
 //        for (LocationPoint newPoint : newPoints){
 //            if (lastPoint == null) {
@@ -220,7 +224,7 @@ public class OutlierFilter {
                 LocationPoint curr = corrected.get(i);
                 LocationPoint p4 = corrected.get(i + 1);
                 LocationPoint p5 = corrected.get(i + 2);
-
+                System.out.println(curr.getAcceptTime() + " " + i);
                 if (FilterConfig.IS_STAY_VERIFY && curr.getIsStay()) continue;
 
                 double dist1 = distance(p2, curr);
@@ -252,6 +256,10 @@ public class OutlierFilter {
                     LocationPoint fixed = interpolate(p2, p4);
                     corrected.set(i, fixed);
                     hasDrift = true;
+                }
+
+                if (i == corrected.size() - 3){
+                    hasDrift = false;
                 }
             }
         } while (hasDrift);

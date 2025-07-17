@@ -1,7 +1,14 @@
 package com.jwzt.modules.experiment.controller;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
+
+import com.jwzt.modules.experiment.domain.TakBehaviorRecords;
+import com.jwzt.modules.experiment.service.ITakBehaviorRecordsService;
+import com.jwzt.modules.experiment.vo.TakBehaviorRecordDetailVo;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +41,9 @@ public class TakBehaviorRecordDetailController extends BaseController
     @Autowired
     private ITakBehaviorRecordDetailService takBehaviorRecordDetailService;
 
+    @Autowired
+    private ITakBehaviorRecordsService takBehaviorRecordsService;
+
     /**
      * 查询行为记录详情列表
      */
@@ -41,9 +51,36 @@ public class TakBehaviorRecordDetailController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(TakBehaviorRecordDetail takBehaviorRecordDetail)
     {
-        startPage();
+//        startPage();
         List<TakBehaviorRecordDetail> list = takBehaviorRecordDetailService.selectTakBehaviorRecordDetailList(takBehaviorRecordDetail);
         return getDataTable(list);
+    }
+
+    /**
+     * 查询行为记录详情列表
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:detail:list')")
+    @RequestMapping("/listByUserId")
+    public TableDataInfo listAllByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail)
+    {
+//        startPage();
+        TakBehaviorRecords takBehaviorRecords = new TakBehaviorRecords();
+        takBehaviorRecords.setCardId(takBehaviorRecordDetail.getCardId());
+        List<TakBehaviorRecordDetail> list = takBehaviorRecordDetailService.selectTakBehaviorRecordDetailList(takBehaviorRecordDetail);
+        Map<String, List<TakBehaviorRecordDetail>> grouped = list.stream()
+                .collect(Collectors.groupingBy(TakBehaviorRecordDetail::getTrackId));
+
+        grouped.replaceAll((trackId, l) -> l.stream()
+                        .sorted(Comparator.comparing(TakBehaviorRecordDetail::getRecordTime))
+                        .collect(Collectors.toList())
+        );
+        List<TakBehaviorRecords> RecordsList = takBehaviorRecordsService.selectTakBehaviorRecordsList(takBehaviorRecords);
+        for (TakBehaviorRecords record : RecordsList){
+            List<TakBehaviorRecordDetail> details = grouped.get(record.getTrackId());
+            record.setTakBehaviorRecordDetailList(details);
+
+        }
+        return getDataTable(RecordsList);
     }
 
     /**
