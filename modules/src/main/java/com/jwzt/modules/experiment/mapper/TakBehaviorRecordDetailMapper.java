@@ -2,6 +2,7 @@ package com.jwzt.modules.experiment.mapper;
 
 import java.util.List;
 import com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail;
+import com.jwzt.modules.experiment.vo.TakBehaviorRecordDetailVo;
 
 /**
  * 行为记录详情Mapper接口
@@ -35,6 +36,8 @@ public interface TakBehaviorRecordDetailMapper
      */
     public int insertTakBehaviorRecordDetail(TakBehaviorRecordDetail takBehaviorRecordDetail);
 
+    int insertTakBehaviorRecordDetailAll(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList);
+
     /**
      * 修改行为记录详情
      * 
@@ -60,4 +63,6 @@ public interface TakBehaviorRecordDetailMapper
     public int deleteTakBehaviorRecordDetailByIds(Long[] ids);
 
     public void deleteByCreationTime(String create_time);
+
+    List<TakBehaviorRecordDetailVo> selectTakBehaviorRecordDetailListByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail);
 }

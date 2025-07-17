@@ -1,8 +1,9 @@
 package com.jwzt.modules.experiment.domain;
 
-import java.math.BigDecimal;
 import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ruoyi.common.annotation.Excel;
@@ -14,6 +15,7 @@ import com.ruoyi.common.core.domain.BaseEntity;
  * @author lx
  * @date 2025-07-09
  */
+@Data
 public class TakBehaviorRecordDetail extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
@@ -21,11 +23,16 @@ public class TakBehaviorRecordDetail extends BaseEntity
     /** ID */
     private Long id;
 
+    /** 用户ID */
+    @Excel(name = "用户ID")
+    private String cardId;
+
     /** 轨迹编号 */
     @Excel(name = "轨迹编号")
     private String trackId;
 
     /** 点时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @Excel(name = "点时间", width = 30)
     private Date recordTime;
 

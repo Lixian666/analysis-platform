@@ -86,4 +86,6 @@ public interface TakBehaviorRecordsMapper
     public int deleteTakBehaviorRecordDetailByTrackId(Long id);
 
     public void deleteByCreationTime(String createTime);
+
+    List<TakBehaviorRecords> selectTakBehaviorRecordsUserList(TakBehaviorRecords takBehaviorRecords);
 }

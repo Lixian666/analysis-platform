@@ -30,7 +30,8 @@ public class RyTask
         String data = FilePathConfig.YUZUI;
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
-        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
+//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
+        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250710.json";
         JSONObject jsonObject = JsonUtils.loadJson(file);
         JSONArray points = jsonObject.getJSONArray("data");
         List<LocationPoint> LocationPoints = DriverTracker.processWithAnchorData(points, data);

@@ -53,7 +53,6 @@ public class DriverTracker {
 
     public void onNewLocation(List<LocationPoint> points) {
         for (int i = 0; i <= points.size() - recordPointsSize; i++) {
-            System.out.println(i);
             List<LocationPoint> recordPoints = points.subList(i, i + recordPointsSize);
             EventState eventState = detector.updateState(recordPoints);
             switch (eventState.getEvent()) {
@@ -90,9 +89,10 @@ public class DriverTracker {
                         takBehaviorRecords.setState("完成");
                         takBehaviorRecords.setTakBehaviorRecordDetailList(takBehaviorRecordDetailList);
                         iTakBehaviorRecordsService.insertTakBehaviorRecords(takBehaviorRecords);
-                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
-                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
-                        }
+                         iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
+//                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
+//                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
+//                        }
                     }
                     boardingTime = null;
                     System.out.println("📤 检测到到达下车事件");
@@ -111,6 +111,7 @@ public class DriverTracker {
                         List<LocationPoint> subPoints = points.subList(boarding_idx,  i + (recordPointsSize / 2));
                         for (LocationPoint point : subPoints){
                             TakBehaviorRecordDetail takBehaviorRecordDetail = new TakBehaviorRecordDetail();
+                            takBehaviorRecordDetail.setCardId(cardId);
                             takBehaviorRecordDetail.setTrackId(UUID);
                             takBehaviorRecordDetail.setRecordTime(new Date(point.getTimestamp()));
                             takBehaviorRecordDetail.setTimestampMs(point.getTimestamp());
@@ -130,19 +131,21 @@ public class DriverTracker {
                         takBehaviorRecords.setState("完成");
                         takBehaviorRecords.setTakBehaviorRecordDetailList(takBehaviorRecordDetailList);
                         iTakBehaviorRecordsService.insertTakBehaviorRecords(takBehaviorRecords);
-                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
-                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
-                        }
+                        iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
+//                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
+//                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
+//                        }
                     }
                     boardingTime = null;
                     System.out.println("📤 检测到发运下车事件");
                     break;
             }
         }
+        System.out.println("📤 检测完成");
     }
     public void handleNewRawPoint(List<LocationPoint> points) {
-        iTakBehaviorRecordsService.deleteByCreationTime("2025-07-09 00:00:00");
-        iTakBehaviorRecordDetailService.deleteByCreationTime("2025-07-09 00:00:00");
+        iTakBehaviorRecordsService.deleteByCreationTime("2025-07-11 16:00:00");
+        iTakBehaviorRecordDetailService.deleteByCreationTime("2025-07-11 16:00:00");
         List<LocationPoint> normalPoints = new ArrayList<>();
         for (LocationPoint rawPoint : points){
             int state = outlierFilter.isValid(rawPoint);
@@ -163,6 +166,10 @@ public class DriverTracker {
         }
         // 添加运动状态
         List<LocationPoint> newPoints = outlierFilter.stateAnalysis(normalPoints);
+        if (FilterConfig.IS_OUTPUT_SHP){
+            // 生成空间异常、时间间隔异常、速度异常过滤后的shp文件
+            outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\final_points.shp");
+        }
         // 行为分析
         this.onNewLocation(newPoints);
     }
@@ -189,19 +196,26 @@ public class DriverTracker {
             }
         } else if (data.equals("yuzui")){
             for (int i = 0; i < points.size(); i++) {
-                LocationPoint1 point = points.getObject(i, LocationPoint1.class);
-                LocationPoint locationPoint = new LocationPoint();
-                locationPoint.setCardUUID(point.getRecordThirdId());
-                locationPoint.setLongitude(point.getThrough());
-                locationPoint.setLatitude(point.getWeft());
-                String dateTimeStr = point.getRecordTime();
-                int lastColonIndex = dateTimeStr.lastIndexOf(':');
-                if (lastColonIndex != -1) {
-                    dateTimeStr = dateTimeStr.substring(0, lastColonIndex) + "." + dateTimeStr.substring(lastColonIndex + 1);
+                try {
+                    if (i==10777){
+                        System.out.println(i);
+                    }
+                    LocationPoint1 point = points.getObject(i, LocationPoint1.class);
+                    LocationPoint locationPoint = new LocationPoint();
+                    locationPoint.setCardUUID(point.getRecordThirdId());
+                    locationPoint.setLongitude(point.getThrough());
+                    locationPoint.setLatitude(point.getWeft());
+                    String dateTimeStr = fixLeadingZero(point.getRecordTime());
+                    int lastColonIndex = dateTimeStr.lastIndexOf(':');
+                    if (lastColonIndex != -1) {
+                        dateTimeStr = dateTimeStr.substring(0, lastColonIndex) + "." + dateTimeStr.substring(lastColonIndex + 1);
+                    }
+                    locationPoint.setAcceptTime(dateTimeStr);
+                    locationPoint.setTimestamp(point.getRecordTimeLength());
+                    LocationPoints.add(locationPoint);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                locationPoint.setAcceptTime(dateTimeStr);
-                locationPoint.setTimestamp(point.getRecordTimeLength());
-                LocationPoints.add(locationPoint);
             }
         }
 
@@ -210,7 +224,7 @@ public class DriverTracker {
             outputVectorFiles(LocationPoints,"D:\\work\\output\\yuzui\\origin_points.shp");
             // 生成同时间间点清洗数据shp文件
             List<LocationPoint> shpPoints = GeoUtils.processMultiplePointsPerSecond(LocationPoints);
-            outputVectorFiles(shpPoints,"D:\\work\\output\\time_clean_points.shp");
+            outputVectorFiles(shpPoints,"D:\\work\\output\\yuzui\\time_clean_points.shp");
         }
         return LocationPoints;
 
@@ -247,6 +261,13 @@ public class DriverTracker {
 //        return null;
     }
 
+    public static String fixLeadingZero(String timeStr) {
+        if (timeStr != null && timeStr.matches("^0\\d{4}-.*")) {
+            return timeStr.replaceFirst("^0", "");
+        }
+        return timeStr;
+    }
+
     public static void main(String[] args) {
         String data = FilePathConfig.YUZUI;
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
@@ -266,7 +287,7 @@ public class DriverTracker {
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
                 if (FilterConfig.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
-                    outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
+                    outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\finish_clean_points.shp");
                 }
                 DriverTracker tracker = new DriverTracker();
                 // 开始行为分析

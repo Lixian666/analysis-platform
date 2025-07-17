@@ -114,6 +114,10 @@ public class TakBehaviorRecordsServiceImpl implements ITakBehaviorRecordsService
         takBehaviorRecordsMapper.deleteByCreationTime(s);
     }
 
+    public List<TakBehaviorRecords> selectTakBehaviorRecordsUserList(TakBehaviorRecords takBehaviorRecords){
+        return takBehaviorRecordsMapper.selectTakBehaviorRecordsUserList(takBehaviorRecords);
+    }
+
     /**
      * 新增行为记录详情信息
      * 

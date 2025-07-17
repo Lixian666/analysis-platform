@@ -60,4 +60,6 @@ public interface ITakBehaviorRecordsService
     public int deleteTakBehaviorRecordsById(Long id);
 
     public void deleteByCreationTime(String s);
+
+    List<TakBehaviorRecords> selectTakBehaviorRecordsUserList(TakBehaviorRecords takBehaviorRecords);
 }

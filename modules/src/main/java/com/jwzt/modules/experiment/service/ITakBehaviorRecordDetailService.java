@@ -2,6 +2,7 @@ package com.jwzt.modules.experiment.service;
 
 import java.util.List;
 import com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail;
+import com.jwzt.modules.experiment.vo.TakBehaviorRecordDetailVo;
 
 /**
  * 行为记录详情Service接口
@@ -60,4 +61,8 @@ public interface ITakBehaviorRecordDetailService
     public int deleteTakBehaviorRecordDetailById(Long id);
 
     public void deleteByCreationTime(String s);
+
+    public List<TakBehaviorRecordDetailVo> selectTakBehaviorRecordDetailListByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail);
+
+    void insertTakBehaviorRecordDetailAll(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList);
 }

@@ -1,6 +1,8 @@
 package com.jwzt.modules.experiment.service.impl;
 
 import java.util.List;
+
+import com.jwzt.modules.experiment.vo.TakBehaviorRecordDetailVo;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.uuid.IdUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,15 @@ public class TakBehaviorRecordDetailServiceImpl implements ITakBehaviorRecordDet
         return takBehaviorRecordDetailMapper.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
     }
 
+    @Override
+    public void insertTakBehaviorRecordDetailAll(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList){
+        takBehaviorRecordDetailList.forEach(takBehaviorRecordDetail -> {
+            takBehaviorRecordDetail.setCreateTime(DateUtils.getNowDate());
+            takBehaviorRecordDetail.setId(IdUtils.snowflakeId());
+        });
+        takBehaviorRecordDetailMapper.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
+    }
+
     /**
      * 修改行为记录详情
      * 
@@ -98,5 +109,9 @@ public class TakBehaviorRecordDetailServiceImpl implements ITakBehaviorRecordDet
 
     public void deleteByCreationTime(String s){
         takBehaviorRecordDetailMapper.deleteByCreationTime(s);
+    }
+
+    public List<TakBehaviorRecordDetailVo> selectTakBehaviorRecordDetailListByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail){
+        return takBehaviorRecordDetailMapper.selectTakBehaviorRecordDetailListByUserId(takBehaviorRecordDetail);
     }
 }

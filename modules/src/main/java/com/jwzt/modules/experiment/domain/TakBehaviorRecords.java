@@ -2,183 +2,207 @@ package com.jwzt.modules.experiment.domain;
 
 import java.util.List;
 import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.common.core.domain.BaseEntity;
+import org.springframework.data.annotation.Transient;
 
 /**
  * 行为记录对象 tak_behavior_records
- * 
+ *
  * @author lx
  * @date 2025-07-10
  */
-public class TakBehaviorRecords extends BaseEntity
-{
+public class TakBehaviorRecords extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
-    /** ID */
+    /**
+     * ID
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 用户ID */
+    /**
+     * 用户ID
+     */
     @Excel(name = "用户ID")
     private String cardId;
 
-    /** 货场ID */
+    /**
+     * 货场ID
+     */
     @Excel(name = "货场ID")
     private String yardId;
 
-    /** 轨迹编号（如: zhang001_20250705_1100） */
+    /**
+     * 轨迹编号（如: zhang001_20250705_1100）
+     */
     @Excel(name = "轨迹编号", readConverterExp = "如=:,z=hang001_20250705_1100")
     private String trackId;
 
-    /** 轨迹起始时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "轨迹起始时间", width = 30, dateFormat = "yyyy-MM-dd")
+    /**
+     * 作业任务数
+     */
+    private int taskCount;
+
+    /**
+     * 作业任务最后时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date taskLastTime;
+
+    /**
+     * 轨迹起始时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date startTime;
 
-    /** 轨迹结束时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Excel(name = "轨迹结束时间", width = 30, dateFormat = "yyyy-MM-dd")
+    /**
+     * 轨迹结束时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date endTime;
 
-    /** 点数量 */
+    /**
+     * 点数量
+     */
     @Excel(name = "点数量")
     private Long pointCount;
 
-    /** 行为类型 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库 */
+    /**
+     * 行为类型 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库
+     */
     @Excel(name = "行为类型 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库")
     private Long type;
 
-    /** 持续时间 */
+    /**
+     * 持续时间
+     */
     @Excel(name = "持续时间")
     private String duration;
 
-    /** 状态 完成 行驶中 */
+    /**
+     * 状态 完成 行驶中
+     */
     @Excel(name = "状态 完成 行驶中")
     private String state;
 
-    /** 行为记录详情信息 */
+    /**
+     * 行为记录详情信息
+     */
     private List<TakBehaviorRecordDetail> takBehaviorRecordDetailList;
 
-    public void setId(Long id) 
-    {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public Long getId() 
-    {
+    public Long getId() {
         return id;
     }
-    public void setCardId(String cardId) 
-    {
+
+    public void setCardId(String cardId) {
         this.cardId = cardId;
     }
 
-    public String getCardId() 
-    {
+    public String getCardId() {
         return cardId;
     }
-    public void setYardId(String yardId) 
-    {
+
+    public void setYardId(String yardId) {
         this.yardId = yardId;
     }
 
-    public String getYardId() 
-    {
+    public String getYardId() {
         return yardId;
     }
-    public void setTrackId(String trackId) 
-    {
+
+    public void setTrackId(String trackId) {
         this.trackId = trackId;
     }
 
-    public String getTrackId() 
-    {
+    public String getTrackId() {
         return trackId;
     }
-    public void setStartTime(Date startTime) 
-    {
+
+    public void setStartTime(Date startTime) {
         this.startTime = startTime;
     }
 
-    public Date getStartTime() 
-    {
+    public int getTaskCount() {
+        return taskCount;
+    }
+
+    public void setTaskCount(int taskCount) {
+        this.taskCount = taskCount;
+    }
+
+    public Date getTaskLastTime() {
+        return taskLastTime;
+    }
+
+    public void setTaskLastTime(Date taskLastTime) {
+        this.taskLastTime = taskLastTime;
+    }
+
+    public Date getStartTime() {
         return startTime;
     }
-    public void setEndTime(Date endTime) 
-    {
+
+    public void setEndTime(Date endTime) {
         this.endTime = endTime;
     }
 
-    public Date getEndTime() 
-    {
+    public Date getEndTime() {
         return endTime;
     }
-    public void setPointCount(Long pointCount) 
-    {
+
+    public void setPointCount(Long pointCount) {
         this.pointCount = pointCount;
     }
 
-    public Long getPointCount() 
-    {
+    public Long getPointCount() {
         return pointCount;
     }
-    public void setType(Long type) 
-    {
+
+    public void setType(Long type) {
         this.type = type;
     }
 
-    public Long getType() 
-    {
+    public Long getType() {
         return type;
     }
-    public void setDuration(String duration) 
-    {
+
+    public void setDuration(String duration) {
         this.duration = duration;
     }
 
-    public String getDuration() 
-    {
+    public String getDuration() {
         return duration;
     }
-    public void setState(String state) 
-    {
+
+    public void setState(String state) {
         this.state = state;
     }
 
-    public String getState() 
-    {
+    public String getState() {
         return state;
     }
 
-    public List<TakBehaviorRecordDetail> getTakBehaviorRecordDetailList()
-    {
+    public List<TakBehaviorRecordDetail> getTakBehaviorRecordDetailList() {
         return takBehaviorRecordDetailList;
     }
 
-    public void setTakBehaviorRecordDetailList(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList)
-    {
+    public void setTakBehaviorRecordDetailList(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList) {
         this.takBehaviorRecordDetailList = takBehaviorRecordDetailList;
     }
 
     @Override
     public String toString() {
-        return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
-            .append("id", getId())
-            .append("cardId", getCardId())
-            .append("yardId", getYardId())
-            .append("trackId", getTrackId())
-            .append("startTime", getStartTime())
-            .append("endTime", getEndTime())
-            .append("pointCount", getPointCount())
-            .append("createTime", getCreateTime())
-            .append("updateTime", getUpdateTime())
-            .append("type", getType())
-            .append("duration", getDuration())
-            .append("state", getState())
-            .append("takBehaviorRecordDetailList", getTakBehaviorRecordDetailList())
-            .toString();
+        return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE).append("id", getId()).append("cardId", getCardId()).append("yardId", getYardId()).append("trackId", getTrackId()).append("startTime", getStartTime()).append("endTime", getEndTime()).append("pointCount", getPointCount()).append("createTime", getCreateTime()).append("updateTime", getUpdateTime()).append("type", getType()).append("duration", getDuration()).append("state", getState()).append("takBehaviorRecordDetailList", getTakBehaviorRecordDetailList()).toString();
     }
 }

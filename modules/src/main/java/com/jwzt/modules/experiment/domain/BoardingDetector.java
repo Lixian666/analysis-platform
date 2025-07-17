@@ -34,9 +34,9 @@ public class BoardingDetector {
     public EventState updateState(List<LocationPoint> recordPoints){
         Event result = Event.NONE;;
         if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) return new EventState();
-        List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, 10);
+        List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, FilterConfig.RECORD_POINTS_SIZE / 2);
         LocationPoint currentPoint = recordPoints.get(FilterConfig.RECORD_POINTS_SIZE / 2);
-        List<LocationPoint> theLastTenPoints = recordPoints.subList(recordPoints.size() - 10, recordPoints.size());
+        List<LocationPoint> theLastTenPoints = recordPoints.subList(recordPoints.size() - (FilterConfig.RECORD_POINTS_SIZE / 2), recordPoints.size());
         ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
         // 判断是否在货运线区域（发运下车区域）
         boolean isTheFreightLineArea = zoneChecker.isInHuoyunxinZone(currentPoint);
@@ -48,7 +48,7 @@ public class BoardingDetector {
             lastEvent = Event.NONE;
             currentEvent = Event.NONE;
         }
-        if (currentPoint.getAcceptTime().equals("2025-07-05 10:19:55.000")){
+        if (currentPoint.getAcceptTime().equals("2025-07-05 10:52:28.000")){
             System.out.println("触发断点");
         }
         // 检测到达上车
