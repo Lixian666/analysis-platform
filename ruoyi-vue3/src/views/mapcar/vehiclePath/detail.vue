@@ -12,19 +12,19 @@
     <div class="TopTaskInformationBox TopTaskInformationBox_novw TaskInformation1">
       <p class="TaskInformation TaskInformation_novw">车辆信息</p>
       <el-table v-if="assignmentRecords.length>0" :data="assignmentRecords" border style="width: 100%">
-        <el-table-column align="center" label="到达时间">
+        <el-table-column align="center" label="上车时间">
                <template v-slot="scope">
                  <span v-if="scope.row.startTime">{{ scope.row.startTime }}</span>
                  <span v-else class="ml10">-</span>
                </template>
              </el-table-column>
-             <el-table-column align="center" label="离开时间">
+             <el-table-column align="center" label="下车时间">
                <template v-slot="scope">
                  <span v-if="scope.row.endTime">{{ scope.row.endTime  }}</span>
                  <span v-else>-</span>
                </template>
              </el-table-column>
-             <el-table-column align="center" label="停留时间" width="120px">
+             <el-table-column align="center" label="时间间隔" width="120px">
                <template v-slot="scope">
                  <!-- <span :style="getTimeColor(scope.row.startTime, scope.row.endTime)" v-text="stopTimeLength(scope.row.duration)" /> -->
                   <span>{{ scope.row.duration }}</span>
@@ -38,14 +38,14 @@
                  <span v-else>-</span>
                </template>
              </el-table-column>
-          
+
              <el-table-column align="center" label="类型" width="100px">
                <template v-slot="scope">
                  <span v-text="getcartype(scope.row.type)">
                  </span>
                </template>
              </el-table-column>
- 
+
              <el-table-column align="center" label="状态" width="80px">
                <template v-slot="scope">
                  <span>
@@ -69,18 +69,18 @@
     </div>
     <!-- 行驶轨迹 -->
     <!-- 轨迹回放 -->
-   
+
     <!-- 轨迹回放 -->
     <!-- 其他信息 -->
 
     <!-- 其他信息 -->
- 
+
   </div>
   <div v-else>
     <div401 />
   </div>
  </template>
- 
+
  <script setup>
   import div401 from '@/views/error/401.vue'
   import { onMounted, ref, nextTick } from "vue"
@@ -145,24 +145,24 @@
     let id = route.query.id
     let resd = await getexperimentid(id)
     if((resd.code == '200' || resd.code == 200) && resd.data){
-      assignmentRecords.value.push(resd.data) 
+      assignmentRecords.value.push(resd.data)
       console.log(assignmentRecords.value)
     }
 
 
   }
-  
+
   function diagnosisRoles(text){
     return true
   }
   function clicktab(){
-    
+
   }
-  
-  
+
+
   //methods end
  </script>
- 
+
  <style scoped lang="scss">
  #body-box {
   height:  calc(100vh - 84px);;
@@ -609,5 +609,4 @@
   }
 }
  </style>
- 
- 
+
