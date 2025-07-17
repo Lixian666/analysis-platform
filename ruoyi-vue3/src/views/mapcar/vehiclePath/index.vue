@@ -78,8 +78,8 @@
 
            </div>
          </div>
-         <div v-loading="dataTable_loading" class="main main_novw">
-           <el-table :data="TaskList" border style="width: 100%" height="100%">
+    <div v-loading="dataTable_loading" class="main main_novw" style="height: 800px;">
+      <el-table :data="TaskList" border style="width: 100%" height="100%">
              <!-- <el-table-column align="center" label="卡ID" class="mainCell1">
                <template v-slot="scope">
                  <span class="ml10">{{ scope.row.cardId }}</span>
