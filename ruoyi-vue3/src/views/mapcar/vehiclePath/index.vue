@@ -12,7 +12,7 @@
              />
            </div>
            <div class="ArrivalTime">
-             <p>到达时间：</p>
+             <p>上车时间：</p>
              <el-date-picker
                v-model="listQuery.searcher.arriveTime"
                type="datetimerange"
@@ -22,7 +22,7 @@
              />
            </div>
            <div class="StartTime">
-             <p>离开时间：</p>
+             <p>下车时间：</p>
              <el-date-picker
                v-model="listQuery.searcher.leaveTime"
                type="datetimerange"
@@ -31,7 +31,7 @@
                end-placeholder="结束日期"
              />
            </div>
- 
+
            <div class="State">
              <p>库区：</p>
              <el-select
@@ -75,7 +75,7 @@
                  <i class="el-icon-refresh" />
                </el-button>
              </el-popover>
- 
+
            </div>
          </div>
          <div v-loading="dataTable_loading" class="main main_novw">
@@ -91,19 +91,19 @@
                  <span v-else class="ml10">-</span>
                </template>
              </el-table-column> -->
-             <el-table-column align="center" label="到达时间">
+             <el-table-column align="center" label="上车时间">
                <template v-slot="scope">
                  <span v-if="scope.row.startTime">{{ scope.row.startTime }}</span>
                  <span v-else class="ml10">-</span>
                </template>
              </el-table-column>
-             <el-table-column align="center" label="离开时间">
+             <el-table-column align="center" label="下车时间">
                <template v-slot="scope">
                  <span v-if="scope.row.endTime">{{ scope.row.endTime  }}</span>
                  <span v-else>-</span>
                </template>
              </el-table-column>
-             <el-table-column align="center" label="停留时间" width="120px">
+             <el-table-column align="center" label="时间间隔" width="120px">
                <template v-slot="scope">
                  <!-- <span :style="getTimeColor(scope.row.startTime, scope.row.endTime)" v-text="stopTimeLength(scope.row.duration)" /> -->
                   <span>{{ scope.row.duration }}</span>
@@ -117,14 +117,14 @@
                  <span v-else>-</span>
                </template>
              </el-table-column>
-          
+
              <el-table-column align="center" label="类型" width="100px">
                <template v-slot="scope">
                  <span v-text="getcartype(scope.row.type)">
                  </span>
                </template>
              </el-table-column>
- 
+
              <el-table-column align="center" label="状态" width="80px">
                <template v-slot="scope">
                  <span>
@@ -174,7 +174,7 @@
      <div401 />
    </div>
  </template>
- 
+
  <script setup>
   import div401 from '@/views/error/401.vue'
   import { getexperimentlist } from '@/api/mapcar.js'
@@ -208,7 +208,7 @@
     //   partitionNames:'示例1',
     //   positionCodes:1,
     //   getcartype:1,
-    //   recordStatusFun:1, 
+    //   recordStatusFun:1,
     //   vehicleColor:1,
     //   positionCodes:1,
     //   recordThirdId:1
@@ -217,7 +217,7 @@
   ])
   const dataTable_loading = ref(false)
   const ReservoirAreaData = ref([]) // 搜索选择库区
-  const seares = ref(true) 
+  const seares = ref(true)
   //data return end
 
   onMounted(()=>{
@@ -330,7 +330,7 @@
   }
   //methods end
  </script>
- 
+
  <style scoped lang="scss">
  #body-box {
    // background-color: #04262b;
@@ -437,12 +437,12 @@
    //font-size: 13px;
    font-size: 14px;
  }
- 
+
  .CommercialVehicle ::v-deep .el-range-separator{
    //font-size: 13px;
    font-size: 14px;
  }
- 
+
  .CommercialVehicle ::v-deep .el-input__inner {
    // background: #001c20;
    height: 36px;
@@ -453,16 +453,16 @@
  .CommercialVehicle ::v-deep .el-input__inner::placeholder {
    color: #848c8e;
  }
- 
+
  .CommercialVehicle ::v-deep .el-date-editor .el-input__icon{
    line-height: 26px !important;
  }
- 
+
  .CommercialVehicle ::v-deep .el-date-editor .el-range-input {
    // background: #001c20;
    height: 33px;
    line-height: 33px;
- 
+
    color: #848c8e;
  }
  .CommercialVehicle ::v-deep .el-date-editor .el-range-input::placeholder {
@@ -488,11 +488,11 @@
    flex-direction: row;
    flex-wrap: wrap;
  }
- 
+
  .LibraryLocationName .el-input {
    height: 36px;
    width: 161px;
- 
+
  }
  .StartTime {
    height: 36px;
@@ -553,7 +553,7 @@
    line-height: 35px;
    font-size:16px;
  }
- 
+
  .TopRight {
    height: 36px;
    float: right;
@@ -576,10 +576,10 @@
      .el-popover__reference-wrapper{
        .littesea{
          width: 20px;
- 
+
        }
        .el-icon-search{
- 
+
        }
      }
    }
@@ -608,7 +608,7 @@
  .main ::v-deep .el-table--enable-row-hover .el-table__body tr:hover > td {
    background-color: inherit;
  }
- 
+
  .main ::v-deep .el-table thead {
    color: #bac1c3;
  }
@@ -633,7 +633,7 @@
  .el-table::before {
    height: 0;
  }
- 
+
  .main_novw .el-table{
    height: 100%;
    ::v-deep{
@@ -653,11 +653,11 @@
          background-color: transparent !important;
        }
      }
- 
+
      td:nth-child(3){
        white-space: pre-wrap;
        text-align: left;
- 
+
        .cell{
          padding-left: 10px !important;
          display: -webkit-box;
@@ -666,7 +666,7 @@
          overflow: hidden;
          text-overflow: ellipsis;
        }
- 
+
      }
      .el-table__header-wrapper{
        .el-table__header{
@@ -698,14 +698,14 @@
  }
  //任务列表结束
  //翻页开始
- 
+
  .pagination-container ::v-deep .el-pagination {
    display: flex;
    flex-direction: row;
    justify-content: flex-end;
    // color: #b2bcc9;
  }
- 
+
  .pagination-container
    ::v-deep
    .el-pagination.is-background
@@ -714,9 +714,9 @@
    // background-color: #83c346;
    // color: #cddebf;
    background-color: #274df9;;
- 
+
  }
- 
+
  ::v-deep  .el-pagination  .el-input__inner {
    // background: #04262b;
    // border: 1px solid #465663;
@@ -725,5 +725,4 @@
  }
  //翻页结束
  </style>
- 
- 
+
