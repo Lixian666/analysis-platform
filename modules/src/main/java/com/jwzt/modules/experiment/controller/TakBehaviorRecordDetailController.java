@@ -61,7 +61,7 @@ public class TakBehaviorRecordDetailController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('experiment:detail:list')")
     @RequestMapping("/listByUserId")
-    public TableDataInfo listAllByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail)
+    public TableDataInfo listAllByUserId(@RequestBody TakBehaviorRecordDetail takBehaviorRecordDetail)
     {
 //        startPage();
         TakBehaviorRecords takBehaviorRecords = new TakBehaviorRecords();

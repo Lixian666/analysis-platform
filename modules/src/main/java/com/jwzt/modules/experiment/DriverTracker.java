@@ -89,7 +89,7 @@ public class DriverTracker {
                         takBehaviorRecords.setState("完成");
                         takBehaviorRecords.setTakBehaviorRecordDetailList(takBehaviorRecordDetailList);
                         iTakBehaviorRecordsService.insertTakBehaviorRecords(takBehaviorRecords);
-                         iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
+                        iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
 //                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
 //                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
 //                        }
@@ -188,13 +188,13 @@ public class DriverTracker {
 
     public static List<LocationPoint> processWithAnchorData(JSONArray points, String data) {
         List<LocationPoint> LocationPoints = new ArrayList<>();
-        if (data.equals("minhang")){
+        if (data.equals("rtk")){
             for (int i = 0; i < points.size(); i++) {
                 LocationPoint point = points.getObject(i, LocationPoint.class);
                 point.setTimestamp(DateTimeUtils.convertToTimestamp(point.getAcceptTime()));
                 LocationPoints.add(point);
             }
-        } else if (data.equals("yuzui")){
+        } else if (data.equals("other")){
             for (int i = 0; i < points.size(); i++) {
                 try {
                     if (i==10777){

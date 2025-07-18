@@ -49,8 +49,11 @@ class Application {
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
                 if (FilterConfig.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
-                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
+                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\data_clean_points.shp");
                 }
+                cardId = String.valueOf(entry.getKey());
+                // 开始行为分析
+                tracker.handleNewRawPoint(newPoints);
                 // 开始行为分析
 //                for (LocationPoint point : newPoints) {
 //                    tracker.handleNewRawPoint(tracker, point);

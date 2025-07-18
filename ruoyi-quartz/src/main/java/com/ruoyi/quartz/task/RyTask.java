@@ -27,16 +27,17 @@ public class RyTask
     private DriverTracker tracker;
     public void driverTracker()
     {
-        String data = FilePathConfig.YUZUI;
+        String data = FilePathConfig.RTK;
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
-        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250710.json";
+//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250710.json";
+        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250710定位卡63856RTK.json";
         JSONObject jsonObject = JsonUtils.loadJson(file);
         JSONArray points = jsonObject.getJSONArray("data");
         List<LocationPoint> LocationPoints = DriverTracker.processWithAnchorData(points, data);
         // 按卡号分组
-        if (data.equals("minhang")){
+        if (data.equals("rtk")){
             Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
                     .collect(Collectors.groupingBy(LocationPoint::getCardId));
             for (Map.Entry<Integer, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
@@ -46,15 +47,18 @@ public class RyTask
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
                 if (FilterConfig.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
-                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
+                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
                 }
+                DriverTracker.cardId = String.valueOf(entry.getKey());
+                // 开始行为分析
+                tracker.handleNewRawPoint(newPoints);
 //                DriverTracker tracker = new DriverTracker();
                 // 开始行为分析
 //                for (LocationPoint point : newPoints) {
 //                    tracker.handleNewRawPoint(tracker, point);
 //                }
             }
-        } else if (data.equals("yuzui")){
+        } else if (data.equals("other")){
             Map<String, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
                     .collect(Collectors.groupingBy(LocationPoint::getCardUUID));
             for (Map.Entry<String, List<LocationPoint>> entry : groupedByCardId.entrySet()) {

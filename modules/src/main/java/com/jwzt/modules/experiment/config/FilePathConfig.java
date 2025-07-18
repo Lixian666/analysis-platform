@@ -7,6 +7,9 @@ public class FilePathConfig {
     public static final String MINHANG = "minhang";
     public static final String YUZUI = "yuzui";
 
+    public static final String RTK = "rtk";
+    public static final String OTHER = "other";
+
     // 货场区域
     private static final Map<String, List<String>> DRIVING_ZONE_PATHS = new HashMap<>();
     // 停车区域
