@@ -9,92 +9,194 @@
       </div>
     </div> -->
     <!-- 商品车信息开始 -->
-    <div class="TopTaskInformationBox TopTaskInformationBox_novw TaskInformation1">
-      <p class="TaskInformation TaskInformation_novw">车辆信息</p>
-      <el-table v-if="assignmentRecords.length>0" :data="assignmentRecords" border style="width: 100%">
-        <el-table-column align="center" label="上车时间">
-               <template v-slot="scope">
-                 <span v-if="scope.row.startTime">{{ scope.row.startTime }}</span>
-                 <span v-else class="ml10">-</span>
-               </template>
-             </el-table-column>
-             <el-table-column align="center" label="下车时间">
-               <template v-slot="scope">
-                 <span v-if="scope.row.endTime">{{ scope.row.endTime  }}</span>
-                 <span v-else>-</span>
-               </template>
-             </el-table-column>
-             <el-table-column align="center" label="时间间隔" width="120px">
-               <template v-slot="scope">
-                 <!-- <span :style="getTimeColor(scope.row.startTime, scope.row.endTime)" v-text="stopTimeLength(scope.row.duration)" /> -->
-                  <span>{{ scope.row.duration }}</span>
-               </template>
-             </el-table-column>
-             <el-table-column align="center" label="点数量">
-               <template v-slot="scope">
-                 <span v-if="scope.row.pointCount">
-                   {{ scope.row.pointCount }}
-                 </span>
-                 <span v-else>-</span>
-               </template>
-             </el-table-column>
+    <div class="activelist">
+      <p class="">路径信息</p>
+      <el-table 
+        :data="assignmentRecords" 
+        style="width: 100%" 
+        ref="eltableRef"
+        @selection-change="handleSelectionChange"
+      >
 
-             <el-table-column align="center" label="类型" width="100px">
-               <template v-slot="scope">
-                 <span v-text="getcartype(scope.row.type)">
-                 </span>
-               </template>
-             </el-table-column>
+        <el-table-column type="selection" width="35" />
+        <el-table-column align="center" label="名称">
+          <template v-slot="scope">
+            <span>路线{{ scope.$index + 1 }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="到达时间">
+          <template v-slot="scope">
+            <span v-if="scope.row.startTime">{{ scope.row.startTime.split(' ')[1] }}</span>
+            <span v-else class="ml10">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="离开时间">
+          <template v-slot="scope">
+            <span v-if="scope.row.endTime">{{ scope.row.endTime.split(' ')[1]  }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
 
-             <el-table-column align="center" label="状态" width="80px">
-               <template v-slot="scope">
-                 <span>
-                   {{ scope.row.state }}
-                 </span>
-               </template>
-             </el-table-column>
+        <el-table-column align="center" label="停留时间" width="120px">
+          <template v-slot="scope">
+            
+            <span>{{ scope.row.duration }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column  align="center" label="颜色" width="50px">
+          <template v-slot="scope">
+            <div class="block" :style="'background-color:'+scope.row.color+';'"></div>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="类型" width="100px">
+          <template v-slot="scope">
+            <span v-text="getcartype(scope.row.type)">
+            </span>
+          </template>
+        </el-table-column>
+        <!-- <el-table-column align="center" label="操作" width="55">
+          <template v-slot="scope">
+            <el-button
+              type="text"
+              size="mini"
+              @click="handleEdit(scope.row.cardId,scope.row.id)"
+              >详情</el-button>
+          </template>
+        </el-table-column> -->
       </el-table>
+      
+
+
+      <!-- <el-table v-if="assignmentRecords.length>0" :data="assignmentRecords" border style="width: 100%">
+        <el-table-column align="center" label="到达时间">
+          <template v-slot="scope">
+            <span v-if="scope.row.startTime">{{ scope.row.startTime }}</span>
+            <span v-else class="ml10">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="离开时间">
+          <template v-slot="scope">
+            <span v-if="scope.row.endTime">{{ scope.row.endTime  }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="停留时间" width="120px">
+          <template v-slot="scope">
+            <span :style="getTimeColor(scope.row.startTime, scope.row.endTime)" v-text="stopTimeLength(scope.row.duration)" />
+            <span>{{ scope.row.duration }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="点数量">
+          <template v-slot="scope">
+            <span v-if="scope.row.pointCount">
+              {{ scope.row.pointCount }}
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+    
+        <el-table-column align="center" label="类型" width="100px">
+          <template v-slot="scope">
+            <span v-text="getcartype(scope.row.type)">
+            </span>
+          </template>
+        </el-table-column>
+
+        <el-table-column align="center" label="状态" width="80px">
+          <template v-slot="scope">
+            <span>
+              {{ scope.row.state }}
+            </span>
+          </template>
+        </el-table-column>
+      </el-table>  -->
     </div>
-    <!-- 商品车信息 -->
-    <el-tabs v-model="activeName" class="el-tabs_novw" @tab-click="clicktab">
 
-      <el-tab-pane label="轨迹回放" name="2" />
-
-    </el-tabs>
-    <!-- 行驶轨迹 -->
-    <div class="activeName" v-if="activeName == 2" >
-      <div class="TopTaskInformationBox_novw" style="height: 100%;">
+    <div class="activeName"  >
+      <div class="" style="height: 100%;">
         <carline :list="cargoline" ref="carlineRef"/>
       </div>
     </div>
-    <!-- 行驶轨迹 -->
-    <!-- 轨迹回放 -->
 
-    <!-- 轨迹回放 -->
-    <!-- 其他信息 -->
+    <!-- 修改滑块部分 -->
+    <div class="time-axis-container" v-if="dwShow">
+    
 
-    <!-- 其他信息 -->
 
+      <!-- 移动到这里的时间颗粒度控制按钮组 -->
+      <div style="margin-left: 10px">
+        <el-button-group>
+          <el-button size="small" icon="ZoomIn" @click="zoomInTimeGranularity" title="放大时间颗粒度"></el-button>
+          <el-button size="small" icon="ZoomOut" @click="zoomOutTimeGranularity" title="缩小时间颗粒度"></el-button>
+          <el-button size="small" icon="Refresh" @click="resetTimeGranularity" title="还原"></el-button>
+        </el-button-group>
+      </div>
+
+  
+
+      <div class="time-axis-wrapper" ref="zWidth">
+        <div class="time-axis" style="height: 100%;" :style="{ width: totalWidth + 'px' }" ref="timeAxis">
+
+          <!-- <div class="pushpinno" style="position: absolute; border-bottom: 45px solid aquamarine;"
+               :style="{width: '10px', height: '50px', left: `${position.xL}px`}" @mousedown="startDragL">
+          </div> -->
+          <div class="timeblock" >
+            <div v-for="item in assignmentRecords" :class="item.boxshaw?'shaw':''" :style="'background-color:'+item.color+';width:'+getWidth(item)+';left:'+getLeft(item)+'px;'"></div>
+          </div>
+          <div class="timecard" width="100%">
+            <div
+              v-for="(timeBlock, index) in processedTimeList"
+              :key="index"
+              class="time-block"
+              :class="{ 'has-activity': timeBlock.data > 0 }"
+              :style="{
+                  width: timeBlockWidth + 'px',
+                  minWidth: timeBlockWidth + 'px'
+                }"
+              :data-time="timeBlock.value"
+            >
+              <div class="time-label" v-if="shouldShowLabel(index)">
+                {{ timeBlock.showTime }}
+              </div>
+              <div class="time-marker"></div>
+            </div>
+          </div>
+
+          <!-- <div class="pushpinno" style="position: absolute; border-bottom: 45px solid red;"
+               :style="{width: '10px', height: '50px', left: `${position.xR}px`}"
+               @mousedown="startDragR">
+          </div> -->
+
+
+        </div>
+      </div>
+    </div>
+ 
   </div>
   <div v-else>
     <div401 />
   </div>
  </template>
-
+ 
  <script setup>
   import div401 from '@/views/error/401.vue'
-  import { onMounted, ref, nextTick } from "vue"
+  import { onMounted, ref, nextTick, computed } from "vue"
   import carline from '@/components/mars3D/carline.vue'
-  import { getexperimentdetail, getexperimentid} from '@/api/mapcar.js'
+  import { getlistByUserId } from '@/api/mapcar.js'
+  import { get } from '@vueuse/core'
   const route = useRoute()
   const router = useRouter()
   //data return start
   const cargoline = ref(null)
-  const activeName = ref('2')
   const listQuery = ref({
     page: 1,
     limit: 10
   })
+
+  const starttime = ref( '00:00:00')
+  const endtime = ref('00:00:00')
+
+  const eltableRef = ref(null)
   const assignmentRecords = ref([])
   const TaskInformation = ref([])// 商品车
   const TrackData = ref([])
@@ -103,7 +205,56 @@
   const partitionIdName = ref('')
   const positionName = ref('')
   const carlineRef = ref(null)
+  const dwShow = ref(true)
+  const timeGranularity = ref(1800) // 最大0.5小时
+  const minTimeGranularity = ref(30) // 最小30秒
+  const maxTimeGranularity = ref(1800) // 最大0.5小时
+  const dateTime = ref('')
+  const dateTimeLIst = ref([])
+  const isUserTriggered = ref(false)
+  
+  const timeGranularityLevels = ref( [1800, 900, 60]) // 1小时、30分钟、15分钟、1分钟
+  const currentGranularityIndex = ref(0)
+  const timeblock = ref('<div></div><div></div>')
+
+  const timeBlockWidth = ref(120)
+  const minBlockWidth = ref(30)
+  const maxBlockWidth = ref(120)
+  const timeS = ref(0)
+  const sliderStep = ref(0.1) // 添加更小的步进值
+  const totalSteps = ref(144) // 12小时 * 12个刻度(5分钟一个刻度)
+  const changeDataTimer = ref(null)
+  const position = ref({xL: 0, xR: 100}) // 初始位置
+  const draggingL = ref(false) // 是否正在拖动
+  const draggingR = ref(false) // 是否正在拖动
+  const offset = ({xL: 0, xR: 100}) // 偏移量
+  const queryParams = ref({
+    dzwl: true,
+  })
   //data return end
+  
+  //computed start
+  const totalWidth = computed(() => {
+    return processedTimeList.value.length * timeBlockWidth.value;
+  })
+  const processedTimeList = computed(() => {
+   // if (!dateTimeLIst.value.length) return [];
+    let time = getCurrentDate()
+    dateTime.value = time
+    const startTime = new Date(dateTime.value + 'T09:00:00');
+    const endTime = new Date(dateTime.value + 'T21:00:00');
+    const result = [];
+    for (let time = startTime; time <= endTime; time = new Date(time.getTime() + timeGranularity.value * 1000)) {
+      const timeString = time.toTimeString().substr(0, 8);
+      result.push({
+        value: timeString,
+        showTime: formatTimeLabel(time),
+        data: getActivityData(timeString)
+      });
+    }
+    return result;
+  })
+  //computed end
 
   onMounted(()=>{
     init()
@@ -111,7 +262,6 @@
 
   //methods start
   function getcartype(val){
-    console.log('a',val)
     let data = val
     if (data === 0) {
       data = '到达卸车'
@@ -131,44 +281,281 @@
     return data
   }
   async function init(){
-    let vid = route.query.vehicleThirdId
-    let res = await getexperimentdetail(vid)
-    console.log((res.code == '200' || res.code == 200) , res.rows,'aaaaa',res)
+    let vid ={
+      cardId: route.query.vehicleThirdId
+    } 
+    let jsonvid = JSON.stringify(vid)
+    let res = await getlistByUserId(jsonvid)
     if((res.code == '200' || res.code == 200) && res.rows){
-
-      let list = res.rows
+      let list = JSON.stringify(res.rows) 
+      let array = JSON.parse(list) 
+      starttime.value = gettime(position.value.xL)
+      endtime.value = gettime(position.value.xR)
+      for (let index = 0; index < array.length; index++) {
+        const element = array[index];
+        element.color =  getRandomHexColor()
+        element.boxshaw = true
+      }
+     assignmentRecords.value = array
       nextTick(()=>{
-        console.log('carlineRef.value',carlineRef.value)
-        carlineRef.value.initMap(list)
+        assignmentRecords.value.forEach(row => {
+          isUserTriggered.value = false; // 明确不是用户操作
+          eltableRef.value.toggleRowSelection(row, true)
+        })
+        carlineRef.value.initMap(array)
+        isUserTriggered.value = true; // 明确不是用户操作
       })
     }
-    let id = route.query.id
-    let resd = await getexperimentid(id)
-    if((resd.code == '200' || resd.code == 200) && resd.data){
-      assignmentRecords.value.push(resd.data)
-      console.log(assignmentRecords.value)
-    }
-
-
+    // let id = route.query.id
+    // let resd = await getexperimentid(id)
+    // if((resd.code == '200' || resd.code == 200) && resd.data){
+    //   assignmentRecords.value.push(resd.data) 
+    // }
   }
+
+  
+  function handleSelectionChange(selection){
+    if(!isUserTriggered.value){return}
+    nextTick(()=>{
+      // console.log(selection)
+      carlineRef.value.delmars()
+      carlineRef.value.initdraw(selection)
+      const exclude = [];
+      selection.forEach((item)=>{
+        exclude.push(item.id)
+      })
+      assignmentRecords.value.forEach(item => {
+        item.boxshaw= exclude.includes(item.id) ? true : false
+      });
+      selection.sort((a, b) => {
+        const timeA = new Date(a.createTime).getTime();
+        const timeB = new Date(b.createTime).getTime();
+        return timeA - timeB; // 降序排列
+      });
+      let leftto = 0
+      if(selection.length>0){
+        leftto = getLeft(selection[0]) 
+      }
+      document.getElementsByClassName('time-axis-wrapper')[0].scrollTo({
+        top: 0,
+        left: leftto,
+        behavior: 'smooth'
+      });
+    })
+  }
+
 
   function diagnosisRoles(text){
     return true
   }
-  function clicktab(){
 
+  function getWidth(item){
+    let start = item.startTime.split(' ')[1]
+    let endrt = item.endTime.split(' ')[1]
+    let leftpx1 = (getsecond(start)-getsecond('09:00:00'))/(getsecond('21:00:00')-getsecond('09:00:00'))*(  totalWidth.value - timeBlockWidth.value) 
+    let leftpx2 = (getsecond(endrt)-getsecond('09:00:00'))/(getsecond('21:00:00')-getsecond('09:00:00'))*(  totalWidth.value - timeBlockWidth.value) 
+    return leftpx2 - leftpx1 + 'px'
+  }
+  function getLeft(item){
+    let start = item.startTime.split(' ')[1]
+    let leftpx = (getsecond(start)-getsecond('09:00:00'))/(getsecond('21:00:00')-getsecond('09:00:00'))*(  totalWidth.value - timeBlockWidth.value) 
+    return leftpx
+  }
+
+  function zoomInTimeGranularity() {
+    if (starttime.value == '00:00:00' && endtime.value == '00:00:00') {
+      return
+    }
+    if(queryParams.value.timeS === 2){
+      return;
+    }
+    if (currentGranularityIndex.value < timeGranularityLevels.value.length - 1) {
+      currentGranularityIndex.value++;
+      timeGranularity.value = timeGranularityLevels.value[currentGranularityIndex.value];
+      timeS.value = currentGranularityIndex.value;
+      queryParams.value.timeS = currentGranularityIndex.value;
+      // 根据时间粒度调整块宽度
+      switch (timeGranularity.value) {
+        // case 3600: // 1小时
+        //   timeBlockWidth.value = 120;
+        //   break;
+        case 1800: // 30分钟
+          timeBlockWidth.value = 90;
+          break;
+        case 900: // 15分钟
+          timeBlockWidth.value = 60;
+          break;
+        case 60: // 1分钟
+          timeBlockWidth.value = 60;
+          break;
+      }
+      nextTick(() => {
+        //getPosiTionList(queryParams.value.idCard, false)
+        position.value.xL = getleft(getmatSeconds(starttime.value))
+        position.value.xR = getleft(getmatSeconds(endtime.value))
+      });
+    }
+  }
+  function zoomOutTimeGranularity() {
+    if (starttime.value == '00:00:00' && endtime.value == '00:00:00') {
+      return
+    }
+    if (currentGranularityIndex.value > 0) {
+      currentGranularityIndex.value--;
+      timeGranularity.value = timeGranularityLevels.value[currentGranularityIndex.value];
+      timeS.value = currentGranularityIndex.value;
+      queryParams.value.timeS = currentGranularityIndex.value;
+      // 根据时间粒度调整块宽度
+      switch (timeGranularity.value) {
+        // case 3600: // 1小时
+        //   timeBlockWidth.value = 120;
+        //   break;
+        case 1800: // 30分钟
+          timeBlockWidth.value = 90;
+          break;
+        case 900: // 15分钟
+          timeBlockWidth.value = 60;
+          break;
+        case 60: // 1分钟
+          timeBlockWidth.value = 30;
+          break;
+      }
+      nextTick(() => {
+        // scrollToCenterTime(centerTime);
+        // changeData(value.value);
+        position.value.xL = getleft(getmatSeconds(starttime.value))
+        position.value.xR = getleft(getmatSeconds(endtime.value))
+      });
+    }
+  }
+
+  function resetTimeGranularity() {
+    if (starttime.value == '00:00:00' && endtime.value == '00:00:00') {
+      return
+    }
+    currentGranularityIndex.value = 0;
+    timeGranularity.value = timeGranularityLevels.value[0]; // 重置为1小时
+    timeBlockWidth.value = 90;
+    timeS.value = 0;
+    queryParams.value.timeS = 0;
+
+    nextTick(() => {
+      // getPosiTionList(queryParams.value.idCard, false)
+      // scrollToCurrentTime();
+      // changeData(this.value);
+      position.value.xL = getleft(getmatSeconds(starttime.value))
+      position.value.xR = getleft(getmatSeconds(endtime.value))
+    });
+  }
+
+  function formatTimeLabel(date) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    // 始终返回完整时间格式
+    return `${hours}:${minutes}`;
+  }
+
+  function gettime(time) {
+    let leftpx = time - (- 10)
+    let xx = 43200 * leftpx / (totalWidth.value -timeBlockWidth.value)
+    return formatSeconds(xx)
+  }
+
+  function formatSeconds(seconds) {
+    let hours = Math.floor(seconds / 3600) + 9; // 计算小时
+    let minutes = Math.floor((seconds % 3600) / 60); // 计算分钟
+    let secs = parseInt(seconds % 60); // 计算秒数
+    // 补零操作，确保格式始终是两位数
+    return [hours, minutes, secs].map(unit => String(unit).padStart(2, '0')).join(':');
+  }
+
+  function getActivityData(timeString) {
+    //const timeData = dateTimeLIst.value.find(item => (getsecond(item.createTime.split(' ')[1])-getsecond(timeString)>0&&getsecond(item.createTime.split(' ')[1])-getsecond(timeString) < timeGranularity.value));
+    const timeData = dateTimeLIst.value.find(item => (gethms(item.recordTime)-getsecond(timeString)>0&&gethms(item.recordTime)-getsecond(timeString) < timeGranularity.value));
+    return timeData ? 1:0//timeData.data : 0;
+  }
+  function getCurrentDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    let month = now.getMonth() + 1;
+    month = month.toString().padStart(2, '0')
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function getRandomHexColor() {
+    const color = '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+    return color+'ff';
+  }
+  
+  function shouldShowLabel(index) {
+    // 修改为始终返回 true，显示所有时间刻度
+    return true;
+  }
+
+  function gethms(time){
+    let newdate = new Date(time)
+    //return newdate.getHours()+':'+newdate.getMinutes()+':'+newdate.getSeconds()
+    return Number(newdate.getSeconds()) + Number(newdate.getMinutes())*60 + Number(newdate.getHours())*60*60
+  }
+
+  function getsecond(val){
+    let aaa = val.split(':')
+    return Number(aaa[2]) + Number(aaa[1])*60 + Number(aaa[0])*60*60
+
+  }
+  function getmatSeconds(str) {
+    const [hours, minutes, seconds] = str.split(":").map(Number);
+    return (hours - 9) * 3600 + minutes * 60 + seconds;
+  }
+  
+  function getleft(second) {
+    let pers = second / 43200
+    let leftpx = pers * (totalWidth.value - timeBlockWidth.value) + (- 10)
+    return leftpx
+  }
+  //methods end
+ </script>
+ 
+ <style scoped lang="scss">
+ #body-box {
+  height:  calc(100vh - 84px);
+  overflow: hidden;
+  .activelist{
+    width: 545px;
+    height: calc(100% - 90px);
+  //  background-color: #03b311;
+    float: left;
+    overflow: hidden;
+    overflow-y: scroll;
+  }
+
+  .block{
+    width: 30px;
+    height: 20px;
   }
 
 
-  //methods end
- </script>
-
- <style scoped lang="scss">
- #body-box {
-  height:  calc(100vh - 84px);;
  .activeName{
-  height: calc(100% - 250px);
- }
+    width: calc(100% - 550px);
+    height: calc(100% - 90px);
+   // background-color: red;
+    float: right;
+  }
+  .time-axis-container{
+    //margin-top: calc(250px);
+    width: 100%;
+    height: 80px;
+   // margin-top: 20px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    position: absolute;
+    bottom:0;
+    padding: 0;
+    overflow: visible; // 允许内容溢出显示
+
+  }
   // background: #04262b; //黑版
   // min-height: 976px;
   // position: relative;
@@ -273,29 +660,9 @@
     }
   }
 }
-// 商品车信息开始
-.TopTaskInformationBox {
-  padding: 10px 33px 0;
-}
-.TaskInformation {
 
-  color: #333333;
-  //color: #848c8e; //黑版
 
-  padding: 0 0 0 10px;
 
-  //border-left: 3px solid #8acc48; //黑版
-}
-.TaskInformation_novw{
-  font-size: 17px;
-  height: 18px;
-  line-height: 18px;
-  border-left: 4px solid #405dae;
-}
-
-// .TopTaskInformationBox ::v-deep .el-table {
-//   background: #04262b; //黑版
-// }
 .TopTaskInformationBox ::v-deep .el-table th {
   background: #f8f9fb;
   //background: #04262b; //黑版
@@ -328,35 +695,6 @@
   text-align: center;
   // background: #04262b; //黑版
 }
-// .TopTaskInformationBox
-//   ::v-deep
-//   .el-table--enable-row-hover
-//   .el-table__body
-//   tr:hover
-//   > td {
-//   background-color: #04262b; //黑版
-// }
-// .TaskInformation1 ::v-deep colgroup col:nth-of-type(1) {
-//   width: 196px !important;
-// }
-// .TaskInformation1 ::v-deep colgroup col:nth-of-type(2) {
-//   width: 230px !important;
-// }
-// .TaskInformation1 ::v-deep colgroup col:nth-of-type(3) {
-//   width: 230px !important;
-// }
-// .TaskInformation1 ::v-deep colgroup col:nth-of-type(4) {
-//   width: 140px !important;
-// }
-// .TaskInformation1 ::v-deep colgroup col:nth-of-type(5) {
-//   width: 140px !important;
-// }
-// .TaskInformation1 ::v-deep colgroup col:nth-of-type(6) {
-//   width: 140px !important;
-// }
-// .TaskInformation1 ::v-deep colgroup col:nth-of-type(7) {
-//   width: 140px !important;
-// }
 
 .TopTaskInformationBox{
   ::v-deep {
@@ -372,46 +710,6 @@
         color: #222222;
         font-weight: 400;
         text-align: center;
-      }
-    }
-  }
-}
-
-.TopTaskInformationBox_novw{
-  padding: 10px 33px 0;
-  ::v-deep {
-    .el-table {
-      th,td,tr{
-        font-size: 14px;
-        height: 44px !important;
-        line-height: unset !important;
-        .cell{
-          padding:0 !important;
-        }
-      }
-      tr:hover{
-        background-color: #f3f5f8 !important;
-        td{
-          background-color: transparent !important;
-        }
-      }
-      .el-table__header-wrapper{
-        .el-table__header{
-          th{
-            padding: 4.098px 0;
-            background: #eff3fb;
-            font-size: 15px;
-            color: #222222;
-          }
-        }
-      }
-      .el-table__body-wrapper{
-        .el-table__body{
-          td{
-            padding: 4.098px 0;
-            height: 2.732px;
-          }
-        }
       }
     }
   }
@@ -608,5 +906,172 @@
     }
   }
 }
- </style>
 
+.time-axis-container {
+    width: 100%;
+    height: 80px;
+    margin-top: 20px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    position: relative;
+    padding: 0;
+    overflow: visible; // 允许内容溢出显示
+  }
+
+  .time-axis-wrapper {
+    width: 100%;
+    height: 50px;
+    overflow-x: auto;
+    overflow-y: visible; // 允许垂直方向内容溢出
+    padding: 0 30px ;
+
+    position: absolute; // 添加定位上下文
+    bottom: 0;
+    z-index: 1; // 确保正确的层叠顺序
+   
+  }
+
+  .time-axis {
+
+
+    position: relative;
+
+    // height: 40px;
+    // transition: all 0.3s ease;
+    // margin: 0 20px;
+    //
+    .timecard {
+      position: absolute;
+      align-items: center;
+      display: flex;
+      height: 100%;
+    
+    }
+    .timeblock{
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      .shaw{
+        box-shadow: 0 0 5px 2px #636363;
+      }
+      div{
+        position: absolute;
+        width: 200px;
+        height: 100%;
+        //background-color: #03b31122;
+      }
+    }
+  }
+
+  .time-block {
+    position: relative;
+    flex-shrink: 0;
+    height: 20px;
+    border-left: 1px solid #ddd;
+    transition: all 0.3s ease;
+    // margin-top: 15px;
+
+    &.has-activity {
+      background-color: rgba(82, 196, 26, 0.2);
+    }
+
+    .time-label {
+      position: absolute;
+      top: 0px;
+      // left: 50%;
+      transform: translateX(-50%); // 添加45度旋转
+      font-size: 12px;
+      color: #666;
+      white-space: nowrap;
+      z-index: 1;
+      transform-origin: center;
+      margin-top: -5px; // 向上调整位置
+    }
+
+    .time-marker {
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1px;
+      height: 20px;
+      background-color: #999;
+    }
+  }
+  .time-block:last-child{
+    .time-marker{
+      width: 0;
+    }
+  }
+
+  // 移除渐变效果，因为现在所有内容都在灰条内
+  .time-axis-wrapper::before,
+  .time-axis-wrapper::after {
+    display: none;
+  }
+
+  /* 优化滑块样式 */
+  ::v-deep .el-slider {
+    &__runway {
+      height: 4px;
+      margin: 16px 0;
+    }
+
+    &__bar {
+      height: 4px;
+      background-color: #409EFF;
+    }
+
+    &__button {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #409EFF;
+      background-color: #fff;
+      transition: transform 0.1s ease;
+
+      &:hover, &.hover {
+        transform: scale(1.2);
+      }
+
+      &:active, &.active {
+        transform: scale(1.1);
+      }
+    }
+
+    &__stop {
+      width: 2px;
+      height: 4px;
+    }
+
+    &__marks {
+      font-size: 12px;
+      color: #909399;
+    }
+  }
+
+  /* 添加loading遮罩样式 */
+  .loading-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .pushpinno {
+    z-index: 99999;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 45px solid transparent; //#00bfff;
+    transform: rotate(180deg);
+  }
+ </style>
+ 
+ 

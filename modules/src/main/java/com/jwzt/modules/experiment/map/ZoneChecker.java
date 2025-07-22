@@ -28,6 +28,15 @@ public class ZoneChecker {
     }
 
     /**
+     * 是否在货场停车区域
+     */
+    public boolean isInParking2RoadZone(LocationPoint p) {
+        Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
+        List<String> shpPaths = FilePathConfig.getParking2RoadZonePaths(yard);
+        return GeoUtils.isInsideShp(newCoordinate, shpPaths);
+    }
+
+    /**
      * 是否在货场货运线区域
      */
     public boolean isInHuoyunxinZone(LocationPoint p) {
