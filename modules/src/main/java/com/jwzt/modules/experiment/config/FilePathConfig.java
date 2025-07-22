@@ -12,6 +12,8 @@ public class FilePathConfig {
 
     // 货场区域
     private static final Map<String, List<String>> DRIVING_ZONE_PATHS = new HashMap<>();
+    // 停车区域-道路区域
+    private static final Map<String, List<String>> PARKING_2_ROAD_ZONE_PATHS = new HashMap<>();
     // 停车区域
     private static final Map<String, List<String>> PARKING_ZONE_PATHS = new HashMap<>();
     // 道路区域
@@ -42,6 +44,11 @@ public class FilePathConfig {
                 "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴库区\\kuqu.shp",
                 "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线\\huoyunxian.shp"
         ));
+
+        PARKING_2_ROAD_ZONE_PATHS.put(YUZUI, Arrays.asList(
+                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴道路\\daolu.shp",
+                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴库区\\kuqu.shp"
+        ));
         PARKING_ZONE_PATHS.put(YUZUI, Collections.singletonList(
                 "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴库区\\kuqu.shp"
         ));
@@ -55,6 +62,10 @@ public class FilePathConfig {
 
     public static List<String> getDrivingZonePaths(String yard) {
         return DRIVING_ZONE_PATHS.getOrDefault(yard, Collections.emptyList());
+    }
+
+    public static List<String> getParking2RoadZonePaths(String yard) {
+        return PARKING_2_ROAD_ZONE_PATHS.getOrDefault(yard, Collections.emptyList());
     }
 
     public static List<String> getParkingZonePaths(String yard) {
