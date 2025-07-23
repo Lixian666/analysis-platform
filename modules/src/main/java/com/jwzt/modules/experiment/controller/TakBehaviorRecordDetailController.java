@@ -78,7 +78,6 @@ public class TakBehaviorRecordDetailController extends BaseController
         for (TakBehaviorRecords record : RecordsList){
             List<TakBehaviorRecordDetail> details = grouped.get(record.getTrackId());
             record.setTakBehaviorRecordDetailList(details);
-
         }
         return getDataTable(RecordsList);
     }

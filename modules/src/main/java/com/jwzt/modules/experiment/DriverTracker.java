@@ -70,6 +70,7 @@ public class DriverTracker {
                         List<LocationPoint> subPoints = points.subList(boarding_idx,  i + (recordPointsSize / 2));
                         for (LocationPoint point : subPoints){
                             TakBehaviorRecordDetail takBehaviorRecordDetail = new TakBehaviorRecordDetail();
+                            takBehaviorRecordDetail.setCardId(cardId);
                             takBehaviorRecordDetail.setTrackId(UUID);
                             takBehaviorRecordDetail.setRecordTime(new Date(point.getTimestamp()));
                             takBehaviorRecordDetail.setTimestampMs(point.getTimestamp());
@@ -144,8 +145,8 @@ public class DriverTracker {
         System.out.println("📤 检测完成");
     }
     public void handleNewRawPoint(List<LocationPoint> points) {
-        iTakBehaviorRecordsService.deleteByCreationTime("2025-07-11 16:00:00");
-        iTakBehaviorRecordDetailService.deleteByCreationTime("2025-07-11 16:00:00");
+        iTakBehaviorRecordsService.deleteByCreationTime("2025-07-22 16:00:00");
+        iTakBehaviorRecordDetailService.deleteByCreationTime("2025-07-22 16:00:00");
         List<LocationPoint> normalPoints = new ArrayList<>();
         for (LocationPoint rawPoint : points){
             int state = outlierFilter.isValid(rawPoint);
