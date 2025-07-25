@@ -8,12 +8,16 @@ import com.jwzt.modules.experiment.vo.EventState;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.jwzt.modules.experiment.config.FilterConfig.ADJACENT_POINTS_TIME_INTERVAL_MS;
+import static com.jwzt.modules.experiment.config.FilterConfig.IDENTIFY_IDENTIFY_TIME_INTERVAL_MS;
+
 /**
  * 上下车识别器
  */
 public class BoardingDetector {
 
-    private static final String HUOCHANG = FilePathConfig.YUZUI;
+    private static final String HUOCHANG = FilePathConfig.HUOCHANG;
+    ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
 
     public enum Event {
         NONE,
@@ -30,6 +34,8 @@ public class BoardingDetector {
     private Event currentEvent = Event.NONE;
     private LocationPoint curPoint = null;
 
+    private EventState  lastEventState = new EventState();
+
 
     public EventState updateState(List<LocationPoint> recordPoints){
         Event result = Event.NONE;;
@@ -37,16 +43,34 @@ public class BoardingDetector {
         List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, FilterConfig.RECORD_POINTS_SIZE / 2);
         LocationPoint currentPoint = recordPoints.get(FilterConfig.RECORD_POINTS_SIZE / 2);
         List<LocationPoint> theLastTenPoints = recordPoints.subList(recordPoints.size() - (FilterConfig.RECORD_POINTS_SIZE / 2), recordPoints.size());
-        ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
         // 判断是否在货运线区域（发运下车区域）
         boolean isTheFreightLineArea = zoneChecker.isInHuoyunxinZone(currentPoint);
         // 判断是否在停车区域（发运上车区域）
         boolean isnParkingArea = zoneChecker.isInParkingZone(currentPoint);
+        if (currentPoint.getAcceptTime().equals("2025-07-10 10:45:48.000")){
+            System.out.println("触发断点");
+        }
+        if (currentPoint.getAcceptTime().equals("2025-07-10 16:22:18.000")){
+            System.out.println("触发断点");
+        }
+        if (currentPoint.getAcceptTime().equals("2025-07-10 16:26:47.000")){
+            System.out.println("触发断点");
+        }
         // 判断上移流程是否超时
-        if (curPoint != null && currentPoint.getTimestamp() - curPoint.getTimestamp() > 300000) {
+        if (curPoint != null && currentPoint.getTimestamp() - curPoint.getTimestamp() > ADJACENT_POINTS_TIME_INTERVAL_MS) {
             // 重置状态
             lastEvent = Event.NONE;
             currentEvent = Event.NONE;
+            curPoint = null;
+            return new EventState(currentEvent, currentPoint.getTimestamp(),1);
+        }
+        // 两个状态之间的时间间隔
+        if (IDENTIFY_IDENTIFY_TIME_INTERVAL_MS > 0
+                && lastEvent == Event.NONE
+                && lastEventState.getTimestamp() > 0
+                && (currentPoint.getTimestamp() - lastEventState.getTimestamp()) < IDENTIFY_IDENTIFY_TIME_INTERVAL_MS){
+            curPoint = null;
+            return new EventState(Event.NONE, currentPoint.getTimestamp(),2);
         }
         if (currentPoint.getAcceptTime().equals("2025-07-05 10:52:28.000")){
             System.out.println("触发断点");
@@ -93,6 +117,7 @@ public class BoardingDetector {
                 curPoint = currentPoint;
                 lastEvent = Event.ARRIVED_BOARDING;
                 currentEvent = Event.ARRIVED_BOARDING;
+                lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(),currentPoint.getAcceptTime());
                 return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
@@ -138,6 +163,7 @@ public class BoardingDetector {
                 System.out.println("⚠️ 检测到到达已下车");
                 lastEvent = Event.NONE;
                 currentEvent = Event.ARRIVED_DROPPING;
+                lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(),currentPoint.getAcceptTime());
                 return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
@@ -182,6 +208,7 @@ public class BoardingDetector {
                 curPoint = currentPoint;
                 lastEvent = Event.SEND_BOARDING;
                 currentEvent = Event.SEND_BOARDING;
+                lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(),currentPoint.getAcceptTime());
                 return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
@@ -211,7 +238,7 @@ public class BoardingDetector {
                 System.out.println("⚠️ 检测到发运已下车");
                 lastEvent = Event.NONE;
                 currentEvent = Event.SEND_DROPPING;
-                result = currentEvent;
+                lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(),currentPoint.getAcceptTime());
                 return new EventState(currentEvent, currentPoint.getTimestamp());
             }
         }
