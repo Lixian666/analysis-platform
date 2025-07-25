@@ -4,7 +4,11 @@ public class FilterConfig {
 
     // 功能开关
     public static final boolean IS_STAY_VERIFY = false;         // 是否进行停留点验证
+
+    // 调试使用配置
     public static final boolean IS_OUTPUT_SHP = true;       // 是否输出定位点shp文件
+    public static final String DELETE_DATETIME = "2025-07-25 11:00:00";
+
 
     // 行为识别配置
     public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
@@ -21,7 +25,6 @@ public class FilterConfig {
     public static final int ADJACENT_POINTS_TIME_INTERVAL_MS = 1000000;   // 相邻点位时间间隔 （毫秒）  0：不进行时间间隔判定
     public static final int IDENTIFY_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 上下车识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
 
-    public static final String DELETE_DATETIME = "2025-07-25 11:00:00";
 
     // 上下车识别配置
     public static final int WINDOW_SIZE = 5; // 数据缓存大小
