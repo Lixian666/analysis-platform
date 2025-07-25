@@ -6,6 +6,7 @@ public class FilePathConfig {
 
     public static final String MINHANG = "minhang";
     public static final String YUZUI = "yuzui";
+    public static final String HUOCHANG = YUZUI;
 
     public static final String RTK = "rtk";
     public static final String OTHER = "other";

@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.jwzt.modules.experiment.config.FilterConfig.DELETE_DATETIME;
+
 @Service
 public class DriverTracker {
     OutlierFilter outlierFilter = new OutlierFilter();
@@ -55,6 +57,11 @@ public class DriverTracker {
         for (int i = 0; i <= points.size() - recordPointsSize; i++) {
             List<LocationPoint> recordPoints = points.subList(i, i + recordPointsSize);
             EventState eventState = detector.updateState(recordPoints);
+            if (eventState.getState() == 1){
+                boardingTime = null;
+            } else if (eventState.getState() == 2) {
+                boardingTime = null;
+            }
             switch (eventState.getEvent()) {
                 case ARRIVED_BOARDING:
                     if (boardingTime == null){
@@ -145,8 +152,8 @@ public class DriverTracker {
         System.out.println("📤 检测完成");
     }
     public void handleNewRawPoint(List<LocationPoint> points) {
-        iTakBehaviorRecordsService.deleteByCreationTime("2025-07-22 16:00:00");
-        iTakBehaviorRecordDetailService.deleteByCreationTime("2025-07-22 16:00:00");
+        iTakBehaviorRecordsService.deleteByCreationTime(DELETE_DATETIME);
+        iTakBehaviorRecordDetailService.deleteByCreationTime(DELETE_DATETIME);
         List<LocationPoint> normalPoints = new ArrayList<>();
         for (LocationPoint rawPoint : points){
             int state = outlierFilter.isValid(rawPoint);
@@ -198,9 +205,6 @@ public class DriverTracker {
         } else if (data.equals("other")){
             for (int i = 0; i < points.size(); i++) {
                 try {
-                    if (i==10777){
-                        System.out.println(i);
-                    }
                     LocationPoint1 point = points.getObject(i, LocationPoint1.class);
                     LocationPoint locationPoint = new LocationPoint();
                     locationPoint.setCardUUID(point.getRecordThirdId());

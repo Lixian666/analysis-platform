@@ -25,16 +25,31 @@ public class RyTask
 {
     @Autowired
     private DriverTracker tracker;
+
     public void driverTracker()
     {
-        String data = FilePathConfig.RTK;
+        String data = null;
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250710.json";
-        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250710定位卡63856RTK.json";
+//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250710定位卡63856RTK.json";
+        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250724.json";
         JSONObject jsonObject = JsonUtils.loadJson(file);
         JSONArray points = jsonObject.getJSONArray("data");
+        if (points != null && !points.isEmpty()) {
+            JSONObject firstObj = points.getJSONObject(0);
+            if (firstObj.containsKey("trajectoryId")) {
+                // 存在 trajectoryId
+                data = FilePathConfig.OTHER;
+            } else {
+                // 不存在 trajectoryId
+                data = FilePathConfig.RTK;
+            }
+        }
+        if (data == null){
+            return;
+        }
         List<LocationPoint> LocationPoints = DriverTracker.processWithAnchorData(points, data);
         // 按卡号分组
         if (data.equals("rtk")){

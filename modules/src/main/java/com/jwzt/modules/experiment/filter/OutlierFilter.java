@@ -27,7 +27,8 @@ public class OutlierFilter {
     private Deque<LocationPoint> window = new ArrayDeque<>();
     private static final double MAX_DEVIATION_SPEEDUP = 7.0;  //允许的偏差
     private static final double ANGLE_THRESHOLD = 150.0; //角度阈值
-    private static final String HUOCHANG = FilePathConfig.YUZUI;
+    private static final String HUOCHANG = FilePathConfig.HUOCHANG;
+    ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
 
 
 
@@ -71,7 +72,6 @@ public class OutlierFilter {
         double distance = GeoUtils.distanceM(newCoordinate, lastCoordinate);
         long timeDiff = newPoint.getTimestamp() - lastPoint.getTimestamp();
 
-        ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
 //         时间间隔太小
         if (timeDiff < FilterConfig.MIN_TIME_INTERVAL_MS) {
             lastPoint = newPoint;

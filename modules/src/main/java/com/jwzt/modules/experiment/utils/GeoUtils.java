@@ -198,6 +198,57 @@ public class GeoUtils {
     }
 
     /**
+     * 将shp文件变成Geometry
+     * @param shpFilePaths
+     * @return
+     */
+    public static List<Geometry> loadGeometries(List<String> shpFilePaths) {
+        List<Geometry> geometryList = new ArrayList<>();
+        for (String path : shpFilePaths) {
+            File file = new File(path);
+            if (!file.exists()) continue;
+
+            try {
+                ShapefileDataStore store = (ShapefileDataStore) FileDataStoreFinder.getDataStore(file);
+                if (store == null) continue;
+
+                SimpleFeatureSource featureSource = store.getFeatureSource();
+                try (SimpleFeatureIterator features = featureSource.getFeatures().features()) {
+                    while (features.hasNext()) {
+                        SimpleFeature feature = features.next();
+                        Object geomObj = feature.getDefaultGeometry();
+                        if (geomObj instanceof Geometry) {
+                            geometryList.add((Geometry) geomObj);
+                        }
+                    }
+                }
+                store.dispose();
+            } catch (Exception e) {
+                System.err.println("读取 shp 文件失败：" + path);
+                e.printStackTrace();
+            }
+        }
+        return geometryList;
+    }
+
+    /**
+     * 判断点是否在多个Geometry中的任意一个多边形内
+     * @param coordinate
+     * @param geometries
+     * @return
+     */
+    public static boolean isInsideGeometry(Coordinate coordinate, List<Geometry> geometries) {
+        if (coordinate == null || geometries == null || geometries.isEmpty()) return false;
+        Point point = geometryFactory.createPoint(new org.locationtech.jts.geom.Coordinate(coordinate.getLongitude(), coordinate.getLatitude()));
+        for (Geometry geom : geometries) {
+            if (geom.covers(point)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * 判断点是否在多个shp文件中的任意一个多边形内
      * @param coordinate
      * @param shpFilePaths

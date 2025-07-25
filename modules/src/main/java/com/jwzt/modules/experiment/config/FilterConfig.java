@@ -17,11 +17,17 @@ public class FilterConfig {
     public static final int MIN_TIME_INTERVAL_MS = 1000; // 最小时间间隔 （毫秒）
     public static final int WINDOW_STATE_SIZE = 2;      // 行为状态识别窗口大小
 
+    // 时间间隔配置
+    public static final int ADJACENT_POINTS_TIME_INTERVAL_MS = 1000000;   // 相邻点位时间间隔 （毫秒）  0：不进行时间间隔判定
+    public static final int IDENTIFY_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 上下车识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
+
+    public static final String DELETE_DATETIME = "2025-07-25 11:00:00";
+
     // 上下车识别配置
     public static final int WINDOW_SIZE = 5; // 数据缓存大小
 
-    public static final int NUMBER = 5;
-    public static final int NUMBER1 = 3;
+    public static final int NUMBER = 3;
+    public static final int NUMBER1 = 1;
 
     public static final int ARRIVED_BEFORE_UP_STATE_SIZE = NUMBER;        // 到达上车识别判定标签数
     public static final int ARRIVED_AFTER_UP_STATE_SIZE = NUMBER;     // 到达下车识别判定标签数
@@ -33,8 +39,8 @@ public class FilterConfig {
     public static final int SEND_BEFORE_DOWN_STATE_SIZE = NUMBER;        // 发运上车识别判定标签数
     public static final int SEND_AFTER_DOWN_STATE_SIZE = NUMBER;     // 发运下车识别判定标签数
 
-    public static final int STOPPED_STATE_SIZE = NUMBER1;       // 停车识别判定标签数
-    public static final int DRIVING_STATE_SIZE = NUMBER1;       // 行驶识别判定标签数
+    public static final int STOPPED_STATE_SIZE = 1;       // 停车识别判定标签数
+    public static final int DRIVING_STATE_SIZE = 2;       // 行驶识别判定标签数
 
     public static final int RECORD_POINTS_SIZE = 31;        // 上下车识别窗口大小
 
