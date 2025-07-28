@@ -12,7 +12,7 @@
              />
            </div>
            <div class="ArrivalTime">
-             <p>到达时间：</p>
+             <p>开始时间：</p>
              <el-date-picker
                v-model="listQuery.searcher.arriveTime"
                type="datetimerange"
@@ -22,7 +22,7 @@
              />
            </div>
            <div class="StartTime">
-             <p>离开时间：</p>
+             <p>结束时间：</p>
              <el-date-picker
                v-model="listQuery.searcher.leaveTime"
                type="datetimerange"
