@@ -7,6 +7,6 @@ echo.
 cd %~dp0
 
 cd ..
-yarn dev
+npm run dev
 
 pause
