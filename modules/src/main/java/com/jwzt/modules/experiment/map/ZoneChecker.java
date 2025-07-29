@@ -37,6 +37,8 @@ public class ZoneChecker {
         zoneGeometries.put("huoyunxin", GeoUtils.loadGeometries(FilePathConfig.getHuoyunxinZonePaths(yard)));
         zoneGeometries.put("parking", GeoUtils.loadGeometries(FilePathConfig.getParkingZonePaths(yard)));
         zoneGeometries.put("road", GeoUtils.loadGeometries(FilePathConfig.getRoadZonePaths(yard)));
+        zoneGeometries.put("huoyunxinzyt", GeoUtils.loadGeometries(FilePathConfig.getHuoyunxinZytZonePaths(yard)));
+        zoneGeometries.put("huoyunxinjc", GeoUtils.loadGeometries(FilePathConfig.getHuoyunxinJcZonePaths(yard)));
     }
 
     /**
@@ -72,6 +74,20 @@ public class ZoneChecker {
      */
     public boolean isInRoadZone(LocationPoint p) {
         return GeoUtils.isInsideGeometry(new Coordinate(p.getLongitude(), p.getLatitude()), zoneGeometries.get("road"));
+    }
+
+    /**
+     * 是否在货场货运线-作业台区域
+     */
+    public boolean isInHuoyunxinZytZone(LocationPoint p) {
+        return GeoUtils.isInsideGeometry(new Coordinate(p.getLongitude(), p.getLatitude()), zoneGeometries.get("huoyunxinzyt"));
+    }
+
+    /**
+     * 是否在货场货运线-J车区域
+     */
+    public boolean isInHuoyunxinJcZone(LocationPoint p) {
+        return GeoUtils.isInsideGeometry(new Coordinate(p.getLongitude(), p.getLatitude()), zoneGeometries.get("huoyunxinjc"));
     }
 
 //    public ZoneChecker(String yard) {

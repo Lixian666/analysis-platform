@@ -21,6 +21,10 @@ public class FilePathConfig {
     private static final Map<String, List<String>> ROAD_ZONE_PATHS = new HashMap<>();
     // 货运线区域
     private static final Map<String, List<String>> HUOYUNXIN_ZONE_PATHS = new HashMap<>();
+    // 货运线区域-作业台
+    private static final Map<String, List<String>> HUOYUNXINZYT_ZONE_PATHS = new HashMap<>();
+    // 货运线区域-J车
+    private static final Map<String, List<String>> HUOYUNXINJC_ZONE_PATHS = new HashMap<>();
 
     static {
         // 闵行配置
@@ -59,6 +63,12 @@ public class FilePathConfig {
         HUOYUNXIN_ZONE_PATHS.put(YUZUI, Collections.singletonList(
                 "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线\\huoyunxian.shp"
         ));
+        HUOYUNXINZYT_ZONE_PATHS.put(YUZUI, Collections.singletonList(
+                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线作业台\\huoyunxianzyt.shp"
+        ));
+        HUOYUNXINJC_ZONE_PATHS.put(YUZUI, Collections.singletonList(
+                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线J车\\huoyunxianjc.shp"
+        ));
     }
 
     public static List<String> getDrivingZonePaths(String yard) {
@@ -79,5 +89,13 @@ public class FilePathConfig {
 
     public static List<String> getHuoyunxinZonePaths(String yard) {
         return HUOYUNXIN_ZONE_PATHS.getOrDefault(yard, Collections.emptyList());
+    }
+
+    public static List<String> getHuoyunxinZytZonePaths(String yard) {
+        return HUOYUNXINZYT_ZONE_PATHS.getOrDefault(yard, Collections.emptyList());
+    }
+
+    public static List<String> getHuoyunxinJcZonePaths(String yard) {
+        return HUOYUNXINJC_ZONE_PATHS.getOrDefault(yard, Collections.emptyList());
     }
 }

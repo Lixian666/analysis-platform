@@ -5,9 +5,39 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 import java.time.Duration;
+import java.util.Calendar;
 import java.util.Date;
 
 public class DateTimeUtils {
+
+    /**
+     * 在指定时间字符串上增加指定秒数
+     * @param str 原始时间字符串，例如 "2025-07-24 08:36:42:000"
+     * @param seconds 要增加的秒数
+     * @return 增加后的时间字符串，格式保持为 "yyyy-MM-dd HH:mm:ss:SSS"
+     * @throws Exception
+     */
+    public static String addSeconds(String str, int seconds){
+        // 替换最后一个冒号为点，方便SimpleDateFormat解析
+        String formattedStr = str.replaceFirst(":(\\d{3})$", ".$1");
+        Date date = null;
+        // 解析时间
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        try {
+            date = sdf.parse(formattedStr);
+        }catch (Exception e){
+            date = new Date();
+        }
+
+        // 使用 Calendar 增加秒数
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.add(Calendar.SECOND, seconds);
+
+        // 再转回原始格式
+        String result = sdf.format(cal.getTime()).replace(".", ":");
+        return result;
+    }
 
     public static String calculateTimeDifference(long timestamp1, long timestamp2) {
         long diffMillis = Math.abs(timestamp2 - timestamp1);
