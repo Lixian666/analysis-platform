@@ -189,6 +189,7 @@ public class DriverTracker {
         for (int i = 0; i < LocationPoints.size(); i++){
             LocationPoint point = LocationPoints.get(i);
             coordinates.add(new Coordinate(point.getLongitude(), point.getLatitude(), DateTimeUtils.convertToTimestamp(point.getAcceptTime())));
+//            coordinates.add(new Coordinate(point.getLongitude(), point.getLatitude(), DateTimeUtils.convertToTimestamp(point.getAcceptTime())));
         }
         // 写入shp文件 输出坐标点图层
         ShapefileWriter.writeCoordinatesToShapefile(coordinates, shpFilePath);
