@@ -31,7 +31,8 @@ public class ShapefileWriter {
             typeBuilder.setCRS(DefaultGeographicCRS.WGS84); // WGS84经纬度坐标
             typeBuilder.add("the_geom", Point.class);
             typeBuilder.add("id", Integer.class); // 可以添加更多属性
-            typeBuilder.add("timestamp", String.class); // 时间字段
+            typeBuilder.add("time", String.class); // 时间字段
+            typeBuilder.add("timestamp", Long.class); // 时间字段
             final SimpleFeatureType TYPE = typeBuilder.buildFeatureType();
 
             // 2. 创建 FeatureCollection
@@ -46,7 +47,7 @@ public class ShapefileWriter {
                 featureBuilder.add(i); //
                 String timeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timestamp);
                 featureBuilder.add(timeString); // 加入时间字符串
-//                featureBuilder.add(timestamp); // 时间
+                featureBuilder.add(c.getTimestamp()); // 时间
                 SimpleFeature feature = featureBuilder.buildFeature(null);
                 collection.add(feature);
             }

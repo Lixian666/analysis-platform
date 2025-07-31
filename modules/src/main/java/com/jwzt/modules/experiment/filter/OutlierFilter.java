@@ -224,7 +224,6 @@ public class OutlierFilter {
                 LocationPoint curr = corrected.get(i);
                 LocationPoint p4 = corrected.get(i + 1);
                 LocationPoint p5 = corrected.get(i + 2);
-                System.out.println(curr.getAcceptTime() + " " + i);
                 if (FilterConfig.IS_STAY_VERIFY && curr.getIsStay()) continue;
 
                 double dist1 = distance(p2, curr);

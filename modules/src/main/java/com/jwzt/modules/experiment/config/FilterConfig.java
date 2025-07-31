@@ -7,7 +7,7 @@ public class FilterConfig {
 
     // 调试使用配置
     public static final boolean IS_OUTPUT_SHP = true;       // 是否输出定位点shp文件
-    public static final String DELETE_DATETIME = "2025-07-25 11:00:00";
+    public static final String DELETE_DATETIME = "2025-07-30 11:00:00";
 
 
     // 行为识别配置
