@@ -120,31 +120,91 @@
   function initMap(newlist) {
     arrayList.value = newlist
     // mars3d初始化
-    map.value = new mars3d.Map('mars3dContainer', {
-      scene: {
-        center: proxy.$center,
-        showSun: true,
-        showMoon: true,
-        showSkyBox: true,
-        showSkyAtmosphere: false, // 关闭球周边的白色轮廓 map.scene.skyAtmosphere = false
-        fog: true,
-        fxaa: false,//优化，抗锯齿关闭效果好点
-        globe: {
-          showGroundAtmosphere: false, // 关闭大气（球表面白蒙蒙的效果）
-          depthTestAgainstTerrain: false,
-          baseColor: '#546a53'
-        },
-        mapProjection: mars3d.CRS.EPSG3857, // 2D下展示墨卡托投影
-        mapMode2D: Cesium.MapMode2D.INFINITE_SCROLL,// 2D下左右一直可以滚动重复世界地图
-        resolutionScale: 0.8,//优化
-        contextOptions: {//优化
-          webgl: {
-            antialias: false
-          }
-        },
-        msaaSamples: 8,//优化
-      }
-    })
+    // 第一步：先创建 Map 实例（不立即设置 msaaSamples）
+// 第一步：创建地图实例
+map.value = new mars3d.Map('mars3dContainer', {
+  center: proxy.$center,
+
+  scene: {
+    showSun: true,
+    showMoon: true,
+    showSkyBox: true,
+    showSkyAtmosphere: false,
+    fog: true,
+    fxaa: true, // 开启 FXAA 抗锯齿
+    globe: {
+      showGroundAtmosphere: false,
+      depthTestAgainstTerrain: false,
+      baseColor: '#546a53'
+    },
+    mapProjection: mars3d.CRS.EPSG3857,
+    mapMode2D: Cesium.MapMode2D.INFINITE_SCROLL
+  },
+
+  contextOptions: {
+    webgl: {
+      antialias: false // 由我们控制抗锯齿
+    }
+  },
+
+  resolutionScale: 0.8
+  // msaaSamples 先不设置，动态检测后再赋值
+});
+
+// 第二步：获取 viewer 实例（map.value 就是 viewer）
+const viewer = map.value;
+
+// 使用 viewer.scene 的 postRender 事件（确保 scene 已初始化）
+// 使用 once = true，只执行一次
+const removeListener = viewer.scene.postRender.addEventListener(() => {
+  try {
+    const context = viewer.scene.context;
+    const gl = context?._gl;
+
+    if (!gl) {
+      console.warn('WebGL context 未就绪');
+      setMsaaSamples(1);
+      removeListener(); // 移除监听
+      return;
+    }
+
+    // 检查是否支持多采样渲染缓冲
+    const ext = gl.getExtension('WEBGL_multisampled_renderbuffer');
+    if (!ext) {
+      console.warn('当前环境不支持 WEBGL_multisampled_renderbuffer');
+      setMsaaSamples(1);
+      removeListener();
+      return;
+    }
+
+    // 获取最大支持的采样数
+    const maxSamples = gl.getParameter(ext.MAX_SAMPLES_WEBGL);
+    console.log('设备最大支持的 MSAA 采样数:', maxSamples);
+
+    // 安全设置：取 min(4, maxSamples)
+    const safeSamples = Math.min(4, maxSamples > 0 ? maxSamples : 1);
+
+    // 设置 MSAA 采样数
+    setMsaaSamples(safeSamples);
+
+  } catch (error) {
+    console.error('检测 MSAA 支持失败:', error);
+    setMsaaSamples(1);
+  }
+
+  // 执行完成后移除监听
+  removeListener();
+});
+
+// 封装设置 msaaSamples 的函数，避免重复代码
+function setMsaaSamples(samples) {
+  try {
+    viewer.scene.msaaSamples = samples;
+    console.log(`✅ 已设置 MSAA 采样数: ${samples}`);
+  } catch (e) {
+    console.warn('设置 msaaSamples 失败:', e);
+  }
+}
     // 矢量地图倾斜摄影加载
     addTileLayer()
     camerahistory()

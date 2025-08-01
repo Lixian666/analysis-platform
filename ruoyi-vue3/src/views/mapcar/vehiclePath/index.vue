@@ -164,7 +164,7 @@
              </el-table-column>
            </el-table>
          </div>
-         <div class="paging">
+         <!-- <div class="paging">
            <pagination
              v-show="listQuery.total != 0"
              :total="listQuery.total"
@@ -172,13 +172,13 @@
              :limit="listQuery.limit"
              @pagination="getPagination"
            />
-         </div>
+         </div> -->
 
-     <add-assignment
+     <!-- <add-assignment
        v-show="dialogVisible"
        ref="addAssignmentFrom"
        @refreshDataList="search()"
-     />
+     /> -->
    </div>
    <div v-else id="body-box">
      <div401 />
