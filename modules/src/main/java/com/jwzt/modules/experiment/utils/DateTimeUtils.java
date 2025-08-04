@@ -39,6 +39,13 @@ public class DateTimeUtils {
         return result;
     }
 
+    /**
+     * 计算两个时间戳之间的时间差
+     * @param timestamp1 时间戳1
+     * @param timestamp2 时间戳2
+     * @return 时间差，格式为 "天 时:分:秒.毫秒"
+     */
+
     public static String calculateTimeDifference(long timestamp1, long timestamp2) {
         long diffMillis = Math.abs(timestamp2 - timestamp1);
         Duration duration = Duration.ofMillis(diffMillis);
@@ -68,6 +75,11 @@ public class DateTimeUtils {
         return result.toString();
     }
 
+    /**
+     * 将时间戳转换为日期时间字符串
+     * @param dateTimeStr 时间字符串
+     * @return 日期时间字符串
+     */
     public static long convertToTimestamp(String dateTimeStr) {
         // 先尝试修复错误格式（比如形如 2025-07-05 09:34:14:000）
         int lastColonIndex = dateTimeStr.lastIndexOf(':');
@@ -104,8 +116,23 @@ public class DateTimeUtils {
 //        return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 //    }
 
+    /**
+     *  时间戳转日期时间字符串
+     * @param timestamp
+     * @return
+     */
     public static String timestampToDateTimeStr(long timestamp) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return sdf.format(new Date(timestamp));
+    }
+
+    /**
+     *  时间戳转日期字符串
+     * @param timestamp
+     * @return
+     */
+    public static String timestampToDateStr(long timestamp) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         return sdf.format(new Date(timestamp));
     }
 }

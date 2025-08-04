@@ -7,6 +7,7 @@ import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
+import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.jwzt.modules.experiment.config.FilterConfig.OUTPUT_SHP_PATH;
 
 /**
  * 定时任务调度测试
@@ -29,14 +32,15 @@ public class RyTask
     public void driverTracker()
     {
         String data = null;
+        String date = "未获取到日期";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250710.json";
-//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250710定位卡63856RTK.json";
+//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250710定位卡63856RTK.json";1
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250724.json";
 //        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250729.json";
-        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\20250729.json";
+        String file = "D:\\PlatformData\\定位卡数据\\鱼嘴\\20250729.json";
         JSONObject jsonObject = JsonUtils.loadJson(file);
         JSONArray points = jsonObject.getJSONArray("data");
         if (points != null && !points.isEmpty()) {
@@ -48,11 +52,19 @@ public class RyTask
                 // 不存在 trajectoryId
                 data = FilePathConfig.RTK;
             }
+            if (firstObj.containsKey("recordTimeLength")){
+                // 存在 acceptTime
+                date = DateTimeUtils.timestampToDateStr(Long.parseLong(firstObj.getString("recordTimeLength")));
+            } else if (firstObj.containsKey("timestamp")) {
+                date = DateTimeUtils.timestampToDateStr(Long.parseLong(firstObj.getString("timestamp")));
+            }
         }
         if (data == null){
             return;
         }
         List<LocationPoint> LocationPoints = DriverTracker.processWithAnchorData(points, data);
+
+        String shpFilePath = OUTPUT_SHP_PATH + "/" + date + "/" + data + "/";
         // 按卡号分组
         if (data.equals("rtk")){
             Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
@@ -64,7 +76,7 @@ public class RyTask
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
                 if (FilterConfig.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
-                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
+                    DriverTracker.outputVectorFiles(newPoints,shpFilePath + "data_clean_points.shp");
                 }
                 DriverTracker.cardId = String.valueOf(entry.getKey());
                 // 开始行为分析
@@ -85,7 +97,7 @@ public class RyTask
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
                 if (FilterConfig.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
-                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
+                    DriverTracker.outputVectorFiles(newPoints,shpFilePath + "data_clean_points.shp");
                 }
                 DriverTracker.cardId = entry.getKey();
                 // 开始行为分析

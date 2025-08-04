@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.jwzt.modules.experiment.config.FilterConfig.DELETE_DATETIME;
+import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 @Service
 public class DriverTracker {
@@ -191,6 +192,7 @@ public class DriverTracker {
             coordinates.add(new Coordinate(point.getLongitude(), point.getLatitude(), DateTimeUtils.convertToTimestamp(point.getAcceptTime())));
 //            coordinates.add(new Coordinate(point.getLongitude(), point.getLatitude(), DateTimeUtils.convertToTimestamp(point.getAcceptTime())));
         }
+        ensureFilePathExists(shpFilePath);
         // 写入shp文件 输出坐标点图层
         ShapefileWriter.writeCoordinatesToShapefile(coordinates, shpFilePath);
     }
