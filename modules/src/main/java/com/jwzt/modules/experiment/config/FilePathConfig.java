@@ -8,8 +8,8 @@ public class FilePathConfig {
     public static final String YUZUI = "yuzui";
     public static final String HUOCHANG = YUZUI;
 
-    public static final String RTK = "rtk";
-    public static final String OTHER = "other";
+//    public static final String PATH = "";
+    public static final String BASE_PATH = "D:/PlatformData/shp";
 
     // 货场区域
     private static final Map<String, List<String>> DRIVING_ZONE_PATHS = new HashMap<>();
@@ -29,45 +29,45 @@ public class FilePathConfig {
     static {
         // 闵行配置
         DRIVING_ZONE_PATHS.put(MINHANG, Arrays.asList(
-                "D:\\work\\data\\shp\\minhang\\行车道路\\xingcdaolu.shp",
-                "D:\\work\\data\\shp\\minhang\\20250624库区\\kuqu.shp",
-                "D:\\work\\data\\shp\\minhang\\货运线\\huoyunxin.shp"
+                BASE_PATH + "/minhang/行车道路/xingcdaolu.shp",
+                BASE_PATH + "/minhang/20250624库区/kuqu.shp",
+                BASE_PATH + "/minhang/货运线/huoyunxin.shp"
         ));
         PARKING_ZONE_PATHS.put(MINHANG, Collections.singletonList(
-                "D:\\work\\data\\shp\\minhang\\20250624库区\\kuqu.shp"
+                BASE_PATH + "/minhang/20250624库区/kuqu.shp"
         ));
         ROAD_ZONE_PATHS.put(MINHANG, Collections.singletonList(
-                "D:\\work\\data\\shp\\minhang\\行车道路\\xingcdaolu.shp"
+                BASE_PATH + "/minhang/行车道路/xingcdaolu.shp"
         ));
         HUOYUNXIN_ZONE_PATHS.put(MINHANG, Collections.singletonList(
-                "D:\\work\\data\\shp\\minhang\\货运线\\huoyunxin.shp"
+                BASE_PATH + "/minhang/货运线/huoyunxin.shp"
         ));
 
         // 鱼嘴配置（根据你具体路径再补充）
         DRIVING_ZONE_PATHS.put(YUZUI, Arrays.asList(
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴道路\\daolu.shp",
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴库区\\kuqu.shp",
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线\\huoyunxian.shp"
+                BASE_PATH + "/yuzui/20250630鱼嘴道路/daolu.shp",
+                BASE_PATH + "/yuzui/20250630鱼嘴库区/kuqu.shp",
+                BASE_PATH + "/yuzui/20250630鱼嘴货运线/huoyunxian.shp"
         ));
 
         PARKING_2_ROAD_ZONE_PATHS.put(YUZUI, Arrays.asList(
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴道路\\daolu.shp",
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴库区\\kuqu.shp"
+                BASE_PATH + "/yuzui/20250630鱼嘴道路/daolu.shp",
+                BASE_PATH + "/yuzui/20250630鱼嘴库区/kuqu.shp"
         ));
         PARKING_ZONE_PATHS.put(YUZUI, Collections.singletonList(
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴库区\\kuqu.shp"
+                BASE_PATH + "/yuzui/20250630鱼嘴库区/kuqu.shp"
         ));
         ROAD_ZONE_PATHS.put(YUZUI, Collections.singletonList(
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴道路\\daolu.shp"
+                BASE_PATH + "/yuzui/20250630鱼嘴道路/daolu.shp"
         ));
         HUOYUNXIN_ZONE_PATHS.put(YUZUI, Collections.singletonList(
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线\\huoyunxian.shp"
+                BASE_PATH + "/yuzui/20250630鱼嘴货运线/huoyunxian.shp"
         ));
         HUOYUNXINZYT_ZONE_PATHS.put(YUZUI, Collections.singletonList(
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线作业台\\huoyunxianzyt.shp"
+                BASE_PATH + "/yuzui/20250630鱼嘴货运线作业台/huoyunxianzyt.shp"
         ));
         HUOYUNXINJC_ZONE_PATHS.put(YUZUI, Collections.singletonList(
-                "D:\\work\\data\\shp\\yuzui\\20250630鱼嘴货运线J车\\huoyunxianjc.shp"
+                BASE_PATH + "/yuzui/20250630鱼嘴货运线J车/huoyunxianjc.shp"
         ));
     }
 

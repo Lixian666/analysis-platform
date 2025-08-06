@@ -3,20 +3,25 @@ package com.ruoyi.quartz.task;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.jwzt.modules.experiment.DriverTracker;
+import com.jwzt.modules.experiment.config.BaseConfg;
 import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.LocationPoint;
+import com.jwzt.modules.experiment.domain.LocationPoint2;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.JsonUtils;
+import com.jwzt.modules.experiment.utils.third.ZQOpenApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.jwzt.modules.experiment.config.FilterConfig.OUTPUT_SHP_PATH;
+import static com.jwzt.modules.experiment.config.BaseConfg.OUTPUT_SHP_PATH;
+import static com.jwzt.modules.experiment.utils.third.ZQOpenApi.getListOfPoints;
 
 /**
  * 定时任务调度测试
@@ -28,6 +33,53 @@ public class RyTask
 {
     @Autowired
     private DriverTracker tracker;
+
+    public void driverTrackerZQ()
+    {
+        String data = BaseConfg.LOCATION_CARD_TYPE;
+        String date = "未获取到日期";
+
+//        JSONObject jsonObject = ZQOpenApi.getListOfCards();
+//        JSONArray points = jsonObject.getJSONArray("data");
+//        if (points != null && !points.isEmpty()) {
+//
+//        }
+        String cardId = "1918B3000BA3";
+        JSONObject jsonObject = JSONObject.parseObject(getListOfPoints(cardId, "209885"));
+        JSONArray points = jsonObject.getJSONArray("data");
+        List<LocationPoint> LocationPoints = new ArrayList<>();
+        for (int i = 0; i < points.size(); i++){
+            JSONObject js = (JSONObject) points.get(i);
+            JSONArray plist = js.getJSONArray("points");
+            for (int j = 0; j < plist.size(); j++){
+                LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                if (date.equals("未获取到日期")){
+                    date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                }
+                LocationPoint point1 = new LocationPoint(
+                        cardId,
+                        point.getLongitude(),
+                        point.getLatitude(),
+                        DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                        Long.parseLong(point.getTime()));
+                LocationPoints.add(point1);
+            }
+        }
+        String shpFilePath = OUTPUT_SHP_PATH + "/" + date + "/" + data + "/";
+        DriverTracker.cardId = "1918B3000BA3";
+        DriverTracker.shpFilePath = shpFilePath;
+        // 生成原始点位数据和时间序列清洗过的数据shp文件
+        DriverTracker.processWithAnchorDataZQ(LocationPoints, data);
+        // 再次根据点位、是否时间一样、是否漂移清洗数据
+        List<LocationPoint> newPoints = new OutlierFilter().fixTheData(LocationPoints);
+        if (BaseConfg.IS_OUTPUT_SHP){
+            //清洗过运动或停留数据后生成shp文件
+            DriverTracker.outputVectorFiles(newPoints,shpFilePath + "data_clean_points.shp");
+        }
+        // 开始行为分析
+        tracker.handleNewRawPoint(newPoints);
+
+    }
 
     public void driverTracker()
     {
@@ -47,10 +99,10 @@ public class RyTask
             JSONObject firstObj = points.getJSONObject(0);
             if (firstObj.containsKey("trajectoryId")) {
                 // 存在 trajectoryId
-                data = FilePathConfig.OTHER;
+                data = BaseConfg.OTHER;
             } else {
                 // 不存在 trajectoryId
-                data = FilePathConfig.RTK;
+                data = BaseConfg.RTK;
             }
             if (firstObj.containsKey("recordTimeLength")){
                 // 存在 acceptTime
@@ -74,11 +126,12 @@ public class RyTask
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (FilterConfig.IS_OUTPUT_SHP){
+                if (BaseConfg.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,shpFilePath + "data_clean_points.shp");
                 }
                 DriverTracker.cardId = String.valueOf(entry.getKey());
+                DriverTracker.shpFilePath = shpFilePath;
                 // 开始行为分析
                 tracker.handleNewRawPoint(newPoints);
 //                DriverTracker tracker = new DriverTracker();
@@ -95,11 +148,12 @@ public class RyTask
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (FilterConfig.IS_OUTPUT_SHP){
+                if (BaseConfg.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,shpFilePath + "data_clean_points.shp");
                 }
                 DriverTracker.cardId = entry.getKey();
+                DriverTracker.shpFilePath = shpFilePath;
                 // 开始行为分析
                 tracker.handleNewRawPoint(newPoints);
 //                for (LocationPoint point : newPoints) {

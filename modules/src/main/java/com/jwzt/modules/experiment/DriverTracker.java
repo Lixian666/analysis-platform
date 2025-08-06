@@ -2,6 +2,7 @@ package com.jwzt.modules.experiment;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.jwzt.modules.experiment.config.BaseConfg;
 import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.*;
@@ -22,7 +23,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.jwzt.modules.experiment.config.FilterConfig.DELETE_DATETIME;
+import static com.jwzt.modules.experiment.config.BaseConfg.DELETE_DATETIME;
 import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 @Service
@@ -47,6 +48,7 @@ public class DriverTracker {
 
     private static String UUID;
     public static String cardId;
+    public static String shpFilePath;
 
     private int boarding_idx = 0;
     private int dropping_idx = 0;
@@ -175,9 +177,9 @@ public class DriverTracker {
         }
         // 添加运动状态
         List<LocationPoint> newPoints = outlierFilter.stateAnalysis(normalPoints);
-        if (FilterConfig.IS_OUTPUT_SHP){
+        if (BaseConfg.IS_OUTPUT_SHP){
             // 生成空间异常、时间间隔异常、速度异常过滤后的shp文件
-            outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\final_points.shp");
+            outputVectorFiles(newPoints,shpFilePath + "final_points.shp");
         }
         // 行为分析
         this.onNewLocation(newPoints);
@@ -195,6 +197,17 @@ public class DriverTracker {
         ensureFilePathExists(shpFilePath);
         // 写入shp文件 输出坐标点图层
         ShapefileWriter.writeCoordinatesToShapefile(coordinates, shpFilePath);
+    }
+
+    public static List<LocationPoint> processWithAnchorDataZQ(List<LocationPoint> LocationPoints, String data) {
+        if (BaseConfg.IS_OUTPUT_SHP){
+            // 生成原始shp文件
+            outputVectorFiles(LocationPoints, shpFilePath + "origin_points.shp");
+            // 生成同时间间点清洗数据shp文件
+            List<LocationPoint> shpPoints = GeoUtils.processMultiplePointsPerSecond(LocationPoints);
+            outputVectorFiles(shpPoints, shpFilePath + "time_clean_points.shp");
+        }
+        return LocationPoints;
     }
 
     public static List<LocationPoint> processWithAnchorData(JSONArray points, String data) {
@@ -227,46 +240,14 @@ public class DriverTracker {
             }
         }
 
-        if (FilterConfig.IS_OUTPUT_SHP){
+        if (BaseConfg.IS_OUTPUT_SHP){
             // 生成原始shp文件
-            outputVectorFiles(LocationPoints,"D:\\work\\output\\yuzui\\origin_points.shp");
+            outputVectorFiles(LocationPoints, shpFilePath + "origin_points.shp");
             // 生成同时间间点清洗数据shp文件
             List<LocationPoint> shpPoints = GeoUtils.processMultiplePointsPerSecond(LocationPoints);
-            outputVectorFiles(shpPoints,"D:\\work\\output\\yuzui\\time_clean_points.shp");
+            outputVectorFiles(shpPoints, shpFilePath + "time_clean_points.shp");
         }
         return LocationPoints;
-
-//        // 按卡号分组
-//        if (data.equals("minhang")){
-//            Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
-//                    .collect(Collectors.groupingBy(LocationPoint::getCardId));
-//            for (Map.Entry<Integer, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
-//                // 取出一个卡号的所有点
-//                List<LocationPoint> pointsByCardId = entry.getValue();
-//                // 再次根据点位、是否时间一样、是否漂移清洗数据
-//                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-//                if (FilterConfig.IS_OUTPUT_SHP){
-//                    //清洗过运动或停留数据后生成shp文件
-//                    outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
-//                }
-//                return newPoints;
-//            }
-//        } else if (data.equals("yuzui")){
-//            Map<String, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
-//                    .collect(Collectors.groupingBy(LocationPoint::getCardUUID));
-//            for (Map.Entry<String, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
-//                // 取出一个卡号的所有点
-//                List<LocationPoint> pointsByCardId = entry.getValue();
-//                // 再次根据点位、是否时间一样、是否漂移清洗数据
-//                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-//                if (FilterConfig.IS_OUTPUT_SHP){
-//                    //清洗过运动或停留数据后生成shp文件
-//                    outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
-//                }
-//                return newPoints;
-//            }
-//        }
-//        return null;
     }
 
     public static String fixLeadingZero(String timeStr) {
@@ -293,9 +274,9 @@ public class DriverTracker {
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (FilterConfig.IS_OUTPUT_SHP){
+                if (BaseConfg.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
-                    outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\finish_clean_points.shp");
+                    outputVectorFiles(newPoints, shpFilePath + "finish_clean_points.shp");
                 }
                 DriverTracker tracker = new DriverTracker();
                 // 开始行为分析
@@ -311,9 +292,9 @@ public class DriverTracker {
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (FilterConfig.IS_OUTPUT_SHP){
+                if (BaseConfg.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
-                    outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
+                    outputVectorFiles(newPoints, shpFilePath + "data_clean_points.shp");
                 }
                 DriverTracker tracker = new DriverTracker();
                 cardId = entry.getKey();

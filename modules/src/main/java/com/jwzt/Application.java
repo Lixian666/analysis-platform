@@ -3,6 +3,7 @@ package com.jwzt;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.jwzt.modules.experiment.DriverTracker;
+import com.jwzt.modules.experiment.config.BaseConfg;
 import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.LocationPoint;
@@ -47,7 +48,7 @@ class Application {
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (FilterConfig.IS_OUTPUT_SHP){
+                if (BaseConfg.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\data_clean_points.shp");
                 }
@@ -67,7 +68,7 @@ class Application {
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (FilterConfig.IS_OUTPUT_SHP){
+                if (BaseConfg.IS_OUTPUT_SHP){
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
                 }
