@@ -1,5 +1,6 @@
 package com.jwzt.modules.experiment.filter;
 
+import com.jwzt.modules.experiment.config.BaseConfg;
 import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.Coordinate;
@@ -101,7 +102,7 @@ public class OutlierFilter {
         // 处理一秒内多个点的情况（使用中位数）
         List<LocationPoint> newPoints = GeoUtils.processMultiplePointsPerSecond(sortPoints);
         System.out.println("完成处理一秒内多个点的情况");
-        if (FilterConfig.IS_STAY_VERIFY){
+        if (BaseConfg.IS_STAY_VERIFY){
             // 检测停留点
             detectStayPoints(newPoints);
             // 修正停留区
@@ -224,7 +225,7 @@ public class OutlierFilter {
                 LocationPoint curr = corrected.get(i);
                 LocationPoint p4 = corrected.get(i + 1);
                 LocationPoint p5 = corrected.get(i + 2);
-                if (FilterConfig.IS_STAY_VERIFY && curr.getIsStay()) continue;
+                if (BaseConfg.IS_STAY_VERIFY && curr.getIsStay()) continue;
 
                 double dist1 = distance(p2, curr);
                 double dist2 = distance(curr, p4);
