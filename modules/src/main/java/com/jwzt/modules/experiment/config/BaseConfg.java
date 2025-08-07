@@ -6,8 +6,8 @@ public class BaseConfg {
 
     // 调试使用配置
     public static final boolean IS_OUTPUT_SHP = true;       // 是否输出定位点shp文件
-    public static final String OUTPUT_SHP_PATH = "D:\\PlatformData\\output";        // 输出shp文件路径
-    public static final String DELETE_DATETIME = "2025-07-30 11:00:00";     // 数据删除时间
+    public static final String OUTPUT_SHP_PATH = "D:/PlatformData/output";        // 输出shp文件路径
+    public static final String DELETE_DATETIME = "2025-08-07 14:00:00";     // 数据删除时间
 
     // 定位卡配置
     public static final String RTK = "rtk";

@@ -49,7 +49,7 @@ public class BoardingDetector {
         boolean isTheZYTArea = zoneChecker.isInHuoyunxinZytZone(currentPoint);
         // 判断是否在停车区域（发运上车区域）
         boolean isnParkingArea = zoneChecker.isInParkingZone(currentPoint);
-        if (currentPoint.getAcceptTime().equals("2025-07-10 10:45:48.000")){
+        if (currentPoint.getAcceptTime().equals("2025-08-05 21:45:55")){
             System.out.println("触发断点");
         }
         if (currentPoint.getAcceptTime().equals("2025-07-10 16:22:18.000")){
@@ -66,14 +66,14 @@ public class BoardingDetector {
             curPoint = null;
             return new EventState(currentEvent, currentPoint.getTimestamp(),1);
         }
-        // 两个状态之间的时间间隔
-        if (IDENTIFY_IDENTIFY_TIME_INTERVAL_MS > 0
-                && lastEvent == Event.NONE
-                && lastEventState.getTimestamp() > 0
-                && (currentPoint.getTimestamp() - lastEventState.getTimestamp()) < IDENTIFY_IDENTIFY_TIME_INTERVAL_MS){
-            curPoint = null;
-            return new EventState(Event.NONE, currentPoint.getTimestamp(),2);
-        }
+//        // 两个状态之间的时间间隔
+//        if (IDENTIFY_IDENTIFY_TIME_INTERVAL_MS > 0
+//                && lastEvent == Event.NONE
+//                && lastEventState.getTimestamp() > 0
+//                && (currentPoint.getTimestamp() - lastEventState.getTimestamp()) < IDENTIFY_IDENTIFY_TIME_INTERVAL_MS){
+//            curPoint = null;
+//            return new EventState(Event.NONE, currentPoint.getTimestamp(),2);
+//        }
         if (currentPoint.getAcceptTime().equals("2025-07-05 10:52:28.000")){
             System.out.println("触发断点");
         }

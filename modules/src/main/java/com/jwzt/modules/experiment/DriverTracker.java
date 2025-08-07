@@ -163,9 +163,11 @@ public class DriverTracker {
             if (!(state == 0)) {
                 if (state == 1){
                     System.out.println("⚠️  时间间隔异常定位点已剔除：" + rawPoint);
-                } else if (state == 2) {
-                    System.out.println("⚠️  速度异常定位点已剔除：" + rawPoint);
-                } else if (state == 3) {
+                }
+//                    else if (state == 2) {
+//                    System.out.println("⚠️  速度异常定位点已剔除：" + rawPoint);
+//                }
+                else if (state == 3) {
                     System.out.println("⚠️  定位异常定位点已剔除：" + rawPoint);
                 } else {
                     System.out.println("⚠️  异常定位点已剔除：" + rawPoint);
