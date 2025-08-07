@@ -52,8 +52,8 @@ public class ZQOpenApi {
         headers.put("X-BuildId", buildId);
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
             put("mac", cardId);
-            put("startTime", DateTimeUtils.convertToTimestamp("2025-08-05 09:00:00"));
-            put("endTime", DateTimeUtils.convertToTimestamp("2025-08-05 12:00:00"));
+            put("startTime", DateTimeUtils.convertToTimestamp("2025-08-05 18:00:00"));
+            put("endTime", DateTimeUtils.convertToTimestamp("2025-08-05 23:00:00"));
             put("locationType", "real");
         }});
         String buildResult = sendPost(BaseConfg.GET_POINTS_URL, headers, jsonBody);

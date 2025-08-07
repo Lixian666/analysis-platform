@@ -86,7 +86,7 @@ public class OutlierFilter {
         double speed = distance / (timeDiff / 1000.0); // m/s
         newPoint.setSpeed(speed);
         // 速度过大 or 跳跃距离过远
-        if (speed > FilterConfig.MAX_SPEED_MPS || distance > FilterConfig.MAX_JUMP_DISTANCE) {
+        if (speed > FilterConfig.MAX_SPEED_MPS || (distance > FilterConfig.MAX_JUMP_DISTANCE & timeDiff <= 1000)) {
             lastPoint = newPoint;
             return 2;
         }

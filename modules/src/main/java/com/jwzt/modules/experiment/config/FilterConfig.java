@@ -37,7 +37,7 @@ public class FilterConfig {
     public static final int STOPPED_STATE_SIZE = 1;       // 停车识别判定标签数
     public static final int DRIVING_STATE_SIZE = 2;       // 行驶识别判定标签数
 
-    public static final int RECORD_POINTS_SIZE = 31;        // 上下车识别窗口大小
+    public static final int RECORD_POINTS_SIZE = 51;        // 上下车识别窗口大小
 
     // 停留检测配置
     public static final int STAY_WINDOW_SIZE = 5;       // 停留检测窗口大小
