@@ -15,10 +15,7 @@ import com.jwzt.modules.experiment.utils.http.HttpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
@@ -47,13 +44,13 @@ public class ZQOpenApi {
 
 
 
-    public static String getListOfPoints(String cardId, String buildId) {
+    public static String getListOfPoints(String cardId, String buildId, String startTime, String endTime) {
         Map<String, String> headers = getHeaders();
         headers.put("X-BuildId", buildId);
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
             put("mac", cardId);
-            put("startTime", DateTimeUtils.convertToTimestamp("2025-08-05 18:00:00"));
-            put("endTime", DateTimeUtils.convertToTimestamp("2025-08-05 23:00:00"));
+            put("startTime", DateTimeUtils.convertToTimestamp(startTime));
+            put("endTime", DateTimeUtils.convertToTimestamp(endTime));
             put("locationType", "real");
         }});
         String buildResult = sendPost(BaseConfg.GET_POINTS_URL, headers, jsonBody);
@@ -218,6 +215,17 @@ public class ZQOpenApi {
 
     public static void main(String[] args) {
 //        getListOfCards();
-        String buildResult = getListOfPoints("1918B3000BA3", "209885");
+        String startTime = "2025-08-06 15:00:00";
+        String endTime = "2025-08-06 21:00:00";
+        JSONObject jsonObject = JSONObject.parseObject(getListOfPoints("1918B3000BA3", "209885", startTime, endTime));
+        // 指定要生成的 JSON 文件路径
+        String filePath = "D:/PlatformData/定位卡数据/鱼嘴" + "/20250806下午zq.json";
+
+        try (FileWriter fileWriter = new FileWriter(filePath)) {
+            fileWriter.write(jsonObject.toJSONString()); // fastjson 中使用 toJSONString() 方法
+            System.out.println("JSON 文件已生成，路径为：" + filePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

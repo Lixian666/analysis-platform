@@ -45,7 +45,10 @@ public class RyTask
 //
 //        }
         String cardId = "1918B3000BA3";
-        JSONObject jsonObject = JSONObject.parseObject(getListOfPoints(cardId, "209885"));
+        String buildId = "209885";
+        String startTime = "2025-08-06 16:00:00";
+        String endTime = "2025-08-06 21:00:00";
+        JSONObject jsonObject = JSONObject.parseObject(getListOfPoints(cardId, buildId, startTime, endTime));
         JSONArray points = jsonObject.getJSONArray("data");
         List<LocationPoint> LocationPoints = new ArrayList<>();
         for (int i = 0; i < points.size(); i++){
