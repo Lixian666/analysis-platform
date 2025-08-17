@@ -215,8 +215,8 @@ public class ZQOpenApi {
 
     public static void main(String[] args) {
 //        getListOfCards();
-        String startTime = "2025-08-06 15:00:00";
-        String endTime = "2025-08-06 21:00:00";
+        String startTime = "2025-08-12 15:00:00";
+        String endTime = "2025-08-12 21:00:00";
         JSONObject jsonObject = JSONObject.parseObject(getListOfPoints("1918B3000BA3", "209885", startTime, endTime));
         // 指定要生成的 JSON 文件路径
         String filePath = "D:/PlatformData/定位卡数据/鱼嘴" + "/20250806下午zq.json";
