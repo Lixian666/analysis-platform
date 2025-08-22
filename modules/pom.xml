@@ -54,6 +54,8 @@
             <groupId>com.joysuch</groupId>
             <artifactId>open-v2-api-sdk</artifactId>
             <version>3.7.10</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/../lib/open-v2-api-sdk-3.7.10.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>cn.hutool</groupId>
