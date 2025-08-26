@@ -73,11 +73,11 @@
             <artifactId>activemq-client</artifactId>
             <version>5.15.10</version>
         </dependency>
-        <!-- Mysql驱动包 -->
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-        </dependency>
+<!--        &lt;!&ndash; Mysql驱动包 &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>mysql</groupId>-->
+<!--            <artifactId>mysql-connector-java</artifactId>-->
+<!--        </dependency>-->
     </dependencies>
 
     

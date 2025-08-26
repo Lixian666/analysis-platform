@@ -15,6 +15,11 @@
         web服务入口
     </description>
 
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <dameng.version>8.1.2.79</dameng.version>
+    </properties>
+
     <dependencies>
 
         <!-- spring-boot-devtools -->
@@ -41,6 +46,13 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+
+        <!--达梦数据库驱动包-->
+        <dependency>
+            <groupId>com.dameng</groupId>
+            <artifactId>DmJdbcDriver18</artifactId>
+            <version>${dameng.version}</version>
         </dependency>
 
         <!-- 核心模块-->
