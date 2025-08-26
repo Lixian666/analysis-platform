@@ -117,9 +117,9 @@ public class RyTask
         if (data == null){
             return;
         }
-        List<LocationPoint> LocationPoints = DriverTracker.processWithAnchorData(points, data);
-
         String shpFilePath = OUTPUT_SHP_PATH + "/" + date + "/" + data + "/";
+        DriverTracker.shpFilePath = shpFilePath;
+        List<LocationPoint> LocationPoints = DriverTracker.processWithAnchorData(points, data);
         // 按卡号分组
         if (data.equals("rtk")){
             Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
@@ -134,7 +134,6 @@ public class RyTask
                     DriverTracker.outputVectorFiles(newPoints,shpFilePath + "data_clean_points.shp");
                 }
                 DriverTracker.cardId = String.valueOf(entry.getKey());
-                DriverTracker.shpFilePath = shpFilePath;
                 // 开始行为分析
                 tracker.handleNewRawPoint(newPoints);
 //                DriverTracker tracker = new DriverTracker();
@@ -156,7 +155,6 @@ public class RyTask
                     DriverTracker.outputVectorFiles(newPoints,shpFilePath + "data_clean_points.shp");
                 }
                 DriverTracker.cardId = entry.getKey();
-                DriverTracker.shpFilePath = shpFilePath;
                 // 开始行为分析
                 tracker.handleNewRawPoint(newPoints);
 //                for (LocationPoint point : newPoints) {

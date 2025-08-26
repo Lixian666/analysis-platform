@@ -13,7 +13,7 @@ public class BaseConfg {
     public static final String RTK = "rtk";
     public static final String ZHENQU = "zhenqu";
     public static final String OTHER = "other";
-    public static final String LOCATION_CARD_TYPE = ZHENQU;
+    public static final String LOCATION_CARD_TYPE = OTHER;
 
     // 真趣定位服务
     public static final String USER_NAME = "18911091136";
