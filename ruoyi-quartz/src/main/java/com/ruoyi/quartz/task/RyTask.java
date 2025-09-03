@@ -33,7 +33,6 @@ public class RyTask
 {
     @Autowired
     private DriverTracker tracker;
-
     public void driverTrackerZQ()
     {
         String data = BaseConfg.LOCATION_CARD_TYPE;
