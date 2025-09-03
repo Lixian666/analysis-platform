@@ -46,9 +46,16 @@ public class DriverTracker {
     private Long boardingTime = null;
     private Long droppingTime = null;
 
+    // UUID
     private static String UUID;
+    // 卡ID
     public static String cardId;
+    // 矢量文件路径
     public static String shpFilePath;
+    // 卡类型
+    public static String cardType;
+
+
 
     private int boarding_idx = 0;
     private int dropping_idx = 0;
