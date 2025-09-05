@@ -43,4 +43,10 @@ public class ZqTask {
         log.debug("订阅结果：{}",result);
     }
 
+    public void ZQHttpUnSubscriber()
+    {
+        SubscribeResult result = ZQOpenApi.httpUnSubscriber("82");
+        log.debug("订阅结果：{}",result);
+    }
+
 }

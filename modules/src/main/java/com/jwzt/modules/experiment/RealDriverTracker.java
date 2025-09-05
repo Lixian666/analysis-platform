@@ -27,7 +27,7 @@ import static com.jwzt.modules.experiment.config.BaseConfg.DELETE_DATETIME;
 import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 @Service
-public class DriverTracker {
+public class RealDriverTracker implements RealtimeAnalyzer {
     OutlierFilter outlierFilter = new OutlierFilter();
     LocationSmoother smoother = new LocationSmoother();
 
@@ -39,6 +39,8 @@ public class DriverTracker {
 
     private Deque<LocationPoint> window = new ArrayDeque<>();
     private List<LocationPoint> recordPoints = new ArrayList<>();
+    // per-card 状态（建议放到一个 CardContext 类里）
+    private final Deque<LocationPoint> recordWindow = new ArrayDeque<>(FilterConfig.RECORD_POINTS_SIZE);
     private Deque<MovementAnalyzer.MovementState> states = new ArrayDeque<>();
     private int windowSize = FilterConfig.WINDOW_STATE_SIZE;
     private int recordPointsSize = FilterConfig.RECORD_POINTS_SIZE;
@@ -62,104 +64,31 @@ public class DriverTracker {
 
     private BoardingDetector detector = new BoardingDetector();
 
+    // 增量入口
+    @Override
+    public void accept(LocationPoint raw) {
+        // 1) 去重/校验/异常点过滤
+        int state = outlierFilter.isValid(raw);
+        if (state != 0) return;
 
-    public void realOnNewLocation(List<LocationPoint> points) {
-        for (int i = 0; i <= points.size() - recordPointsSize; i++) {
-            List<LocationPoint> recordPoints = points.subList(i, i + recordPointsSize);
-            EventState eventState = detector.updateState(recordPoints);
-            if (eventState.getState() == 1){
-                boardingTime = null;
-            } else if (eventState.getState() == 2) {
-                boardingTime = null;
-            }
-            switch (eventState.getEvent()) {
-                case ARRIVED_BOARDING:
-                    if (boardingTime == null){
-                        boarding_idx = i + (recordPointsSize / 2);
-                        boardingTime = eventState.getTimestamp();
-                        UUID = IdUtils.fastSimpleUUID();
-                    }
-                    System.out.println("📥 检测到到达上车事件");
-                    break;
-                case ARRIVED_DROPPING:
-                    if (boardingTime != null){
-                        List<TakBehaviorRecordDetail> takBehaviorRecordDetailList = new ArrayList<TakBehaviorRecordDetail>();
-                        List<LocationPoint> subPoints = points.subList(boarding_idx,  i + (recordPointsSize / 2));
-                        for (LocationPoint point : subPoints){
-                            TakBehaviorRecordDetail takBehaviorRecordDetail = new TakBehaviorRecordDetail();
-                            takBehaviorRecordDetail.setCardId(cardId);
-                            takBehaviorRecordDetail.setTrackId(UUID);
-                            takBehaviorRecordDetail.setRecordTime(new Date(point.getTimestamp()));
-                            takBehaviorRecordDetail.setTimestampMs(point.getTimestamp());
-                            takBehaviorRecordDetail.setLongitude(point.getLongitude());
-                            takBehaviorRecordDetail.setLatitude(point.getLatitude());
-                            takBehaviorRecordDetailList.add(takBehaviorRecordDetail);
-                        }
-                        TakBehaviorRecords takBehaviorRecords = new TakBehaviorRecords();
-                        takBehaviorRecords.setCardId(cardId);
-                        takBehaviorRecords.setYardId("YUZUI");
-                        takBehaviorRecords.setTrackId(UUID);
-                        takBehaviorRecords.setStartTime(new Date(boardingTime));
-                        takBehaviorRecords.setEndTime(new Date(eventState.getTimestamp()));
-                        takBehaviorRecords.setPointCount((long) subPoints.size());
-                        takBehaviorRecords.setType(0L);
-                        takBehaviorRecords.setDuration(DateTimeUtils.calculateTimeDifference(boardingTime, eventState.getTimestamp()));
-                        takBehaviorRecords.setState("完成");
-                        takBehaviorRecords.setTakBehaviorRecordDetailList(takBehaviorRecordDetailList);
-                        iTakBehaviorRecordsService.insertTakBehaviorRecords(takBehaviorRecords);
-                        iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
-//                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
-//                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
-//                        }
-                    }
-                    boardingTime = null;
-                    System.out.println("📤 检测到到达下车事件");
-                    break;
-                case SEND_BOARDING:
-                    if (boardingTime == null){
-                        boarding_idx = i + (recordPointsSize / 2);
-                        boardingTime = eventState.getTimestamp();
-                        UUID = IdUtils.fastSimpleUUID();
-                    }
-                    System.out.println("📥 检测到发运上车事件");
-                    break;
-                case SEND_DROPPING:
-                    if (boardingTime != null){
-                        List<TakBehaviorRecordDetail> takBehaviorRecordDetailList = new ArrayList<TakBehaviorRecordDetail>();
-                        List<LocationPoint> subPoints = points.subList(boarding_idx,  i + (recordPointsSize / 2));
-                        for (LocationPoint point : subPoints){
-                            TakBehaviorRecordDetail takBehaviorRecordDetail = new TakBehaviorRecordDetail();
-                            takBehaviorRecordDetail.setCardId(cardId);
-                            takBehaviorRecordDetail.setTrackId(UUID);
-                            takBehaviorRecordDetail.setRecordTime(new Date(point.getTimestamp()));
-                            takBehaviorRecordDetail.setTimestampMs(point.getTimestamp());
-                            takBehaviorRecordDetail.setLongitude(point.getLongitude());
-                            takBehaviorRecordDetail.setLatitude(point.getLatitude());
-                            takBehaviorRecordDetailList.add(takBehaviorRecordDetail);
-                        }
-                        TakBehaviorRecords takBehaviorRecords = new TakBehaviorRecords();
-                        takBehaviorRecords.setCardId(cardId);
-                        takBehaviorRecords.setYardId("YUZUI");
-                        takBehaviorRecords.setTrackId(UUID);
-                        takBehaviorRecords.setStartTime(new Date(boardingTime));
-                        takBehaviorRecords.setEndTime(new Date(eventState.getTimestamp()));
-                        takBehaviorRecords.setPointCount((long) subPoints.size());
-                        takBehaviorRecords.setType(1L);
-                        takBehaviorRecords.setDuration(DateTimeUtils.calculateTimeDifference(boardingTime, eventState.getTimestamp()));
-                        takBehaviorRecords.setState("完成");
-                        takBehaviorRecords.setTakBehaviorRecordDetailList(takBehaviorRecordDetailList);
-                        iTakBehaviorRecordsService.insertTakBehaviorRecords(takBehaviorRecords);
-                        iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
-//                        for (TakBehaviorRecordDetail takBehaviorRecordDetail : takBehaviorRecordDetailList){
-//                            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetail(takBehaviorRecordDetail);
-//                        }
-                    }
-                    boardingTime = null;
-                    System.out.println("📤 检测到发运下车事件");
-                    break;
-            }
+        // 2) 增量状态添加（含平滑/速度/运动状态分析）
+        LocationPoint p = raw;
+        // 如需平滑: p = smoother.apply(p, ...);
+        // 维护 recordWindow
+        recordWindow.addLast(p);
+        while (recordWindow.size() > FilterConfig.RECORD_POINTS_SIZE) recordWindow.removeFirst();
+
+        // 3) 只有窗口够大才触发检测
+        if (recordWindow.size() == FilterConfig.RECORD_POINTS_SIZE) {
+            List<LocationPoint> window = new ArrayList<>(recordWindow);
+            EventState eventState = detector.updateState(window);
+//            handleEvent(eventState, window);
         }
-        System.out.println("📤 检测完成");
+    }
+
+    private void persistOneTrip(List<LocationPoint> subPoints, long start, long end, long type) {
+        // 将持久化改为“异步批量”见下文
+        // 这里保留你原来的对象构造即可
     }
 
     public void onNewLocation(List<LocationPoint> points) {
@@ -260,7 +189,6 @@ public class DriverTracker {
         }
         System.out.println("📤 检测完成");
     }
-
     public void handleNewRawPoint(List<LocationPoint> points) {
         iTakBehaviorRecordsService.deleteByCreationTime(DELETE_DATETIME);
         iTakBehaviorRecordDetailService.deleteByCreationTime(DELETE_DATETIME);
@@ -290,13 +218,6 @@ public class DriverTracker {
             // 生成空间异常、时间间隔异常、速度异常过滤后的shp文件
             outputVectorFiles(newPoints,shpFilePath + "final_points.shp");
         }
-        // 行为分析
-        this.onNewLocation(newPoints);
-    }
-
-    public void realHandleNewRawPoint(List<LocationPoint> points) {
-        // 添加运动状态
-        List<LocationPoint> newPoints = outlierFilter.stateAnalysis(points);
         // 行为分析
         this.onNewLocation(newPoints);
     }
@@ -422,5 +343,10 @@ public class DriverTracker {
 
             }
         }
+    }
+
+    @Override
+    public void acceptAll(List<LocationPoint> points) {
+        RealtimeAnalyzer.super.acceptAll(points);
     }
 }

@@ -77,6 +77,36 @@ public class ZQOpenApi {
     }
 
     /**
+     * 取消订阅请求
+     *
+     * 订阅类型
+     * location：位置结果
+     * zeroDimEnterLeave：终端进出圈事件
+     * rail：围栏事件
+     * area：区域事件
+     * oneKeyAlarm：一键报警消息
+     * bltOnOffLine：终端定位在离线消息
+     * lowpower：终端低电量
+     * textCmdData：终端下行结果
+     * bltOnOffLineV2：终端通信离线消息
+     * bltProtocolData：标签上报信息
+     * dataReportingData：终端特有数据消息
+     * cmdResult：终端下行cmd结果
+     *
+     * @param subscribeId 订阅数据
+     * @return 取消订阅结果
+     */
+    public static SubscribeResult httpUnSubscriber(String subscribeId){
+        Map<String, String> headers = getHeaders();
+        String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
+            put("subscribeId", subscribeId);
+            put("licence", getLicence(BaseConfg.USER_NAME, BaseConfg.PASSWORD));
+        }});
+        String result = sendPost(BaseConfg.UNSUBSCRIBE_URL, headers, jsonBody);
+        return JSONObject.parseObject(result, SubscribeResult.class);
+    }
+
+    /**
      * 获取指定卡片在指定时间段内的定位点列表
      *
      * @param cardId 卡片ID

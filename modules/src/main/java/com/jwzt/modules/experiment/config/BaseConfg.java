@@ -24,10 +24,11 @@ public class BaseConfg {
 //    public static final String BASE_URL = "https://api.joysuch.com:46000";
     public static final String USER_NAME = "client";
     public static final String PASSWORD = "JoySuch@client10";
-    public static final String BASE_URL = "https://61.50.136.180:40000";
+    public static final String BASE_URL = "http://61.50.136.180:46000";
     public static final String GET_BUILDLIST_URL = BASE_URL + "/api/v1/buildList";
     public static final String GET_CARDS_URL = BASE_URL + "/api/v4/device/blts";
     public static final String GET_POINTS_URL = BASE_URL + "/api/v1/datacenter/historyPath";
     public static final String SUBSCRIBE_URL = BASE_URL + "/api/v2/subscribe/http/subscribe";
+    public static final String UNSUBSCRIBE_URL = BASE_URL + "/api/v2/subscribe/http/unsubscribe";
 
 }
