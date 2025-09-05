@@ -2,6 +2,10 @@ package com.jwzt.modules.experiment.config;
 
 public class FilterConfig {
 
+    // 数据获取配置（需比RECORD_POINTS_SIZE大）
+    public static final int POINTS_SIZE = 60;
+    public static final int RECORD_POINTS_SIZE = 51;        // 上下车识别窗口大小
+
     // 行为识别配置
     public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
     public static final double MIN_SPEED_MPS = 0.0; // 最小速度，单位 m/s（比如步行 < 2，驾驶 < 17）
@@ -36,8 +40,6 @@ public class FilterConfig {
 
     public static final int STOPPED_STATE_SIZE = 1;       // 停车识别判定标签数
     public static final int DRIVING_STATE_SIZE = 2;       // 行驶识别判定标签数
-
-    public static final int RECORD_POINTS_SIZE = 51;        // 上下车识别窗口大小
 
     // 停留检测配置
     public static final int STAY_WINDOW_SIZE = 5;       // 停留检测窗口大小

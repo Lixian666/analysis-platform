@@ -1,4 +1,4 @@
-package com.jwzt.modules.experiment.utils.third;
+package com.jwzt.modules.experiment.utils.third.zq;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -12,6 +12,8 @@ import com.jwzt.modules.experiment.config.BaseConfg;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.Md5Utils;
 import com.jwzt.modules.experiment.utils.http.HttpUtils;
+import com.jwzt.modules.experiment.utils.third.zq.domain.SubReceiveData;
+import com.jwzt.modules.experiment.utils.third.zq.domain.SubscribeResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,9 +44,36 @@ public class ZQOpenApi {
 
     private static JoySuchResponse<TokenEntity> response = null;
 
-
-    public static void httpSubscriber(String type){
-
+    /**
+     * 发送订阅请求
+     *
+     * 订阅类型
+     * location：位置结果
+     * zeroDimEnterLeave：终端进出圈事件
+     * rail：围栏事件
+     * area：区域事件
+     * oneKeyAlarm：一键报警消息
+     * bltOnOffLine：终端定位在离线消息
+     * lowpower：终端低电量
+     * textCmdData：终端下行结果
+     * bltOnOffLineV2：终端通信离线消息
+     * bltProtocolData：标签上报信息
+     * dataReportingData：终端特有数据消息
+     * cmdResult：终端下行cmd结果
+     *
+     * @param type 订阅类型
+     * @param data 订阅数据
+     * @return 订阅结果
+     */
+    public static SubscribeResult httpSubscriber(String type, SubReceiveData data){
+        Map<String, String> headers = getHeaders();
+        String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
+            put("type", type);
+            put("data", data);
+            put("licence", getLicence(BaseConfg.USER_NAME, BaseConfg.PASSWORD));
+        }});
+        String result = sendPost(BaseConfg.SUBSCRIBE_URL, headers, jsonBody);
+        return JSONObject.parseObject(result, SubscribeResult.class);
     }
 
     /**

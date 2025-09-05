@@ -1,4 +1,4 @@
-package com.jwzt.modules.experiment.utils.third;
+package com.jwzt.modules.experiment.utils.third.zq;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 
