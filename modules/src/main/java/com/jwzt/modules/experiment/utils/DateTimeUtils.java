@@ -5,10 +5,49 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 import java.time.Duration;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 public class DateTimeUtils {
+
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    // 常用时间格式，可以按需扩展
+    private static final List<String> DATE_PATTERNS = Arrays.asList(
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy/MM/dd HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss",  // ISO 风格
+            "yyyyMMdd HHmmss"        // 紧凑格式
+    );
+
+    public static LocalDateTime str2DateTime(String dateTimeStr) {
+        for (String pattern : DATE_PATTERNS) {
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+                return LocalDateTime.parse(dateTimeStr, formatter);
+            } catch (DateTimeParseException ignored) {
+                // 尝试下一个格式
+            }
+        }
+        throw new IllegalArgumentException("无法解析时间字符串: " + dateTimeStr);
+    }
+
+    /**
+     * LocalDateTime -> 字符串
+     */
+    public static String localDateTime2String(LocalDateTime dateTime) {
+        return dateTime.format(FORMATTER);
+    }
+
+    /**
+     * Date -> 字符串
+     */
+    public static String Date2String(Date date) {
+        LocalDateTime ldt = LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
+        return ldt.format(FORMATTER);
+    }
 
     /**
      * 在指定时间字符串上增加指定秒数

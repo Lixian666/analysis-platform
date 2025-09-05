@@ -42,6 +42,7 @@ public class BoardingDetector {
         if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) return new EventState();
         List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, FilterConfig.RECORD_POINTS_SIZE / 2);
         LocationPoint currentPoint = recordPoints.get(FilterConfig.RECORD_POINTS_SIZE / 2);
+        System.out.println("开始处理：" + currentPoint);
         List<LocationPoint> theLastTenPoints = recordPoints.subList(recordPoints.size() - (FilterConfig.RECORD_POINTS_SIZE / 2), recordPoints.size());
         // 判断是否在货运线区域（到达上车区域）
         boolean isTheFreightLineArea = zoneChecker.isInHuoyunxinZone(currentPoint);

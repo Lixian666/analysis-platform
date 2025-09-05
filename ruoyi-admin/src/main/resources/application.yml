@@ -20,6 +20,7 @@ server:
   servlet:
     # 应用的访问路径
     context-path: /
+    domain-name: http://192.168.6.8
   tomcat:
     # tomcat的URI编码
     uri-encoding: UTF-8
@@ -129,3 +130,24 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+experiment:
+  filter:
+    points-size: 60
+    record-points-size: 51
+    max-speed-mps: 22.0
+    min-speed-mps: 0.0
+    # ... 其他filter配置
+  location:
+    building-id: 209983
+    is-stay-verify: false
+    is-output-shp: false
+    output-shp-path: "D:/PlatformData/output"
+    delete-datetime: "2025-08-07 14:00:00"
+    # ... 其他location配置
+  path:
+    base-path: "D:/PlatformData/shp"
+    minhang: "minhang"
+    yuzui: "yuzui"
+    huochang: "yuzui"
+
