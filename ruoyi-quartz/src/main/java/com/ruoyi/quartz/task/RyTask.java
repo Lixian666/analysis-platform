@@ -3,36 +3,183 @@ package com.ruoyi.quartz.task;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.jwzt.modules.experiment.DriverTracker;
+import com.jwzt.modules.experiment.RealTimeDriverTracker;
 import com.jwzt.modules.experiment.config.BaseConfg;
-import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
+import com.jwzt.modules.experiment.domain.BoardingDetector;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.domain.LocationPoint2;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.JsonUtils;
-import com.jwzt.modules.experiment.utils.third.ZQOpenApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.Resource;
+import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.jwzt.modules.experiment.config.BaseConfg.OUTPUT_SHP_PATH;
-import static com.jwzt.modules.experiment.utils.third.ZQOpenApi.getListOfPoints;
+import static com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi.getListOfPoints;
 
 /**
  * 定时任务调度测试
  * 
- * @author ruoyi
+ * @author ruoyirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
  */
 @Component("ryTask")
 public class RyTask
 {
     @Autowired
     private DriverTracker tracker;
+
+    @Resource
+    private RealTimeDriverTracker realTimeDriverTracker;
+
+    private BoardingDetector detector = new BoardingDetector();
+
+    OutlierFilter outlierFilter = new OutlierFilter();
+
+    private Deque<LocationPoint> recordWindow = new ArrayDeque<>(FilterConfig.RECORD_POINTS_SIZE);
+    private List<LocationPoint>  recordPoints = new ArrayList<>();
+
+    public void realDriverTrackerZQ() throws ParseException {
+
+        String data = BaseConfg.LOCATION_CARD_TYPE;
+        String date = "未获取到日期";
+
+//        JSONObject jsonObject = ZQOpenApi.getListOfCards();
+//        JSONArray points = jsonObject.getJSONArray("data");
+//        if (points != null && !points.isEmpty()) {
+//
+//        }
+        String cardId = "1918B3000BA3";
+        String buildId = "209885";
+        String startTimeStr = "2025-08-12 15:50:00";
+        String endTimeStr = "2025-08-12 17:00:00";
+        LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
+        LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+
+
+        // 循环从 start 到 end，每次加 10 秒
+        LocalDateTime current = startTime;
+        while (!current.isAfter(endTime)) {
+            // 时间 +10 秒
+            LocalDateTime startCurrent = current;
+            LocalDateTime endCurrent = current.plusSeconds(10);
+            current = endCurrent;
+            String startStr = DateTimeUtils.localDateTime2String(startCurrent);
+            String endStr = DateTimeUtils.localDateTime2String(endCurrent);
+            JSONObject jsonObject = JSONObject.parseObject(getListOfPoints(cardId, buildId, startStr, endStr));
+            JSONArray points = jsonObject.getJSONArray("data");
+            List<LocationPoint> LocationPoints = new ArrayList<>();
+            for (int i = 0; i < points.size(); i++){
+                JSONObject js = (JSONObject) points.get(i);
+                JSONArray plist = js.getJSONArray("points");
+                for (int j = 0; j < plist.size(); j++){
+                    LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                    if (date.equals("未获取到日期")){
+                        date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                    }
+                    LocationPoint point1 = new LocationPoint(
+                            cardId,
+                            point.getLongitude(),
+                            point.getLatitude(),
+                            DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                            Long.parseLong(point.getTime()));
+                    LocationPoints.add(point1);
+                }
+            }
+            if (LocationPoints.size() > 0){
+                realTimeDriverTracker.ingest(LocationPoints);
+            }
+//            List<LocationPoint> normalPoints = new ArrayList<>();
+//            for (LocationPoint rawPoint : LocationPoints){
+//                int state = outlierFilter.isValid(rawPoint);
+//                if (!(state == 0)) {
+//                    if (state == 1){
+//                        System.out.println("⚠️  时间间隔异常定位点已剔除：" + rawPoint);
+//                    }
+////                    else if (state == 2) {
+////                    System.out.println("⚠️  速度异常定位点已剔除：" + rawPoint);
+////                }
+//                    else if (state == 3) {
+//                        System.out.println("⚠️  定位异常定位点已剔除：" + rawPoint);
+//                    } else {
+//                        System.out.println("⚠️  异常定位点已剔除：" + rawPoint);
+//                    }
+//                }else {
+//                    // 正常点
+//                    normalPoints.add(rawPoint);
+//                }
+//            }
+//            for (LocationPoint point : normalPoints){
+//                recordPoints.add(point);
+//                if (recordPoints.size() >= FilterConfig.RECORD_POINTS_SIZE){
+//                    List<LocationPoint> newPoints = new OutlierFilter().fixTheData(recordPoints);
+//                    if (newPoints.size() < FilterConfig.RECORD_POINTS_SIZE){
+//                        recordWindow = new ArrayDeque<>(newPoints);
+//                        continue;
+//                    }
+//                    tracker.realHandleNewRawPoint(newPoints);
+//                }
+//            }
+//            for (LocationPoint point : normalPoints){
+//                recordWindow.addLast(point);
+//                while (recordWindow.size() > FilterConfig.RECORD_POINTS_SIZE) recordWindow.removeFirst();
+//                if (recordWindow.size() == FilterConfig.RECORD_POINTS_SIZE){
+//                    List<LocationPoint> window = new ArrayList<>(recordWindow);
+//                    List<LocationPoint> newPoints = new OutlierFilter().fixTheData(window);
+//                    if (newPoints.size() < FilterConfig.RECORD_POINTS_SIZE){
+//                        recordWindow = new ArrayDeque<>(newPoints);
+//                        continue;
+//                    }
+//                    tracker.realHandleNewRawPoint(newPoints);
+//                }
+//            }
+            String shpFilePath = OUTPUT_SHP_PATH + "/" + date + "/" + data + "/";
+            DriverTracker.cardId = "1918B3000BA3";
+            DriverTracker.shpFilePath = shpFilePath;
+        }
+    }
+
+    public void realDriverTrackerZQTest(){
+
+        String data = BaseConfg.LOCATION_CARD_TYPE;
+        String date = "未获取到日期";
+        String cardId = "1918B3000BA3";
+        String buildId = "209885";
+        String startTimeStr = "2025-08-06 18:20:00";
+        String endTimeStr = "2025-08-06 21:00:00";
+        LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
+        LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+        JSONObject jsonObject = JSONObject.parseObject(getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
+        JSONArray points = jsonObject.getJSONArray("data");
+        List<LocationPoint> LocationPoints = new ArrayList<>();
+        for (int i = 0; i < points.size(); i++){
+            JSONObject js = (JSONObject) points.get(i);
+            JSONArray plist = js.getJSONArray("points");
+            for (int j = 0; j < plist.size(); j++){
+                LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                if (date.equals("未获取到日期")){
+                    date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                }
+                LocationPoint point1 = new LocationPoint(
+                        cardId,
+                        point.getLongitude(),
+                        point.getLatitude(),
+                        DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                        Long.parseLong(point.getTime()));
+                LocationPoints.add(point1);
+            }
+        }
+        if (LocationPoints.size() > 0){
+            realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
+        }
+    }
+
     public void driverTrackerZQ()
     {
         String data = BaseConfg.LOCATION_CARD_TYPE;
