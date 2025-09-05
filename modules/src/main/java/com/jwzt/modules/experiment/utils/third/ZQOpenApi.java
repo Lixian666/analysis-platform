@@ -43,7 +43,19 @@ public class ZQOpenApi {
     private static JoySuchResponse<TokenEntity> response = null;
 
 
+    public static void httpSubscriber(String type){
 
+    }
+
+    /**
+     * 获取指定卡片在指定时间段内的定位点列表
+     *
+     * @param cardId 卡片ID
+     * @param buildId 建筑ID
+     * @param startTime 开始时间，格式为"yyyy-MM-dd HH:mm:ss"
+     * @param endTime 结束时间，格式为"yyyy-MM-dd HH:mm:ss"
+     * @return 定位点列表的JSON字符串结果
+     */
     public static String getListOfPoints(String cardId, String buildId, String startTime, String endTime) {
         Map<String, String> headers = getHeaders();
         headers.put("X-BuildId", buildId);
