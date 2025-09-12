@@ -27,12 +27,28 @@ public interface GenTableMapper
     public List<GenTable> selectDbTableList(GenTable genTable);
 
     /**
+     * 查询据库列表(DM)
+     *
+     * @param genTable 业务信息
+     * @return 数据库表集合
+     */
+    List<GenTable> selectDMDbTableList(GenTable genTable);
+
+    /**
      * 查询据库列表
      * 
      * @param tableNames 表名称组
      * @return 数据库表集合
      */
     public List<GenTable> selectDbTableListByNames(String[] tableNames);
+
+    /**
+     * 查询据库列表(DM)
+     *
+     * @param tableNames 表名称组
+     * @return 数据库表集合
+     */
+    public List<GenTable> selectDMDbTableListByNames(String[] tableNames);
 
     /**
      * 查询所有表信息

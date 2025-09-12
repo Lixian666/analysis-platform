@@ -19,6 +19,14 @@ public interface GenTableColumnMapper
     public List<GenTableColumn> selectDbTableColumnsByName(String tableName);
 
     /**
+     * 根据表名称查询列信息(DM)
+     *
+     * @param tableName 表名称
+     * @return 列信息
+     */
+    public List<GenTableColumn> selectDMDbTableColumnsByName(String tableName);
+
+    /**
      * 查询业务字段列表
      * 
      * @param tableId 业务字段编号
