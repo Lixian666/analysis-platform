@@ -54,6 +54,7 @@ spring:
     basename: i18n/messages
   profiles:
 #    active: druid
+    dbType: dameng
     active: dameng
   # 文件上传
   servlet:

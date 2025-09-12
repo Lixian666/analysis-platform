@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.constant.Constants;
@@ -46,6 +47,9 @@ public class GenTableServiceImpl implements IGenTableService
 {
     private static final Logger log = LoggerFactory.getLogger(GenTableServiceImpl.class);
 
+
+    @Value("${spring.profiles.dbType}")
+    private String dbType;
     @Autowired
     private GenTableMapper genTableMapper;
 
@@ -87,6 +91,9 @@ public class GenTableServiceImpl implements IGenTableService
     @Override
     public List<GenTable> selectDbTableList(GenTable genTable)
     {
+        if (dbType.equals("dameng")){
+            return genTableMapper.selectDMDbTableList(genTable);
+        }
         return genTableMapper.selectDbTableList(genTable);
     }
 
@@ -99,6 +106,9 @@ public class GenTableServiceImpl implements IGenTableService
     @Override
     public List<GenTable> selectDbTableListByNames(String[] tableNames)
     {
+        if (dbType.equals("dameng")){
+            return genTableMapper.selectDMDbTableListByNames(tableNames);
+        }
         return genTableMapper.selectDbTableListByNames(tableNames);
     }
 
@@ -179,8 +189,13 @@ public class GenTableServiceImpl implements IGenTableService
                 int row = genTableMapper.insertGenTable(table);
                 if (row > 0)
                 {
+                    List<GenTableColumn> genTableColumns;
                     // 保存列信息
-                    List<GenTableColumn> genTableColumns = genTableColumnMapper.selectDbTableColumnsByName(tableName);
+                    if (dbType.equals("dameng")){
+                        genTableColumns = genTableColumnMapper.selectDMDbTableColumnsByName(tableName);
+                    }else {
+                        genTableColumns = genTableColumnMapper.selectDbTableColumnsByName(tableName);
+                    }
                     for (GenTableColumn column : genTableColumns)
                     {
                         GenUtils.initColumnField(column, table);
@@ -295,11 +310,17 @@ public class GenTableServiceImpl implements IGenTableService
     @Transactional
     public void synchDb(String tableName)
     {
+        List<GenTableColumn> dbTableColumns;
         GenTable table = genTableMapper.selectGenTableByName(tableName);
         List<GenTableColumn> tableColumns = table.getColumns();
         Map<String, GenTableColumn> tableColumnMap = tableColumns.stream().collect(Collectors.toMap(GenTableColumn::getColumnName, Function.identity()));
 
-        List<GenTableColumn> dbTableColumns = genTableColumnMapper.selectDbTableColumnsByName(tableName);
+        if(dbType.equals("dameng")){
+            dbTableColumns = genTableColumnMapper.selectDMDbTableColumnsByName(tableName);
+        }
+        else {
+            dbTableColumns = genTableColumnMapper.selectDbTableColumnsByName(tableName);
+        }
         if (StringUtils.isEmpty(dbTableColumns))
         {
             throw new ServiceException("同步数据失败，原表结构不存在");
