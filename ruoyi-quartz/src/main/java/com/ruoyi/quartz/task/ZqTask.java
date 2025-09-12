@@ -7,6 +7,7 @@ import com.ruoyi.quartz.domain.SysJobLog;
 import com.ruoyi.quartz.util.JobInvokeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +22,8 @@ import java.util.List;
  */
 @Component("zqTask")
 public class ZqTask {
+    @Autowired
+    private ZQOpenApi zqOpenApi;
 
     private static final Logger log = LoggerFactory.getLogger(ZqTask.class);
 
@@ -29,7 +32,7 @@ public class ZqTask {
     private String domain;
     @Value("${server.port}")
     private String port;
-    @Value("${experiment.location.building-id}")
+    @Value("${experiment.base.building-id}")
     private String buildingId;
 
     public void ZQHttpSubscriber(String type)
@@ -39,13 +42,13 @@ public class ZqTask {
         buildIds.add(buildingId);
         data.setBuildIds(buildIds);
         data.setServerUrl(domain + ":" + port + "/subscribe/callback/zqTagScanUwbBeacon");
-        SubscribeResult result = ZQOpenApi.httpSubscriber(type,data);
+        SubscribeResult result = zqOpenApi.httpSubscriber(type,data);
         log.debug("订阅结果：{}",result);
     }
 
     public void ZQHttpUnSubscriber()
     {
-        SubscribeResult result = ZQOpenApi.httpUnSubscriber("82");
+        SubscribeResult result = zqOpenApi.httpUnSubscriber("82");
         log.debug("订阅结果：{}",result);
     }
 

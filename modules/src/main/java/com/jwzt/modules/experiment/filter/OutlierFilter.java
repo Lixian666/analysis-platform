@@ -1,6 +1,6 @@
 package com.jwzt.modules.experiment.filter;
 
-import com.jwzt.modules.experiment.config.BaseConfg;
+import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.Coordinate;
@@ -9,7 +9,8 @@ import com.jwzt.modules.experiment.domain.MovementAnalyzer;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.GeoUtils;
 import com.jwzt.modules.experiment.map.ZoneChecker;
-import com.jwzt.modules.experiment.utils.geo.CoordinateUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,7 +21,20 @@ import static com.jwzt.modules.experiment.utils.GeoUtils.calculateCenter;
 /**
  * 坐标点滤波器
  */
+@Component
 public class OutlierFilter {
+
+    @Autowired
+    private BaseConfig baseConfig;
+
+    @Autowired
+    private FilePathConfig filePathConfig;
+
+    @Autowired
+    private ZoneChecker zoneChecker;
+
+    @Autowired
+    private static FilterConfig filterConfig;
     private final int windowSize = 5;    // 滑动窗口大小必须为奇数
     private LocationPoint lastPoint = null;
     private final Deque<LocationPoint> history = new ArrayDeque<>();
@@ -28,8 +42,6 @@ public class OutlierFilter {
     private Deque<LocationPoint> window = new ArrayDeque<>();
     private static final double MAX_DEVIATION_SPEEDUP = 7.0;  //允许的偏差
     private static final double ANGLE_THRESHOLD = 150.0; //角度阈值
-    private static final String HUOCHANG = FilePathConfig.HUOCHANG;
-    ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
 
 
 
@@ -74,7 +86,7 @@ public class OutlierFilter {
         long timeDiff = newPoint.getTimestamp() - lastPoint.getTimestamp();
 
 //         时间间隔太小
-        if (timeDiff < FilterConfig.MIN_TIME_INTERVAL_MS) {
+        if (timeDiff < filterConfig.MIN_TIME_INTERVAL_MS) {
             lastPoint = newPoint;
             return 1;
         }
@@ -86,7 +98,7 @@ public class OutlierFilter {
         double speed = distance / (timeDiff / 1000.0); // m/s
         newPoint.setSpeed(speed);
         // 速度过大 or 跳跃距离过远
-        if (speed > FilterConfig.MAX_SPEED_MPS || (distance > FilterConfig.MAX_JUMP_DISTANCE & timeDiff <= 1000)) {
+        if (speed > filterConfig.MAX_SPEED_MPS || (distance > filterConfig.MAX_JUMP_DISTANCE & timeDiff <= 1000)) {
             lastPoint = newPoint;
             return 2;
         }
@@ -102,7 +114,7 @@ public class OutlierFilter {
         // 处理一秒内多个点的情况（使用中位数）
         List<LocationPoint> newPoints = GeoUtils.processMultiplePointsPerSecond(sortPoints);
         System.out.println("完成处理一秒内多个点的情况");
-        if (BaseConfg.IS_STAY_VERIFY){
+        if (baseConfig.isStayVerify()){
             // 检测停留点
             detectStayPoints(newPoints);
             // 修正停留区
@@ -211,7 +223,7 @@ public class OutlierFilter {
     /**
      * 修正运动点（带速度自适应阈值）
      */
-    private static List<LocationPoint> correctMovingPoints(List<LocationPoint> points) {
+    private List<LocationPoint> correctMovingPoints(List<LocationPoint> points) {
         if (points.size() < 5) return points;
 
         List<LocationPoint> corrected = new ArrayList<>(points);
@@ -225,7 +237,7 @@ public class OutlierFilter {
                 LocationPoint curr = corrected.get(i);
                 LocationPoint p4 = corrected.get(i + 1);
                 LocationPoint p5 = corrected.get(i + 2);
-                if (BaseConfg.IS_STAY_VERIFY && curr.getIsStay()) continue;
+                if (baseConfig.isStayVerify() && curr.getIsStay()) continue;
 
                 double dist1 = distance(p2, curr);
                 double dist2 = distance(curr, p4);
@@ -235,7 +247,7 @@ public class OutlierFilter {
                 double speed1 = (time1 > 0) ? dist1 / time1 : 0.0;
                 double speed2 = (time2 > 0) ? dist2 / time2 : 0.0;
 
-                double dynamicThreshold = Math.max(FilterConfig.BASE_DISTANCE_THRESHOLD, Math.max(speed1, speed2) * 2);
+                double dynamicThreshold = Math.max(filterConfig.BASE_DISTANCE_THRESHOLD, Math.max(speed1, speed2) * 2);
 
                 // 异常检测条件
                 boolean isDrift = false;
@@ -244,7 +256,7 @@ public class OutlierFilter {
                 }
 
                 // 方向突变检测
-                if (!isDrift && speed1 > FilterConfig.MAX_RUNING_SPEED) {
+                if (!isDrift && speed1 > filterConfig.MAX_RUNING_SPEED) {
                     double angle = directionChange(p1, p2, curr, p4, p5);
                     if (angle > 120.0) {
                         isDrift = true;
@@ -290,7 +302,7 @@ public class OutlierFilter {
 //            hasDrift = false;
 //            for (int i = 1; i < corrected.size() - 1; i++) {
 //                System.out.println(i);
-//                if (FilterConfig.IS_STAY_VERIFY){
+//                if (FilterConfig.stayVerify){
 //                    if (corrected.get(i).getIsStay()) continue; // 跳过停留点
 //                }
 //                LocationPoint prev = corrected.get(i - 1);
@@ -368,15 +380,15 @@ public class OutlierFilter {
      * 停留点检测（使用滑动窗口）
      */
     private static void detectStayPoints(List<LocationPoint> points) {
-        if (points.size() < FilterConfig.STAY_WINDOW_SIZE) return;
+        if (points.size() < filterConfig.STAY_WINDOW_SIZE) return;
 
         // 存储停留段信息: <开始索引, 结束索引, 中心点>
         List<Object[]> staySegments = new ArrayList<>();
 
         int start = 0;
-        while (start <= points.size() - FilterConfig.STAY_WINDOW_SIZE) {
+        while (start <= points.size() - filterConfig.STAY_WINDOW_SIZE) {
             // 获取当前窗口
-            List<LocationPoint> window = points.subList(start, start + FilterConfig.STAY_WINDOW_SIZE);
+            List<LocationPoint> window = points.subList(start, start + filterConfig.STAY_WINDOW_SIZE);
 
             // 计算窗口中心
             LocationPoint center = calculateCenter(window);
@@ -384,7 +396,7 @@ public class OutlierFilter {
             // 检查窗口内所有点是否都在停留半径内
             boolean allInRadius = true;
             for (LocationPoint p : window) {
-                if (distance(center, p) > FilterConfig.STAY_RADIUS) {
+                if (distance(center, p) > filterConfig.STAY_RADIUS) {
                     allInRadius = false;
                     break;
                 }
@@ -392,12 +404,12 @@ public class OutlierFilter {
 
             // 发现停留窗口
             if (allInRadius) {
-                int end = start + FilterConfig.STAY_WINDOW_SIZE - 1;
+                int end = start + filterConfig.STAY_WINDOW_SIZE - 1;
 
                 // 尝试扩展停留段
                 while (end < points.size() - 1) {
                     LocationPoint next = points.get(end + 1);
-                    if (distance(center, next) <= FilterConfig.STAY_RADIUS) {
+                    if (distance(center, next) <= filterConfig.STAY_RADIUS) {
                         end++;
                         // 更新中心点（动态计算）
                         center = calculateCenter(points.subList(start, end + 1));
@@ -408,7 +420,7 @@ public class OutlierFilter {
 
                 // 检查停留时长是否满足阈值
                 long duration = points.get(end).getTimestamp() - points.get(start).getTimestamp();
-                if (duration >= FilterConfig.STAY_DURATION_THRESHOLD) {
+                if (duration >= filterConfig.STAY_DURATION_THRESHOLD) {
                     staySegments.add(new Object[]{start, end, center});
                 }
 

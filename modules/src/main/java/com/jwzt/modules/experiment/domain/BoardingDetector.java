@@ -4,6 +4,8 @@ import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.map.ZoneChecker;
 import com.jwzt.modules.experiment.vo.EventState;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,10 +16,15 @@ import static com.jwzt.modules.experiment.config.FilterConfig.IDENTIFY_IDENTIFY_
 /**
  * 上下车识别器
  */
+@Component
 public class BoardingDetector {
 
-    private static final String HUOCHANG = FilePathConfig.HUOCHANG;
-    ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
+    @Autowired
+    private ZoneChecker zoneChecker;
+
+    public boolean detect(LocationPoint currentPoint) {
+        return zoneChecker.isInHuoyunxinZone(currentPoint);
+    }
 
     public enum Event {
         NONE,
@@ -247,67 +254,67 @@ public class BoardingDetector {
         }
         return new EventState();
     }
-    public Event updateState(ArrayList<LocationPoint> window, MovementAnalyzer.MovementState newState) {
-        Event result = Event.NONE;;
+//    public Event updateState(ArrayList<LocationPoint> window, MovementAnalyzer.MovementState newState) {
+//        Event result = Event.NONE;;
+//
+//        ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
+//
+//        if (lastState == MovementAnalyzer.MovementState.WALKING && newState == MovementAnalyzer.MovementState.LOW_DRIVING) {
+//            result = Event.ARRIVED_BOARDING;
+//        } else if (lastState == MovementAnalyzer.MovementState.LOW_DRIVING && newState == MovementAnalyzer.MovementState.WALKING) {
+//            if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
+//                result = Event.ARRIVED_DROPPING;
+//            }
+//        }
+//
+//        lastState = currentState;
+//        currentState = newState;
+//        return result;
+//    }
 
-        ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
-
-        if (lastState == MovementAnalyzer.MovementState.WALKING && newState == MovementAnalyzer.MovementState.LOW_DRIVING) {
-            result = Event.ARRIVED_BOARDING;
-        } else if (lastState == MovementAnalyzer.MovementState.LOW_DRIVING && newState == MovementAnalyzer.MovementState.WALKING) {
-            if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
-                result = Event.ARRIVED_DROPPING;
-            }
-        }
-
-        lastState = currentState;
-        currentState = newState;
-        return result;
-    }
-
-    public <E> Event updateState(ArrayList<E> window, ArrayList<E> states) {
-        Event result = Event.NONE;
-        if (states.size() < 5) return result;
-        int lastCountBoarding = 0;
-        int currentCountBoarding = 0;
-        int lastCountDropping = 0;
-        int currentCountDropping = 0;
-
-        ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
-
-        if (lastStates.size() == 5) {
-            for (int i = 0; i < states.size() - 1; i++) {
-                MovementAnalyzer.MovementState newState = (MovementAnalyzer.MovementState) states.get(i);
-                if (newState == MovementAnalyzer.MovementState.DRIVING || newState == MovementAnalyzer.MovementState.LOW_DRIVING) {
-                    currentCountBoarding += 1;
-                }else if (newState == MovementAnalyzer.MovementState.WALKING || newState == MovementAnalyzer.MovementState.STOPPED) {
-                    if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
-                        currentCountDropping += 1;
-                    }
-                }
-            }
-            for (int i = 0; i < lastStates.size() - 1; i++) {
-                MovementAnalyzer.MovementState newLastState = (MovementAnalyzer.MovementState) lastStates.get(i);
-                if (newLastState == MovementAnalyzer.MovementState.DRIVING || newLastState == MovementAnalyzer.MovementState.LOW_DRIVING) {
-                    lastCountDropping += 1;
-                } else if (newLastState == MovementAnalyzer.MovementState.WALKING || newLastState == MovementAnalyzer.MovementState.STOPPED) {
-                    if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
-                        lastCountBoarding += 1;
-                    }
-                }
-            }
-        }
-        // 下车
-        if (currentCountBoarding>4 && lastCountBoarding>4) {
-            result = Event.ARRIVED_BOARDING;
-        } else if (currentCountDropping>4 && lastCountDropping>4) {
-            if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
-                result = Event.ARRIVED_DROPPING;
-            }
-        }
-        lastStates = (List<MovementAnalyzer.MovementState>) states;
-        return result;
-    }
+//    public <E> Event updateState(ArrayList<E> window, ArrayList<E> states) {
+//        Event result = Event.NONE;
+//        if (states.size() < 5) return result;
+//        int lastCountBoarding = 0;
+//        int currentCountBoarding = 0;
+//        int lastCountDropping = 0;
+//        int currentCountDropping = 0;
+//
+//        ZoneChecker zoneChecker = new ZoneChecker(HUOCHANG);
+//
+//        if (lastStates.size() == 5) {
+//            for (int i = 0; i < states.size() - 1; i++) {
+//                MovementAnalyzer.MovementState newState = (MovementAnalyzer.MovementState) states.get(i);
+//                if (newState == MovementAnalyzer.MovementState.DRIVING || newState == MovementAnalyzer.MovementState.LOW_DRIVING) {
+//                    currentCountBoarding += 1;
+//                }else if (newState == MovementAnalyzer.MovementState.WALKING || newState == MovementAnalyzer.MovementState.STOPPED) {
+//                    if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
+//                        currentCountDropping += 1;
+//                    }
+//                }
+//            }
+//            for (int i = 0; i < lastStates.size() - 1; i++) {
+//                MovementAnalyzer.MovementState newLastState = (MovementAnalyzer.MovementState) lastStates.get(i);
+//                if (newLastState == MovementAnalyzer.MovementState.DRIVING || newLastState == MovementAnalyzer.MovementState.LOW_DRIVING) {
+//                    lastCountDropping += 1;
+//                } else if (newLastState == MovementAnalyzer.MovementState.WALKING || newLastState == MovementAnalyzer.MovementState.STOPPED) {
+//                    if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
+//                        lastCountBoarding += 1;
+//                    }
+//                }
+//            }
+//        }
+//        // 下车
+//        if (currentCountBoarding>4 && lastCountBoarding>4) {
+//            result = Event.ARRIVED_BOARDING;
+//        } else if (currentCountDropping>4 && lastCountDropping>4) {
+//            if (zoneChecker.isInParkingZone((LocationPoint) window.get(window.size() - 1))) {
+//                result = Event.ARRIVED_DROPPING;
+//            }
+//        }
+//        lastStates = (List<MovementAnalyzer.MovementState>) states;
+//        return result;
+//    }
 
     public Event updateState(MovementAnalyzer.MovementState newState) {
         Event result = Event.NONE;
