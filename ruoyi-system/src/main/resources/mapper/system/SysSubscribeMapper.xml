@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.SysSubscribeMapper">
+    
+    <resultMap type="SysSubscribe" id="SysSubscribeResult">
+        <result property="ID"    column="ID"    />
+        <result property="subscribeId"    column="SUBSCRIBE_ID"    />
+        <result property="NAME"    column="NAME"    />
+        <result property="TYPE"    column="TYPE"    />
+        <result property="MODE"    column="MODE"    />
+        <result property="ENDPOINT"    column="ENDPOINT"    />
+        <result property="STATUS"    column="STATUS"    />
+        <result property="SOURCE"    column="SOURCE"    />
+        <result property="createTime"    column="CREATE_TIME"    />
+        <result property="updateTime"    column="UPDATE_TIME"    />
+    </resultMap>
+
+    <sql id="selectSysSubscribeVo">
+        select ID, SUBSCRIBE_ID, NAME, TYPE, MODE, ENDPOINT, STATUS, SOURCE, CREATE_TIME, UPDATE_TIME from SYS_SUBSCRIBE
+    </sql>
+
+    <select id="selectSysSubscribeList" parameterType="SysSubscribe" resultMap="SysSubscribeResult">
+        <include refid="selectSysSubscribeVo"/>
+        <where>  
+            <if test="subscribeId != null  and subscribeId != ''"> and SUBSCRIBE_ID = #{subscribeId}</if>
+            <if test="NAME != null  and NAME != ''"> and NAME like concat('%', #{NAME}, '%')</if>
+            <if test="TYPE != null  and TYPE != ''"> and TYPE = #{TYPE}</if>
+            <if test="MODE != null  and MODE != ''"> and MODE = #{MODE}</if>
+            <if test="ENDPOINT != null  and ENDPOINT != ''"> and ENDPOINT = #{ENDPOINT}</if>
+            <if test="STATUS != null  and STATUS != ''"> and STATUS = #{STATUS}</if>
+            <if test="SOURCE != null  and SOURCE != ''"> and SOURCE = #{SOURCE}</if>
+            <if test="createTime != null  and createTime != ''"> and CREATE_TIME = #{createTime}</if>
+            <if test="updateTime != null  and updateTime != ''"> and UPDATE_TIME = #{updateTime}</if>
+        </where>
+    </select>
+    
+    <select id="selectSysSubscribeByID" parameterType="String" resultMap="SysSubscribeResult">
+        <include refid="selectSysSubscribeVo"/>
+        where ID = #{ID}
+    </select>
+
+    <insert id="insertSysSubscribe" parameterType="SysSubscribe" useGeneratedKeys="true" keyProperty="ID">
+        insert into SYS_SUBSCRIBE
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="subscribeId != null">SUBSCRIBE_ID,</if>
+            <if test="NAME != null">NAME,</if>
+            <if test="TYPE != null">TYPE,</if>
+            <if test="MODE != null">MODE,</if>
+            <if test="ENDPOINT != null">ENDPOINT,</if>
+            <if test="STATUS != null">STATUS,</if>
+            <if test="SOURCE != null">SOURCE,</if>
+            <if test="createTime != null">CREATE_TIME,</if>
+            <if test="updateTime != null">UPDATE_TIME,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="subscribeId != null">#{subscribeId},</if>
+            <if test="NAME != null">#{NAME},</if>
+            <if test="TYPE != null">#{TYPE},</if>
+            <if test="MODE != null">#{MODE},</if>
+            <if test="ENDPOINT != null">#{ENDPOINT},</if>
+            <if test="STATUS != null">#{STATUS},</if>
+            <if test="SOURCE != null">#{SOURCE},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateSysSubscribe" parameterType="SysSubscribe">
+        update SYS_SUBSCRIBE
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="subscribeId != null">SUBSCRIBE_ID = #{subscribeId},</if>
+            <if test="NAME != null">NAME = #{NAME},</if>
+            <if test="TYPE != null">TYPE = #{TYPE},</if>
+            <if test="MODE != null">MODE = #{MODE},</if>
+            <if test="ENDPOINT != null">ENDPOINT = #{ENDPOINT},</if>
+            <if test="STATUS != null">STATUS = #{STATUS},</if>
+            <if test="SOURCE != null">SOURCE = #{SOURCE},</if>
+            <if test="createTime != null">CREATE_TIME = #{createTime},</if>
+            <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>
+        </trim>
+        where ID = #{ID}
+    </update>
+
+    <delete id="deleteSysSubscribeByID" parameterType="String">
+        delete from SYS_SUBSCRIBE where ID = #{ID}
+    </delete>
+
+    <delete id="deleteSysSubscribeByIDs" parameterType="String">
+        delete from SYS_SUBSCRIBE where ID in 
+        <foreach item="ID" collection="array" open="(" separator="," close=")">
+            #{ID}
+        </foreach>
+    </delete>
+</mapper>
