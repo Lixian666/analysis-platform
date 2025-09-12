@@ -1,6 +1,5 @@
 package com.jwzt.modules.experiment.utils;
 
-import com.jwzt.modules.experiment.utils.http.HttpUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

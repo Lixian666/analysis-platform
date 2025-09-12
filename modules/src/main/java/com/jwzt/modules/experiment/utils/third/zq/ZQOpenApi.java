@@ -8,7 +8,7 @@ import com.joysuch.open.bo.UserReq;
 import com.joysuch.open.utils.Md5Util;
 import com.joysuch.open.vo.JoySuchResponse;
 import com.joysuch.open.vo.TokenEntity;
-import com.jwzt.modules.experiment.config.BaseConfg;
+import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.Md5Utils;
 import com.jwzt.modules.experiment.utils.http.HttpUtils;
@@ -16,6 +16,8 @@ import com.jwzt.modules.experiment.utils.third.zq.domain.SubReceiveData;
 import com.jwzt.modules.experiment.utils.third.zq.domain.SubscribeResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.net.ConnectException;
@@ -30,7 +32,10 @@ import java.util.Map;
 /**
  * 真趣定位api
  */
+@Service
 public class ZQOpenApi {
+    @Autowired
+    private BaseConfig baseConfig;
 
     private static final Logger log = LoggerFactory.getLogger(HttpUtils.class);
 
@@ -65,14 +70,14 @@ public class ZQOpenApi {
      * @param data 订阅数据
      * @return 订阅结果
      */
-    public static SubscribeResult httpSubscriber(String type, SubReceiveData data){
+    public SubscribeResult httpSubscriber(String type, SubReceiveData data){
         Map<String, String> headers = getHeaders();
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
             put("type", type);
             put("data", data);
-            put("licence", getLicence(BaseConfg.USER_NAME, BaseConfg.PASSWORD));
+            put("licence", getLicence(baseConfig.getJoysuch().getUsername(), baseConfig.getJoysuch().getPassword()));
         }});
-        String result = sendPost(BaseConfg.SUBSCRIBE_URL, headers, jsonBody);
+        String result = sendPost(baseConfig.getJoysuch().getApi().getSubscribe(), headers, jsonBody);
         return JSONObject.parseObject(result, SubscribeResult.class);
     }
 
@@ -96,13 +101,13 @@ public class ZQOpenApi {
      * @param subscribeId 订阅数据
      * @return 取消订阅结果
      */
-    public static SubscribeResult httpUnSubscriber(String subscribeId){
+    public SubscribeResult httpUnSubscriber(String subscribeId){
         Map<String, String> headers = getHeaders();
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
             put("subscribeId", subscribeId);
-            put("licence", getLicence(BaseConfg.USER_NAME, BaseConfg.PASSWORD));
+            put("licence", getLicence(baseConfig.getJoysuch().getUsername(), baseConfig.getJoysuch().getPassword()));
         }});
-        String result = sendPost(BaseConfg.UNSUBSCRIBE_URL, headers, jsonBody);
+        String result = sendPost(baseConfig.getJoysuch().getApi().getUnsubscribe(), headers, jsonBody);
         return JSONObject.parseObject(result, SubscribeResult.class);
     }
 
@@ -115,7 +120,7 @@ public class ZQOpenApi {
      * @param endTime 结束时间，格式为"yyyy-MM-dd HH:mm:ss"
      * @return 定位点列表的JSON字符串结果
      */
-    public static String getListOfPoints(String cardId, String buildId, String startTime, String endTime) {
+    public String getListOfPoints(String cardId, String buildId, String startTime, String endTime) {
         Map<String, String> headers = getHeaders();
         headers.put("X-BuildId", buildId);
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
@@ -124,13 +129,13 @@ public class ZQOpenApi {
             put("endTime", DateTimeUtils.convertToTimestamp(endTime));
             put("locationType", "real");
         }});
-        String buildResult = sendPost(BaseConfg.GET_POINTS_URL, headers, jsonBody);
+        String buildResult = sendPost(baseConfig.getJoysuch().getApi().getPoints(), headers, jsonBody);
         return buildResult;
     }
 
-    public static JSONObject getListOfCards() {
+    public JSONObject getListOfCards() {
         Map<String, String> headers = getHeaders();
-        String buildResult = sendPost(BaseConfg.GET_BUILDLIST_URL, headers, null);
+        String buildResult = sendPost(baseConfig.getJoysuch().getApi().getBuildList(), headers, null);
         JSONObject resultJson = JSONObject.parseObject(buildResult);
         JSONArray dataArray = resultJson.getJSONArray("data");
         String buildId = null;
@@ -153,14 +158,14 @@ public class ZQOpenApi {
             put("simIccid", "");
         }});
 
-        String result = sendPost(BaseConfg.GET_CARDS_URL, headers, jsonBody);
+        String result = sendPost(baseConfig.getJoysuch().getApi().getCards(), headers, jsonBody);
         return JSONObject.parseObject(result);
     };
 
-    public static Map<String, String> getHeaders() {
+    public Map<String, String> getHeaders() {
         long timestamp = System.currentTimeMillis();
         if (response == null || accessToken == null || signId == null || expireAt == null){
-            response = getAccessToken(BaseConfg.USER_NAME, BaseConfg.PASSWORD);
+            response = getAccessToken(baseConfig.getJoysuch().getUsername(), baseConfig.getJoysuch().getPassword());
             accessToken = response.getData().getAccessToken();
             signId = response.getData().getSignId();
             expireAt = String.valueOf(response.getData().getExpireAt());
@@ -266,37 +271,37 @@ public class ZQOpenApi {
         return result.toString();
     }
 
-    public static String getLicence(String username, String password) {
+    public String getLicence(String username, String password) {
         UserReq userReq = UserReq.builder().username(username).password(password).build();
-        licence = AccessTokenApi.of(BaseConfg.BASE_URL, "null").getLicence(userReq).getData();
+        licence = AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), "null").getLicence(userReq).getData();
         return licence;
     }
 
-    public static JoySuchResponse<TokenEntity> getAccessToken(String username, String password) {
+    public JoySuchResponse<TokenEntity> getAccessToken(String username, String password) {
         AccessTokenReq accessTokenReq = new AccessTokenReq(getLicence(username, password));
-        JoySuchResponse<TokenEntity> response = AccessTokenApi.of(BaseConfg.BASE_URL, accessTokenReq.getLicence()).refreshAccessToken();
+        JoySuchResponse<TokenEntity> response = AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessTokenReq.getLicence()).refreshAccessToken();
         return response;
     }
 
-    public static JoySuchResponse<TokenEntity> refreshAccessToken() {
+    public JoySuchResponse<TokenEntity> refreshAccessToken() {
         AccessTokenReq accessTokenReq = new AccessTokenReq(licence);
-        JoySuchResponse<TokenEntity> response = AccessTokenApi.of(BaseConfg.BASE_URL, accessTokenReq.getLicence()).refreshAccessToken();
+        JoySuchResponse<TokenEntity> response = AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessTokenReq.getLicence()).refreshAccessToken();
         return response;
     }
 
-    public static void main(String[] args) {
-//        getListOfCards();
-        String startTime = "2025-08-12 15:00:00";
-        String endTime = "2025-08-12 21:00:00";
-        JSONObject jsonObject = JSONObject.parseObject(getListOfPoints("1918B3000BA3", "209885", startTime, endTime));
-        // 指定要生成的 JSON 文件路径
-        String filePath = "D:/PlatformData/定位卡数据/鱼嘴" + "/20250806下午zq.json";
-
-        try (FileWriter fileWriter = new FileWriter(filePath)) {
-            fileWriter.write(jsonObject.toJSONString()); // fastjson 中使用 toJSONString() 方法
-            System.out.println("JSON 文件已生成，路径为：" + filePath);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    public static void main(String[] args) {
+////        getListOfCards();
+//        String startTime = "2025-08-12 15:00:00";
+//        String endTime = "2025-08-12 21:00:00";
+//        JSONObject jsonObject = JSONObject.parseObject(getListOfPoints("1918B3000BA3", "209885", startTime, endTime));
+//        // 指定要生成的 JSON 文件路径
+//        String filePath = "D:/PlatformData/定位卡数据/鱼嘴" + "/20250806下午zq.json";
+//
+//        try (FileWriter fileWriter = new FileWriter(filePath)) {
+//            fileWriter.write(jsonObject.toJSONString()); // fastjson 中使用 toJSONString() 方法
+//            System.out.println("JSON 文件已生成，路径为：" + filePath);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 }

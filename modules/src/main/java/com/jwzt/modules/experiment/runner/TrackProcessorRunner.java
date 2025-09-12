@@ -45,7 +45,7 @@ public class TrackProcessorRunner implements CommandLineRunner {
 //                List<LocationPoint> pointsByCardId = entry.getValue();
 //                // 再次根据点位、是否时间一样、是否漂移清洗数据
 //                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-//                if (FilterConfig.IS_OUTPUT_SHP){
+//                if (FilterConfig.outputShp){
 //                    //清洗过运动或停留数据后生成shp文件
 //                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\finish_clean_points.shp");
 //                }
@@ -63,7 +63,7 @@ public class TrackProcessorRunner implements CommandLineRunner {
 //                List<LocationPoint> pointsByCardId = entry.getValue();
 //                // 再次根据点位、是否时间一样、是否漂移清洗数据
 //                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-//                if (FilterConfig.IS_OUTPUT_SHP){
+//                if (FilterConfig.outputShp){
 //                    //清洗过运动或停留数据后生成shp文件
 //                    DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
 //                }

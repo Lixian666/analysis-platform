@@ -1,9 +1,7 @@
 package com.jwzt.modules.experiment;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import com.jwzt.modules.experiment.config.BaseConfg;
-import com.jwzt.modules.experiment.config.FilePathConfig;
+import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.*;
 import com.jwzt.modules.experiment.filter.LocationSmoother;
@@ -12,7 +10,6 @@ import com.jwzt.modules.experiment.service.ITakBehaviorRecordDetailService;
 import com.jwzt.modules.experiment.service.ITakBehaviorRecordsService;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.GeoUtils;
-import com.jwzt.modules.experiment.utils.JsonUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
 import com.jwzt.modules.experiment.vo.EventState;
 import com.ruoyi.common.utils.uuid.IdUtils;
@@ -21,13 +18,17 @@ import org.springframework.stereotype.Service;
 
 
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static com.jwzt.modules.experiment.config.BaseConfg.DELETE_DATETIME;
 import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 @Service
 public class RealDriverTracker implements RealtimeAnalyzer {
+    @Autowired
+    private BaseConfig baseConfig;
+//    @Autowired
+//    private FilePathConfig filePathConfig;
+//    @Autowired
+//    private FilterConfig filterConfig;
     OutlierFilter outlierFilter = new OutlierFilter();
     LocationSmoother smoother = new LocationSmoother();
 
@@ -190,8 +191,8 @@ public class RealDriverTracker implements RealtimeAnalyzer {
         System.out.println("📤 检测完成");
     }
     public void handleNewRawPoint(List<LocationPoint> points) {
-        iTakBehaviorRecordsService.deleteByCreationTime(DELETE_DATETIME);
-        iTakBehaviorRecordDetailService.deleteByCreationTime(DELETE_DATETIME);
+        iTakBehaviorRecordsService.deleteByCreationTime(baseConfig.getDeleteDatetime());
+        iTakBehaviorRecordDetailService.deleteByCreationTime(baseConfig.getDeleteDatetime());
         List<LocationPoint> normalPoints = new ArrayList<>();
         for (LocationPoint rawPoint : points){
             int state = outlierFilter.isValid(rawPoint);
@@ -214,7 +215,7 @@ public class RealDriverTracker implements RealtimeAnalyzer {
         }
         // 添加运动状态
         List<LocationPoint> newPoints = outlierFilter.stateAnalysis(normalPoints);
-        if (BaseConfg.IS_OUTPUT_SHP){
+        if (baseConfig.isOutputShp()){
             // 生成空间异常、时间间隔异常、速度异常过滤后的shp文件
             outputVectorFiles(newPoints,shpFilePath + "final_points.shp");
         }
@@ -236,8 +237,8 @@ public class RealDriverTracker implements RealtimeAnalyzer {
         ShapefileWriter.writeCoordinatesToShapefile(coordinates, shpFilePath);
     }
 
-    public static List<LocationPoint> processWithAnchorDataZQ(List<LocationPoint> LocationPoints, String data) {
-        if (BaseConfg.IS_OUTPUT_SHP){
+    public List<LocationPoint> processWithAnchorDataZQ(List<LocationPoint> LocationPoints, String data) {
+        if (baseConfig.isOutputShp()){
             // 生成原始shp文件
             outputVectorFiles(LocationPoints, shpFilePath + "origin_points.shp");
             // 生成同时间间点清洗数据shp文件
@@ -247,7 +248,7 @@ public class RealDriverTracker implements RealtimeAnalyzer {
         return LocationPoints;
     }
 
-    public static List<LocationPoint> processWithAnchorData(JSONArray points, String data) {
+    public List<LocationPoint> processWithAnchorData(JSONArray points, String data) {
         List<LocationPoint> LocationPoints = new ArrayList<>();
         if (data.equals("rtk")){
             for (int i = 0; i < points.size(); i++) {
@@ -277,7 +278,7 @@ public class RealDriverTracker implements RealtimeAnalyzer {
             }
         }
 
-        if (BaseConfg.IS_OUTPUT_SHP){
+        if (baseConfig.isOutputShp()){
             // 生成原始shp文件
             outputVectorFiles(LocationPoints, shpFilePath + "origin_points.shp");
             // 生成同时间间点清洗数据shp文件
@@ -292,57 +293,6 @@ public class RealDriverTracker implements RealtimeAnalyzer {
             return timeStr.replaceFirst("^0", "");
         }
         return timeStr;
-    }
-
-    public static void main(String[] args) {
-        String data = FilePathConfig.YUZUI;
-//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\51718.json";
-//        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\63856.txt";
-        String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
-        JSONObject jsonObject = JsonUtils.loadJson(file);
-        JSONArray points = jsonObject.getJSONArray("data");
-        List<LocationPoint> LocationPoints = processWithAnchorData(points, data);
-        // 按卡号分组
-        if (data.equals("minhang")){
-            Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
-                    .collect(Collectors.groupingBy(LocationPoint::getCardId));
-            for (Map.Entry<Integer, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
-                // 取出一个卡号的所有点
-                List<LocationPoint> pointsByCardId = entry.getValue();
-                // 再次根据点位、是否时间一样、是否漂移清洗数据
-                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (BaseConfg.IS_OUTPUT_SHP){
-                    //清洗过运动或停留数据后生成shp文件
-                    outputVectorFiles(newPoints, shpFilePath + "finish_clean_points.shp");
-                }
-                DriverTracker tracker = new DriverTracker();
-                // 开始行为分析
-//                for (LocationPoint point : newPoints) {
-//                    tracker.handleNewRawPoint(tracker, point);
-//                }
-            }
-        } else if (data.equals("yuzui")){
-            Map<String, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
-                    .collect(Collectors.groupingBy(LocationPoint::getCardUUID));
-            for (Map.Entry<String, List<LocationPoint>> entry : groupedByCardId.entrySet()) {
-                // 取出一个卡号的所有点
-                List<LocationPoint> pointsByCardId = entry.getValue();
-                // 再次根据点位、是否时间一样、是否漂移清洗数据
-                List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (BaseConfg.IS_OUTPUT_SHP){
-                    //清洗过运动或停留数据后生成shp文件
-                    outputVectorFiles(newPoints, shpFilePath + "data_clean_points.shp");
-                }
-                DriverTracker tracker = new DriverTracker();
-                cardId = entry.getKey();
-                // 开始行为分析
-                tracker.handleNewRawPoint(newPoints);
-//                for (LocationPoint point : newPoints) {
-//                    tracker.handleNewRawPoint(tracker, point);
-//                }
-
-            }
-        }
     }
 
     @Override

@@ -2,7 +2,7 @@ package com.jwzt.modules.experiment;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.jwzt.modules.experiment.config.BaseConfg;
+import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.*;
 import com.jwzt.modules.experiment.filter.LocationSmoother;
@@ -13,6 +13,7 @@ import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
 import com.jwzt.modules.experiment.vo.EventState;
 import com.ruoyi.common.utils.uuid.IdUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -21,7 +22,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static com.jwzt.modules.experiment.config.BaseConfg.DELETE_DATETIME;
 import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 /**
@@ -33,10 +33,21 @@ import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
  */
 @Service
 public class RealTimeDriverTracker {
+    @Autowired
+    private BaseConfig baseConfig;
+//    @Autowired
+//    private FilePathConfig filePathConfig;
+//    @Autowired
+//    private FilterConfig filterConfig;
     // —— 依赖与基础工具 ——
-    private final OutlierFilter outlierFilter = new OutlierFilter();
+    @Autowired
+    private OutlierFilter outlierFilter;
+
+    @Autowired
+    private BoardingDetector detector;
+//    private final OutlierFilter outlierFilter = new OutlierFilter();
     private final LocationSmoother smoother = new LocationSmoother();
-    private final BoardingDetector detector = new BoardingDetector();
+//    private final BoardingDetector detector = new BoardingDetector();
 
     @Resource
     private ITakBehaviorRecordsService iTakBehaviorRecordsService;
@@ -204,7 +215,7 @@ public class RealTimeDriverTracker {
         persistSession(st.activeSession, es.getTimestamp(), sessionPoints);
 
 //        // 可选：输出 shp（整段轨迹）
-//        if (BaseConfg.IS_OUTPUT_SHP) {
+//        if (baseConfig.isOutputShp()) {
 //            String shp = ensureShpPath(shpFileRoot, st.activeSession.sessionId, expectKind);
 //            outputVectorFiles(sessionPoints, shp);
 //        }
@@ -310,8 +321,8 @@ public class RealTimeDriverTracker {
     // —— 兼容：历史批处理入口若也想调用实时逻辑，可提供包装方法 —— //
     public void replayHistorical(List<LocationPoint> points, VehicleType vt) {
         // 可选：先清理旧数据（按你的批处理逻辑）
-        iTakBehaviorRecordsService.deleteByCreationTime(DELETE_DATETIME);
-        iTakBehaviorRecordDetailService.deleteByCreationTime(DELETE_DATETIME);
+        iTakBehaviorRecordsService.deleteByCreationTime(baseConfig.getDeleteDatetime());
+        iTakBehaviorRecordDetailService.deleteByCreationTime(baseConfig.getDeleteDatetime());
 
         upsertVehicleTypeForAll(points, vt);
 

@@ -132,23 +132,60 @@ xss:
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
 
+# 行为分析配置
 experiment:
-  filter:
-    points-size: 60
-    record-points-size: 51
-    max-speed-mps: 22.0
-    min-speed-mps: 0.0
-    # ... 其他filter配置
-  location:
+  base:
     building-id: 209983
-    is-stay-verify: false
-    is-output-shp: false
-    output-shp-path: "D:/PlatformData/output"
-    delete-datetime: "2025-08-07 14:00:00"
-    # ... 其他location配置
-  path:
-    base-path: "D:/PlatformData/shp"
-    minhang: "minhang"
-    yuzui: "yuzui"
-    huochang: "yuzui"
+    stay-verify: false
+    output-shp: false
+    output-shp-path: D:/PlatformData/output
+    delete-datetime: 2025-09-11 14:00:00
+    location-card-type: other
+    card-type: car
 
+    joysuch:
+#      username: 18911091136
+#      password: 3W.163.com
+#      base-url: https://api.joysuch.com:46000
+      username: client
+      password: JoySuch@client10
+      base-url: http://61.50.136.180:46000
+      api:
+        build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
+        cards: ${experiment.base.joysuch.base-url}/api/v4/device/blts
+        points: ${experiment.base.joysuch.base-url}/api/v1/datacenter/historyPath
+        subscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/subscribe
+        unsubscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/unsubscribe
+  file-path:
+    yard-name: yuzui
+    base-path: D:/PlatformData/shp
+    yards:
+      minhang:
+        driving:
+          - ${experiment.file-path.base-path}/minhang/行车道路/xingcdaolu.shp
+          - ${experiment.file-path.base-path}/minhang/20250624库区/kuqu.shp
+          - ${experiment.file-path.base-path}/minhang/货运线/huoyunxin.shp
+        parking:
+          - ${experiment.file-path.base-path}/minhang/20250624库区/kuqu.shp
+        road:
+          - ${experiment.file-path.base-path}/minhang/行车道路/xingcdaolu.shp
+        huoyunxin:
+          - ${experiment.file-path.base-path}/minhang/货运线/huoyunxin.shp
+      yuzui:
+        driving:
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴道路/daolu.shp
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴库区/kuqu.shp
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线/huoyunxian.shp
+        parking2road:
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴道路/daolu.shp
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴库区/kuqu.shp
+        parking:
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴库区/kuqu.shp
+        road:
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴道路/daolu.shp
+        huoyunxin:
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线/huoyunxian.shp
+        huoyunxinzyt:
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线作业台/huoyunxianzyt.shp
+        huoyunxinjc:
+          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线J车/huoyunxianjc.shp

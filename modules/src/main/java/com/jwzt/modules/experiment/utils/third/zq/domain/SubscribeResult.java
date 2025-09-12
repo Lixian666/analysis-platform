@@ -5,14 +5,16 @@ import java.util.List;
 
 @Data
 public class SubscribeResult {
-    private Data data;
+    private DataObj data;
     private int errorCode;
     private List<String> errorMsg;
 
-    public static class Data {
+    @Data
+    public static class DataObj  {
         private List<ResultItem> resultList;
     }
 
+    @Data
     public static class ResultItem {
         private String buildId;
         private String subscribeId;

@@ -3,14 +3,12 @@ package com.jwzt;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.jwzt.modules.experiment.DriverTracker;
-import com.jwzt.modules.experiment.config.BaseConfg;
+import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilePathConfig;
-import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
-import com.jwzt.modules.experiment.runner.TrackProcessorRunner;
 import com.jwzt.modules.experiment.utils.JsonUtils;
-import org.springframework.boot.SpringApplication;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -23,6 +21,10 @@ import java.util.stream.Collectors;
 
 @SpringBootApplication(exclude = { DataSourceAutoConfiguration.class })
 class Application {
+    @Autowired
+    private static BaseConfig baseConfig;
+    @Autowired
+    private static FilePathConfig filePathConfig;
     private static String UUID;
     private static String cardId;
     public static void main(String[] args) {
@@ -38,7 +40,7 @@ class Application {
         String file = "C:\\Users\\Admin\\Desktop\\定位卡数据\\鱼嘴\\250705.json";
         JSONObject jsonObject = JsonUtils.loadJson(file);
         JSONArray points = jsonObject.getJSONArray("data");
-        List<LocationPoint> LocationPoints = DriverTracker.processWithAnchorData(points, data);
+        List<LocationPoint> LocationPoints = new DriverTracker().processWithAnchorData(points, data);
         // 按卡号分组
         if (data.equals("minhang")){
             Map<Integer, List<LocationPoint>> groupedByCardId = LocationPoints.stream()
@@ -48,7 +50,7 @@ class Application {
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (BaseConfg.IS_OUTPUT_SHP){
+                if (baseConfig.isOutputShp()){
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\data_clean_points.shp");
                 }
@@ -68,7 +70,7 @@ class Application {
                 List<LocationPoint> pointsByCardId = entry.getValue();
                 // 再次根据点位、是否时间一样、是否漂移清洗数据
                 List<LocationPoint> newPoints = new OutlierFilter().fixTheData(pointsByCardId);
-                if (BaseConfg.IS_OUTPUT_SHP){
+                if (baseConfig.isOutputShp()){
                     //清洗过运动或停留数据后生成shp文件
                     DriverTracker.outputVectorFiles(newPoints,"D:\\work\\output\\yuzui\\data_clean_points.shp");
                 }
