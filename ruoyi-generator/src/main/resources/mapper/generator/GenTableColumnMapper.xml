@@ -45,6 +45,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		order by ordinal_position
 	</select>
 
+    <select id="selectDMDbTableColumnsByName" parameterType="String" resultMap="GenTableColumnResult">
+        select tabcol.column_name,
+               case when nullable='N' and cons.CONSTRAINT_TYPE!='P' then 1 else null end is_required,
+               case when cons.CONSTRAINT_TYPE='P' then '1' else '0' end is_pk,
+               tabcol.COLUMN_ID sort,
+               colcom.COMMENTS column_comment,
+               case when ai.COL_NAME is null then '0' else '1' end is_increment,
+               tabcol.DATA_TYPE
+        from user_tab_columns tabcol
+                 left join user_cons_columns concol on tabcol.column_name=concol.column_name and concol.TABLE_NAME=tabcol.TABLE_NAME
+                 left join user_constraints cons on cons.CONSTRAINT_NAME=concol.CONSTRAINT_NAME
+                 left join user_col_comments colcom on colcom.TABLE_NAME=tabcol.TABLE_NAME and colcom.COLUMN_NAME=tabcol.COLUMN_NAME
+                 left join (select b.table_name,a.name COL_NAME
+                            from  SYS.SYSCOLUMNS a,all_tables b,sys.sysobjects c where a.INFO2 <![CDATA[ & ]]> 0x01 = 0x01
+                   and a.id=c.id and c.name= b.table_name) ai on ai.TABLE_NAME=tabcol.TABLE_NAME and ai.COL_NAME=tabcol.COLUMN_NAME
+        where tabcol.table_name= #{tableName}
+        order by tabcol.COLUMN_ID
+    </select>
+
     <insert id="insertGenTableColumn" parameterType="GenTableColumn" useGeneratedKeys="true" keyProperty="columnId">
         insert into gen_table_column (
 			<if test="tableId != null and tableId != ''">table_id,</if>
