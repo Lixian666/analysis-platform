@@ -22,6 +22,9 @@ public class ZoneChecker {
     private String yard; // 当前货场，比如 minhang、yuzui
     private final Map<String, List<Geometry>> zoneGeometries = new HashMap<>();
 
+    public ZoneChecker() {
+    }
+
     public ZoneChecker(FilePathConfig filePathConfig) {
         this.filePathConfig = filePathConfig;
         this.yard = filePathConfig.getYardName();
@@ -49,7 +52,7 @@ public class ZoneChecker {
      */
     private void loadZoneGeometries() {
         List<String> types = Arrays.asList("driving", "parking2road", "huoyunxin",
-                "parking", "road", "huoyunxinzyt", "huoyunxinjc");
+                "parking", "road", "huoyunxinzyt", "huoyunxinjc", "banche");
 
         for (String type : types) {
             List<String> paths = filePathConfig.getZonePaths(yard, type);
@@ -123,6 +126,14 @@ public class ZoneChecker {
      */
     public boolean isInHuoyunxinJcZone(LocationPoint p) {
         return isInZone(p, "huoyunxinjc");
+//        return GeoUtils.isInsideGeometry(new Coordinate(p.getLongitude(), p.getLatitude()), zoneGeometries.get("huoyunxinjc"));
+    }
+
+    /**
+     * 是否在货场板车作业区域
+     */
+    public boolean isInBanCheZone(LocationPoint p) {
+        return isInZone(p, "banche");
 //        return GeoUtils.isInsideGeometry(new Coordinate(p.getLongitude(), p.getLatitude()), zoneGeometries.get("huoyunxinjc"));
     }
 

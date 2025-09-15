@@ -43,7 +43,7 @@ public class SysSubscribeController extends BaseController
     @Autowired
     private ISysSubscribeService sysSubscribeService;
 
-    @Value("${experiment.base.building-id}")
+    @Value("${experiment.base.joysuch.building-id}")
     private String buildingId;
 
     @Value("${server.servlet.domain-name}")

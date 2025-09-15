@@ -135,7 +135,6 @@ xss:
 # 行为分析配置
 experiment:
   base:
-    building-id: 209983
     stay-verify: false
     output-shp: false
     output-shp-path: D:/PlatformData/output
@@ -144,6 +143,7 @@ experiment:
     card-type: car
 
     joysuch:
+      building-id: 209885
 #      username: 18911091136
 #      password: 3W.163.com
 #      base-url: https://api.joysuch.com:46000
@@ -156,6 +156,7 @@ experiment:
         points: ${experiment.base.joysuch.base-url}/api/v1/datacenter/historyPath
         subscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/subscribe
         unsubscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/unsubscribe
+        tag-scan-uwb-history: ${experiment.base.joysuch.base-url}/api/v1/device/tagScanUwbHistory
   file-path:
     yard-name: yuzui
     base-path: D:/PlatformData/shp
@@ -189,3 +190,5 @@ experiment:
           - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线作业台/huoyunxianzyt.shp
         huoyunxinjc:
           - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线J车/huoyunxianjc.shp
+        banche:
+          - ${experiment.file-path.base-path}/yuzui/20250901鱼嘴板车作业区/banchezuoyequ.shp

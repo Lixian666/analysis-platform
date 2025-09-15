@@ -28,6 +28,7 @@ public class BaseConfig {
         private String password;
         private String baseUrl;
         private Api api = new Api();
+        private String buildingId;
 
         @Data
         public class Api {
@@ -36,6 +37,7 @@ public class BaseConfig {
             private String points;
             private String subscribe;
             private String unsubscribe;
+            private String tagScanUwbHistory;
         }
     }
 
