@@ -34,8 +34,11 @@ public class DriverTracker {
     private FilePathConfig filePathConfig;
     @Autowired
 //    private FilterConfig filterConfig;
-    OutlierFilter outlierFilter = new OutlierFilter();
+//    OutlierFilter outlierFilter = new OutlierFilter();
+    private OutlierFilter outlierFilter;
     LocationSmoother smoother = new LocationSmoother();
+//    @Autowired
+//    private LocationSmoother smoother;
 
     @Autowired
     private ITakBehaviorRecordsService iTakBehaviorRecordsService;
