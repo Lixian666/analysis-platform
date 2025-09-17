@@ -15,7 +15,7 @@ import com.jwzt.modules.experiment.utils.JsonUtils;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
+import com.ruoyi.common.utils.StringUtils;
 import javax.annotation.Resource;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 /**
  * 定时任务调度测试
  * 
- * @author ruoyirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+ * @author ruoyi
  */
 @Component("ryTask")
 public class RyTask
