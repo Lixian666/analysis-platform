@@ -14,6 +14,7 @@ import com.jwzt.modules.experiment.utils.Md5Utils;
 import com.jwzt.modules.experiment.utils.http.HttpUtils;
 import com.jwzt.modules.experiment.utils.third.zq.domain.SubReceiveData;
 import com.jwzt.modules.experiment.utils.third.zq.domain.SubscribeResult;
+import com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,9 @@ import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -50,6 +53,47 @@ public class ZQOpenApi {
     private static JoySuchResponse<TokenEntity> response = null;
 
     /**
+     * 获取UWB信标列表
+     *
+     * @return UWB信标列表的JSON字符串结果
+     */
+    public String getListOfUWBBeacons() {
+        Map<String, String> headers = getHeaders();
+        String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
+            put("pageSize", 1000);
+        }});
+        String result = sendPost(baseConfig.getJoysuch().getApi().getBeacons(), headers, jsonBody);
+        return result;
+    }
+
+    public String getTagStateHistoryOfTagID(String buildingID, String tagID, String startTime, String endTime){
+        long startTimestamp = DateTimeUtils.convertToTimestamp(startTime);
+        long endTimestamp = DateTimeUtils.convertToTimestamp(endTime);
+        Map<String, String> headers = getHeaders();
+        if (buildingID == null){
+            buildingID = baseConfig.getJoysuch().getBuildingId();
+        }
+        headers.put("X-BuildId", buildingID);
+        String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
+            put("mac", tagID);
+            put("startTime", startTimestamp);
+            put("endTime", endTimestamp);
+        }});
+        String result = sendPost(baseConfig.getJoysuch().getApi().getTagScanUwbHistory(), headers, jsonBody);
+        JSONObject jsonObject = JSONObject.parseObject(result);
+        JSONArray data = jsonObject.getJSONArray("data");
+        List<TagScanUwbData> tagScanUwbDataList = new ArrayList<>();
+        for (int i = 0; i < data.size(); i++) {
+            TagScanUwbData tag = data.getObject(i, TagScanUwbData.class);
+            tag.setDateTime(DateTimeUtils.timestampToDateTimeStr(tag.getTime()));
+            tagScanUwbDataList.add(tag);
+        }
+        JSONArray newData = new JSONArray(tagScanUwbDataList);
+        jsonObject.put("data", newData);
+        return jsonObject.toJSONString();
+    }
+
+    /**
      * 发送订阅请求
      *
      * 订阅类型
@@ -68,7 +112,7 @@ public class ZQOpenApi {
      *
      * @param type 订阅类型
      * @param data 订阅数据
-     * @return 订阅结果
+     * @return 订阅结果,
      */
     public SubscribeResult httpSubscriber(String type, SubReceiveData data){
         Map<String, String> headers = getHeaders();
