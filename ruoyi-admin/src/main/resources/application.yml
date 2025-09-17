@@ -151,11 +151,19 @@ experiment:
       password: JoySuch@client10
       base-url: http://61.50.136.180:46000
       api:
+        # 获取建筑列表
         build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
+        # 获取设备列表
         cards: ${experiment.base.joysuch.base-url}/api/v4/device/blts
+        # 获取标签列表
+        beacons: ${experiment.base.joysuch.base-url}/api/v1/device/uwbBeacons
+        # 获取标签历史轨迹
         points: ${experiment.base.joysuch.base-url}/api/v1/datacenter/historyPath
+        # 订阅http和mq
         subscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/subscribe
+        # 取消订阅
         unsubscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/unsubscribe
+        # 获取标签和uwb扫描历史（测距）
         tag-scan-uwb-history: ${experiment.base.joysuch.base-url}/api/v1/device/tagScanUwbHistory
   file-path:
     yard-name: yuzui
