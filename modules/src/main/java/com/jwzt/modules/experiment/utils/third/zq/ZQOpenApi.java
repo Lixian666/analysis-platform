@@ -59,6 +59,7 @@ public class ZQOpenApi {
      */
     public String getListOfUWBBeacons() {
         Map<String, String> headers = getHeaders();
+        headers.put("X-BuildId", baseConfig.getJoysuch().getBuildingId());
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
             put("pageSize", 1000);
         }});
