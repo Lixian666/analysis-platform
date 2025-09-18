@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwzt.modules.experiment.mapper.TakBeaconInfoMapper">
+    
+    <resultMap type="com.jwzt.modules.experiment.domain.TakBeaconInfo" id="TakBeaconInfoResult">
+        <result property="id"    column="ID"    />
+        <result property="name"    column="NAME"    />
+        <result property="type"    column="TYPE"    />
+        <result property="area"    column="AREA"    />
+        <result property="buildName"    column="BUILD_NAME"    />
+        <result property="buildId"    column="BUILD_ID"    />
+        <result property="beaconId"    column="BEACON_ID"    />
+        <result property="location"    column="LOCATION"    />
+        <result property="status"    column="STATUS"    />
+        <result property="createTime"    column="CREATE_TIME"    />
+        <result property="updateTime"    column="UPDATE_TIME"    />
+    </resultMap>
+
+    <sql id="selectTakBeaconInfoVo">
+        select ID, NAME, TYPE, AREA, BUILD_NAME, BUILD_ID, BEACON_ID, LOCATION, STATUS, CREATE_TIME, UPDATE_TIME from TAK_BEACON_INFO
+    </sql>
+
+    <select id="selectTakBeaconInfoList" parameterType="com.jwzt.modules.experiment.domain.TakBeaconInfo" resultMap="TakBeaconInfoResult">
+        <include refid="selectTakBeaconInfoVo"/>
+        <where>  
+            <if test="name != null  and name != ''"> and NAME like concat('%', #{name}, '%')</if>
+            <if test="type != null  and type != ''"> and TYPE = #{type}</if>
+            <if test="area != null  and area != ''"> and AREA = #{area}</if>
+             <if test="buildName != null  and buildName != ''"> and BUILD_NAME like concat('%', #{buildName}, '%')</if>
+            <if test="buildId != null  and buildId != ''"> and BUILD_ID like concat('%', #{buildId}, '%')</if>
+            <if test="beaconId != null  and beaconId != ''"> and BEACON_ID = #{beaconId}</if>
+            <if test="location != null  and location != ''"> and LOCATION = #{location}</if>
+            <if test="status != null "> and STATUS = #{status}</if>
+            <if test="createTime != null "> and CREATE_TIME = #{createTime}</if>
+            <if test="updateTime != null "> and UPDATE_TIME = #{updateTime}</if>
+        </where>
+    </select>
+    
+    <select id="selectTakBeaconInfoById" parameterType="String" resultMap="TakBeaconInfoResult">
+        <include refid="selectTakBeaconInfoVo"/>
+        where ID = #{id}
+    </select>
+
+    <insert id="insertTakBeaconInfo" parameterType="com.jwzt.modules.experiment.domain.TakBeaconInfo" useGeneratedKeys="true" keyProperty="id">
+        insert into TAK_BEACON_INFO
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">NAME,</if>
+            <if test="type != null and type != ''">TYPE,</if>
+            <if test="area != null and area != ''">AREA,</if>
+            <if test="buildName != null and buildName != ''">BUILD_NAME,</if>
+            <if test="buildId != null and buildId != ''">BUILD_ID,</if>
+            <if test="beaconId != null and beaconId != ''">BEACON_ID,</if>
+            <if test="location != null and location != ''">LOCATION,</if>
+            <if test="status != null">STATUS,</if>
+            <if test="createTime != null">CREATE_TIME,</if>
+            <if test="updateTime != null">UPDATE_TIME,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="type != null and type != ''">#{type},</if>
+            <if test="area != null and area != ''">#{area},</if>
+            <if test="buildName != null and buildName != ''">#{buildName},</if>
+            <if test="buildId != null and buildId != ''">#{buildId},</if>
+            <if test="beaconId != null and beaconId != ''">#{beaconId},</if>
+            <if test="location != null and location != ''">#{location},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTakBeaconInfo" parameterType="com.jwzt.modules.experiment.domain.TakBeaconInfo">
+        update TAK_BEACON_INFO
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="name != null and name != ''">NAME = #{name},</if>
+            <if test="type != null and type != ''">TYPE = #{type},</if>
+            <if test="area != null and area != ''">AREA = #{area},</if>
+            <if test="buildName != null and buildName != ''">BUILD_NAME = #{buildName},</if>
+            <if test="buildId != null and buildId != ''">BUILD_ID = #{buildId},</if>
+            <if test="beaconId != null and beaconId != ''">BEACON_ID = #{beaconId},</if>
+            <if test="location != null and location != ''">LOCATION = #{location},</if>
+            <if test="status != null">STATUS = #{status},</if>
+            <if test="createTime != null">CREATE_TIME = #{createTime},</if>
+            <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>
+        </trim>
+        where ID = #{id}
+    </update>
+
+    <delete id="deleteTakBeaconInfoById" parameterType="String">
+        delete from TAK_BEACON_INFO where ID = #{id}
+    </delete>
+
+    <delete id="deleteTakBeaconInfoByIds" parameterType="String">
+        delete from TAK_BEACON_INFO where ID in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

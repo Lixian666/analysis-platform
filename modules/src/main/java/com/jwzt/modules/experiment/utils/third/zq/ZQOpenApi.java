@@ -177,10 +177,10 @@ public class ZQOpenApi {
             signId = response.getData().getSignId();
             long expireAt = response.getData().getExpireAt();
 
-            // 提前60秒过期，避免临界点失效
-            long ttl = expireAt - System.currentTimeMillis() - 60 * 1000;
-            if (ttl < 0) ttl = 60 * 1000; // 最少缓存1分钟
-
+//            // 提前60秒过期，避免临界点失效
+//            long ttl = expireAt - System.currentTimeMillis() - 60 * 1000;
+//            if (ttl < 0) ttl = 60 * 1000; // 最少缓存1分钟
+            long ttl = 20 * 60 * 1000;
             redisCache.setCacheObject(TOKEN_KEY, accessToken, (int)(ttl/1000), TimeUnit.SECONDS);
             redisCache.setCacheObject(SIGNID_KEY, signId, (int)(ttl/1000), TimeUnit.SECONDS);
         }
