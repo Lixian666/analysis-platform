@@ -10,7 +10,8 @@
         />
       </el-form-item>
       <el-form-item label="类型" prop="type">
-        <el-select v-model="queryParams.type" placeholder="请选择类型" clearable>
+        <!-- 修改此处：给 el-select 添加宽度样式 -->
+        <el-select v-model="queryParams.type" placeholder="请选择类型" clearable :style="{width: '200px'}">
           <el-option
               v-for="dict in tracker_beacon_type"
               :key="dict.value"
@@ -18,6 +19,22 @@
               :value="dict.value"
           />
         </el-select>
+      </el-form-item>
+      <el-form-item label="建筑名称" prop="buildName">
+        <el-input
+            v-model="queryParams.buildName"
+            placeholder="请输入建筑名称"
+            clearable
+            @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="建筑ID" prop="buildId">
+        <el-input
+            v-model="queryParams.buildId"
+            placeholder="请输入建筑ID"
+            clearable
+            @keyup.enter="handleQuery"
+        />
       </el-form-item>
       <el-form-item label="位置" prop="location">
         <el-input
@@ -27,22 +44,22 @@
             @keyup.enter="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="创建时间" prop="createTime">
-        <el-date-picker clearable
-                        v-model="queryParams.createTime"
-                        type="date"
-                        value-format="YYYY-MM-DD"
-                        placeholder="请选择创建时间">
-        </el-date-picker>
-      </el-form-item>
-      <el-form-item label="更新时间" prop="updateTime">
-        <el-date-picker clearable
-                        v-model="queryParams.updateTime"
-                        type="date"
-                        value-format="YYYY-MM-DD"
-                        placeholder="请选择更新时间">
-        </el-date-picker>
-      </el-form-item>
+<!--      <el-form-item label="创建时间" prop="createTime">-->
+<!--        <el-date-picker clearable-->
+<!--                        v-model="queryParams.createTime"-->
+<!--                        type="date"-->
+<!--                        value-format="YYYY-MM-DD"-->
+<!--                        placeholder="请选择创建时间">-->
+<!--        </el-date-picker>-->
+<!--      </el-form-item>-->
+<!--      <el-form-item label="更新时间" prop="updateTime">-->
+<!--        <el-date-picker clearable-->
+<!--                        v-model="queryParams.updateTime"-->
+<!--                        type="date"-->
+<!--                        value-format="YYYY-MM-DD"-->
+<!--                        placeholder="请选择更新时间">-->
+<!--        </el-date-picker>-->
+<!--      </el-form-item>-->
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -52,40 +69,40 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button
-            type="primary"
-            plain
-            icon="Plus"
-            @click="handleAdd"
-            v-hasPermi="['experiment:beaconInfo:add']"
+          type="primary"
+          plain
+          icon="Plus"
+          @click="handleAdd"
+          v-hasPermi="['experiment:beaconInfo:add']"
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button
-            type="success"
-            plain
-            icon="Edit"
-            :disabled="single"
-            @click="handleUpdate"
-            v-hasPermi="['experiment:beaconInfo:edit']"
+          type="success"
+          plain
+          icon="Edit"
+          :disabled="single"
+          @click="handleUpdate"
+          v-hasPermi="['experiment:beaconInfo:edit']"
         >修改</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button
-            type="danger"
-            plain
-            icon="Delete"
-            :disabled="multiple"
-            @click="handleDelete"
-            v-hasPermi="['experiment:beaconInfo:remove']"
+          type="danger"
+          plain
+          icon="Delete"
+          :disabled="multiple"
+          @click="handleDelete"
+          v-hasPermi="['experiment:beaconInfo:remove']"
         >删除</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button
-            type="warning"
-            plain
-            icon="Download"
-            @click="handleExport"
-            v-hasPermi="['experiment:beaconInfo:export']"
+          type="warning"
+          plain
+          icon="Download"
+          @click="handleExport"
+          v-hasPermi="['experiment:beaconInfo:export']"
         >导出</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
@@ -93,23 +110,27 @@
 
     <el-table v-loading="loading" :data="beaconInfoList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
+      <el-table-column type="index" label="序号" align="center" width="50" />
       <el-table-column label="名称" align="center" prop="name" />
       <el-table-column label="类型" align="center" prop="type">
         <template #default="scope">
           <dict-tag :options="tracker_beacon_type" :value="scope.row.type"/>
         </template>
       </el-table-column>
+      <el-table-column label="区域（靠近铁路为A）" align="center" prop="area" />
+      <el-table-column label="建筑名称" align="center" prop="buildName" />
+      <el-table-column label="建筑ID" align="center" prop="buildId" />
       <el-table-column label="信标ID" align="center" prop="beaconId" />
       <el-table-column label="位置" align="center" prop="location" />
       <el-table-column label="状态" align="center" prop="status" />
       <el-table-column label="创建时间" align="center" prop="createTime" width="180">
         <template #default="scope">
-          <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d}') }}</span>
+          <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d} {h}:{i}:{s}') }}</span>
         </template>
       </el-table-column>
       <el-table-column label="更新时间" align="center" prop="updateTime" width="180">
         <template #default="scope">
-          <span>{{ parseTime(scope.row.updateTime, '{y}-{m}-{d}') }}</span>
+          <span>{{ parseTime(scope.row.updateTime, '{y}-{m}-{d} {h}:{i}:{s}') }}</span>
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
@@ -121,11 +142,11 @@
     </el-table>
 
     <pagination
-        v-show="total>0"
-        :total="total"
-        v-model:page="queryParams.pageNum"
-        v-model:limit="queryParams.pageSize"
-        @pagination="getList"
+      v-show="total>0"
+      :total="total"
+      v-model:page="queryParams.pageNum"
+      v-model:limit="queryParams.pageSize"
+      @pagination="getList"
     />
 
     <!-- 添加或修改信标信息对话框 -->
@@ -137,11 +158,43 @@
         <el-form-item label="类型" prop="type">
           <el-select v-model="form.type" placeholder="请选择类型">
             <el-option
-                v-for="dict in tracker_beacon_type"
-                :key="dict.value"
-                :label="dict.label"
-                :value="dict.value"
+              v-for="dict in tracker_beacon_type"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value"
             ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="区域（靠近铁路为A）" prop="area">
+          <el-select v-model="form.area" placeholder="请选择区域">
+            <el-option
+                v-for="area in areaOptions"
+                :key="area"
+                :label="area"
+                :value="area"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="建筑名称" prop="buildName">
+          <el-input v-model="form.buildName" placeholder="请输入建筑名称" />
+        </el-form-item>
+        <el-form-item label="建筑ID" prop="buildId">
+          <el-input v-model="form.buildId" placeholder="请输入建筑ID" />
+        </el-form-item>
+        <el-form-item label="信标ID" prop="beaconId">
+          <el-select v-model="form.beaconId" placeholder="请选择信标ID">
+            <el-option
+                v-for="beaconId in beaconIdList"
+                :key="beaconId"
+                :label="beaconId"
+                :value="beaconId"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="form.status" placeholder="请选择状态" clearable :style="{width: '100%'}">
+            <el-option v-for="(item, index) in statusOptions" :key="index" :label="item.label"
+                       :value="item.value" :disabled="item.disabled"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="位置" prop="location">
@@ -159,11 +212,12 @@
 </template>
 
 <script setup name="BeaconInfo">
-import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo } from "@/api/experiment/beaconInfo";
+import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo, listBeaconId } from "@/api/experiment/beaconInfo";
 
 const { proxy } = getCurrentInstance();
 const { tracker_beacon_type } = proxy.useDict('tracker_beacon_type');
 
+const beaconIdList = ref([]);
 const beaconInfoList = ref([]);
 const open = ref(false);
 const loading = ref(true);
@@ -174,13 +228,35 @@ const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
 
+const statusOptions = ref([{
+  "label": "启用",
+  "value": 0
+}, {
+  "label": "禁用",
+  "value": 1
+}])
+
+const areaOptions = ref(["A","B","C","D","E","F"]);
+
 const data = reactive({
-  form: {},
+  form: {
+    name: null,
+    type: null,
+    area: null,
+    buildName: null,
+    buildId: null,
+    beaconId: null,
+    location: null,
+    status: null,
+  },
   queryParams: {
     pageNum: 1,
     pageSize: 10,
     name: null,
     type: null,
+    area: null,
+    buildName: null,
+    buildId: null,
     beaconId: null,
     location: null,
     status: null,
@@ -194,6 +270,9 @@ const data = reactive({
     type: [
       { required: true, message: "类型不能为空", trigger: "change" }
     ],
+    area: [
+      { required: true, message: "区域不能为空", trigger: "blur" }
+    ],
     beaconId: [
       { required: true, message: "信标ID不能为空", trigger: "change" }
     ],
@@ -201,12 +280,19 @@ const data = reactive({
       { required: true, message: "位置不能为空", trigger: "blur" }
     ],
     status: [
-      { required: true, message: "状态，0-正常，1-异常不能为空", trigger: "change" }
+      { required: true, message: "状态，0-启用，1-禁用不能为空", trigger: "change" }
     ],
   }
 });
 
 const { queryParams, form, rules } = toRefs(data);
+
+onMounted(() => {
+  // 在这里初始化 beaconIdList
+  // 示例：beaconIdList.value = [1, 2, 3];
+  // 或者调用 API 获取数据
+  getBeaconIds();
+});
 
 /** 查询信标信息列表 */
 function getList() {
@@ -218,10 +304,34 @@ function getList() {
   });
 }
 
+/** 查询信标ID列表 */
+function getBeaconIds() {
+  // 如果已经加载过数据，则不再重复加载
+  if (beaconIdList.value && beaconIdList.value.length > 0) {
+    return Promise.resolve();
+  }
+  return listBeaconId().then(response => {
+    console.log("完整 response：", response);
+    console.log("信标ID接口返回：", response.data);
+    beaconIdList.value = response;
+  }).catch(error => {
+    console.error('获取信标ID列表失败:', error);
+    proxy.$modal.message({ message: '获取信标ID列表失败', type: 'error' });
+  });
+}
+
 // 取消按钮
 function cancel() {
   open.value = false;
   reset();
+}
+
+// 表单重置
+function newReset() {
+  form.value.id = null;
+  form.value.createTime = null;
+  form.value.updateTime = null;
+  // proxy.resetForm("beaconInfoRef");
 }
 
 // 表单重置
@@ -230,6 +340,9 @@ function reset() {
     id: null,
     name: null,
     type: null,
+    area: null,
+    buildName: null,
+    buildId: null,
     beaconId: null,
     location: null,
     status: null,
@@ -260,7 +373,11 @@ function handleSelectionChange(selection) {
 
 /** 新增按钮操作 */
 function handleAdd() {
-  reset();
+  newReset();
+// 确保 beaconIdList 已经加载
+  if (!beaconIdList.value || beaconIdList.value.length === 0) {
+    getBeaconIds();
+  }
   open.value = true;
   title.value = "添加信标信息";
 }

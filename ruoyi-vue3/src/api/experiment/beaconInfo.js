@@ -9,6 +9,14 @@ export function listBeaconInfo(query) {
   })
 }
 
+// 查询信标ID列表
+export function listBeaconId() {
+  return request({
+    url: '/experiment/beaconInfo/beaconIds',
+    method: 'get'
+  })
+}
+
 // 查询信标信息详细
 export function getBeaconInfo(id) {
   return request({

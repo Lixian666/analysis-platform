@@ -143,7 +143,10 @@ experiment:
     card-type: car
 
     joysuch:
+      building-name: 鱼嘴
       building-id: 209885
+#      building-name: 董家镇
+#      building-id: 209983
 #      username: 18911091136
 #      password: 3W.163.com
 #      base-url: https://api.joysuch.com:46000

@@ -28,12 +28,14 @@ public class BaseConfig {
         private String password;
         private String baseUrl;
         private Api api = new Api();
+        private String buildingName;
         private String buildingId;
 
         @Data
         public class Api {
             private String buildList;
             private String cards;
+            private String beacons;
             private String points;
             private String subscribe;
             private String unsubscribe;
