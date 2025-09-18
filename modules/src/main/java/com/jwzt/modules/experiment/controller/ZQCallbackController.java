@@ -15,7 +15,7 @@ public class ZQCallbackController {
     public String zqTagScanUwbBeacon(@RequestBody String requestBody) {
         try {
             // 打印接收到的回调数据
-            System.out.println("Received callback data: " + requestBody);
+//            System.out.println("Received callback data: " + requestBody);
 
 //            // 解析 JSON 数据
 //            JSONObject jsonResponse = JSONObject.parseObject(requestBody);
