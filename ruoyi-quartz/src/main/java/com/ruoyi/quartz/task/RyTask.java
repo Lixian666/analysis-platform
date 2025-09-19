@@ -33,6 +33,7 @@ public class RyTask
 {
     @Autowired
     private BaseConfig baseConfig;
+
     @Autowired
     private DriverTracker tracker;
 
@@ -49,6 +50,9 @@ public class RyTask
     private Deque<LocationPoint> recordWindow = new ArrayDeque<>(FilterConfig.RECORD_POINTS_SIZE);
     private List<LocationPoint>  recordPoints = new ArrayList<>();
 
+    /**
+     * 实时任务
+     */
     public void realDriverTrackerZQ() throws ParseException {
 
         String data = baseConfig.LOCATION_CARD_TYPE;
@@ -60,7 +64,7 @@ public class RyTask
 //
 //        }
         String cardId = "1918B3000BA3";
-        String buildId = "209885";
+        String buildId = baseConfig.getJoysuch().getBuildingId();
         String startTimeStr = "2025-08-12 15:50:00";
         String endTimeStr = "2025-08-12 17:00:00";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
@@ -149,12 +153,15 @@ public class RyTask
         }
     }
 
+    /**
+     * 实时任务测试
+     */
     public void realDriverTrackerZQTest(){
 
         String data = baseConfig.LOCATION_CARD_TYPE;
         String date = "未获取到日期";
         String cardId = "1918B3000BA3";
-        String buildId = "209885";
+        String buildId = baseConfig.getJoysuch().getBuildingId();
         String startTimeStr = "2025-08-06 18:20:00";
         String endTimeStr = "2025-08-06 21:00:00";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
