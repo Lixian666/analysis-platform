@@ -16,18 +16,6 @@ public class ZQCallbackController {
         try {
             // 打印接收到的回调数据
 //            System.out.println("Received callback data: " + requestBody);
-
-//            // 解析 JSON 数据
-//            JSONObject jsonResponse = JSONObject.parseObject(requestBody);
-//            String buildId = jsonResponse.getJSONArray("resultList")
-//                    .getJSONObject(0).getString("buildId");
-//            String subscribeId = jsonResponse.getJSONArray("resultList")
-//                    .getJSONObject(0).getString("subscribeId");
-
-            // 将数据保存到数据库
-//            saveToDatabase(buildId, subscribeId);
-
-            // 返回成功响应
             return "Callback received successfully!";
         } catch (Exception e) {
             e.printStackTrace();
