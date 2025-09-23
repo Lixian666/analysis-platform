@@ -1,6 +1,7 @@
 package com.jwzt.modules.experiment.domain;
 
 import com.jwzt.modules.experiment.utils.GeoUtils;
+import com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData;
 import lombok.Data;
 
 @Data
@@ -15,9 +16,13 @@ public class LocationPoint {
     private MovementAnalyzer.MovementState state;
     private String event;
 
+    private TagScanUwbData tagScanUwbData;
+
     private Boolean isStay = false;
 
-
+    public LocationPoint(TagScanUwbData tagScanUwbData) {
+        this.tagScanUwbData = tagScanUwbData;
+    }
 
     public LocationPoint(Integer cardId, Double longitude, Double latitude, String acceptTime, Long timestamp) {
         this.cardId = cardId;
