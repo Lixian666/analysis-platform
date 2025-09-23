@@ -12,6 +12,7 @@ import com.jwzt.modules.experiment.domain.LocationPoint2;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.JsonUtils;
+import com.jwzt.modules.experiment.utils.third.zq.FusionData;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -154,20 +155,25 @@ public class RyTask
     }
 
     /**
-     * 实时任务测试
+     * 实时任务测试（历史数据模拟）
      */
     public void realDriverTrackerZQTest(){
 
         String data = baseConfig.LOCATION_CARD_TYPE;
         String date = "未获取到日期";
-        String cardId = "1918B3000BA3";
         String buildId = baseConfig.getJoysuch().getBuildingId();
-        String startTimeStr = "2025-08-06 18:20:00";
-        String endTimeStr = "2025-08-06 21:00:00";
+//        String cardId = "1918B3000BA3";
+//        String startTimeStr = "2025-08-06 18:20:00";
+//        String endTimeStr = "2025-08-06 21:00:00";
+        String cardId = "1918B3000BA3";
+        String startTimeStr = "2025-09-22 18:24:00";
+        String endTimeStr = "2025-09-22 18:52:00";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
         LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
         JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
+        JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
         JSONArray points = jsonObject.getJSONArray("data");
+        JSONArray tagData = tagJsonObject.getJSONArray("data");
         List<LocationPoint> LocationPoints = new ArrayList<>();
         for (int i = 0; i < points.size(); i++){
             JSONObject js = (JSONObject) points.get(i);
@@ -186,6 +192,7 @@ public class RyTask
                 LocationPoints.add(point1);
             }
         }
+        LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
         if (LocationPoints.size() > 0){
             realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
         }

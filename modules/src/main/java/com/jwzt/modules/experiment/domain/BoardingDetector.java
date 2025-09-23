@@ -45,7 +45,7 @@ public class BoardingDetector {
 
 
     public EventState updateState(List<LocationPoint> recordPoints){
-        Event result = Event.NONE;;
+        Event result = Event.NONE;
         if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) return new EventState();
         List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, FilterConfig.RECORD_POINTS_SIZE / 2);
         LocationPoint currentPoint = recordPoints.get(FilterConfig.RECORD_POINTS_SIZE / 2);

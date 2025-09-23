@@ -90,6 +90,24 @@ public class ZQOpenApi {
 
     /**
      * 发送订阅请求
+     *
+     * 订阅类型
+     * location：位置结果
+     * zeroDimEnterLeave：终端进出圈事件
+     * rail：围栏事件
+     * area：区域事件
+     * oneKeyAlarm：一键报警消息
+     * bltOnOffLine：终端定位在离线消息
+     * lowpower：终端低电量
+     * textCmdData：终端下行结果
+     * bltOnOffLineV2：终端通信离线消息
+     * bltProtocolData：标签上报信息
+     * dataReportingData：终端特有数据消息
+     * cmdResult：终端下行cmd结果
+     *
+     * @param type 订阅类型
+     * @param data 订阅数据
+     * @return 订阅结果,
      */
     public SubscribeResult httpSubscriber(String type, SubReceiveData data){
         Map<String, String> headers = getHeaders();
@@ -104,6 +122,23 @@ public class ZQOpenApi {
 
     /**
      * 取消订阅请求
+     *
+     * 订阅类型
+     * location：位置结果
+     * zeroDimEnterLeave：终端进出圈事件
+     * rail：围栏事件
+     * area：区域事件
+     * oneKeyAlarm：一键报警消息
+     * bltOnOffLine：终端定位在离线消息
+     * lowpower：终端低电量
+     * textCmdData：终端下行结果
+     * bltOnOffLineV2：终端通信离线消息
+     * bltProtocolData：标签上报信息
+     * dataReportingData：终端特有数据消息
+     * cmdResult：终端下行cmd结果
+     *
+     * @param subscribeId 订阅数据
+     * @return 取消订阅结果
      */
     public SubscribeResult httpUnSubscriber(String subscribeId){
         Map<String, String> headers = getHeaders();
@@ -116,7 +151,13 @@ public class ZQOpenApi {
     }
 
     /**
-     * 获取定位点
+     * 获取指定卡片在指定时间段内的定位点列表
+     *
+     * @param cardId 卡片ID
+     * @param buildId 建筑ID
+     * @param startTime 开始时间，格式为"yyyy-MM-dd HH:mm:ss"
+     * @param endTime 结束时间，格式为"yyyy-MM-dd HH:mm:ss"
+     * @return 定位点列表的JSON字符串结果
      */
     public String getListOfPoints(String cardId, String buildId, String startTime, String endTime) {
         Map<String, String> headers = getHeaders();
@@ -140,7 +181,9 @@ public class ZQOpenApi {
             String firstItemStr = dataArray.getString(0);
             JSONObject firstItemJson = JSONObject.parseObject(firstItemStr);
             buildId = firstItemJson.getString("uuid");
+            // 使用 buildId
         } else {
+            // 处理 data 为空的情况
             throw new RuntimeException("data 数组为空，无法提取 buildId");
         }
 
