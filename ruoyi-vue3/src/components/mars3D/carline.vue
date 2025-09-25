@@ -153,7 +153,7 @@ map.value = new mars3d.Map('mars3dContainer', {
 
 // 第二步：获取 viewer 实例（map.value 就是 viewer）
 const viewer = map.value;
-
+map.value.setCameraView(proxy.$center, { duration: 0.1 })
 // 使用 viewer.scene 的 postRender 事件（确保 scene 已初始化）
 // 使用 once = true，只执行一次
 const removeListener = viewer.scene.postRender.addEventListener(() => {
@@ -225,6 +225,32 @@ function setMsaaSamples(samples) {
     }
   }
   function addTileLayer() {
+    add3DTileLayer()
+  }
+
+  function add3DTileLayer(){
+    graphicLayer_map2Dtdt.value = new mars3d.layer.WmtsLayer({
+      url: proxy.$tdt_img,
+      layer: "img",
+      style: "default",
+      tileMatrixSetID: "w",
+      format: "tiles",
+      maximumLevel: 18
+    })
+    map.value.addLayer(graphicLayer_map2Dtdt.value)
+
+    // 加载本地 3D Tiles 模型
+    graphicLayer_map3D.value = new mars3d.layer.TilesetLayer({
+      name: "董家镇货场",
+      url: proxy.$modelMapDongJiaZhen,
+      position: { alt: 36.064268 },
+      maximumScreenSpaceError: 1,
+      flyTo: true
+    })
+    map.value.addLayer(graphicLayer_map3D.value)
+  }
+
+  function add2DTileLayer(){
     graphicLayer_map2Dtdt.value = new mars3d.layer.XyzLayer({
       url: proxy.$tdt,
       opacity: 1
@@ -236,52 +262,54 @@ function setMsaaSamples(samples) {
     })
     map.value.addLayer(graphicLayer_map2D.value)
   }
+
   function camerahistory (){
-    cameraHistory.value = new mars3d.thing.CameraHistory({
-      limit: {
-        // 限定视角范围
-        position: Cesium.Cartesian3.fromDegrees(106.733082, 29.620789, 34.85),
-        radius: 5000.0,
-        debugExtent: false
-      },
-      maxCacheCount: 999
-    })
-    map.value.addThing(cameraHistory.value)
-    const eventTarget = new mars3d.BaseClass()
-    cameraHistory.value.on(mars3d.EventType.change, function (event) {
-      // 触发自定义事件
-      const count = event.count
-      eventTarget.fire("changeCamera", { count })
-    })
+    // cameraHistory.value = new mars3d.thing.CameraHistory({
+    //   limit: {
+    //     // 限定视角范围
+    //     position: Cesium.Cartesian3.fromDegrees(106.733082, 29.620789, 34.85),
+    //     radius: 5000.0,
+    //     debugExtent: false
+    //   },
+    //   maxCacheCount: 999
+    // })
+    // map.value.addThing(cameraHistory.value)
+    // const eventTarget = new mars3d.BaseClass()
+    // cameraHistory.value.on(mars3d.EventType.change, function (event) {
+    //   // 触发自定义事件
+    //   const count = event.count
+    //   eventTarget.fire("changeCamera", { count })
+    // })
   }
-  function moveCarDirection(graphicLayer, pos,bool,color,num,showbool) {
-    if(pos && pos.length==0){
+  function moveCarDirection(graphicLayer, pos, bool, color, num, showbool) {
+    if (!pos || pos.length === 0) {
       return
     }
     let cargo = pos
     let linecolor = color
-    if(num<=1){
+    // === 线条点位 ===
+    const liftedPositions = cargo.map(([lon, lat, height]) => [lon, lat, (height || 0) + 28])
+    if (num <= 1) {
+      // === 线条 ===
       const graphicqa = new mars3d.graphic.PolylinePrimitive({
-        positions: cargo,
-        show:showbool,
+        positions: liftedPositions,
+        show: showbool,
         style: {
           width: 7,
           materialType: mars3d.MaterialType.LineFlow,
           materialOptions: {
             image: linepng,
-            speed: 8,
-            //repeat: new Cesium.Cartesian2(cargo.length / 2, 1.0),
-            // color: '#3388FF',
-            // color: Cesium.Color.CHARTREUSE,
-            // image: 'http://mars3d.cn/img/textures/line-arrow-dovetail.png',
-            // speed: 20
+            speed: 8
           },
-          //clampToGround: true
+          depthTest: false   // 🚀 永远显示在最上面
         }
       })
       graphicLayer.addGraphic(graphicqa)
+
+      // === 线条 ===
       const graphicq = new mars3d.graphic.PolylinePrimitive({
-        positions: cargo,show:showbool,
+        positions: liftedPositions,
+        show: showbool,
         style: {
           color: "#f5062",
           materialType: mars3d.MaterialType.LineFlowColor,
@@ -292,100 +320,66 @@ function setMsaaSamples(samples) {
             speed: 0.3,
             percent: 0.35,
             alpha: 0.55
-          }
-        },
+          },
+          depthTest: false   // 🚀 永远显示在最上面
+        }
       })
       graphicLayer.addGraphic(graphicq)
-      const graphics = new mars3d.graphic.BillboardEntity({
-        position:[ cargo[0][0],cargo[0][1],0],show:showbool,
-        style: {
-          image: startpng,
-          scale: 1,
-          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          label: {
-            text: "",
-            font_size: 18,
-            color: "#ffffff",
-            pixelOffsetY: 0,
-          }
-        },
-        attr: { remark: "" }
-      })
-      graphicLayer.addGraphic(graphics)
-      const graphice = new mars3d.graphic.BillboardEntity({
-        position:[ cargo[cargo.length - 1][0],cargo[cargo.length - 1][1],0],show:showbool,
-        style: {
-          image: endpng,
-          scale: 1,
-          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          label: {
-            text: "",
-            font_size: 18,
-            color: "#ffffff",
-            pixelOffsetY: 0,
-          }
-        },
-        attr: { remark: "" }
-      })
-      graphicLayer.addGraphic(graphice)
-
-    }else{
+    } else {
+      // === 线条 ===
       const graphicq = new mars3d.graphic.PolylinePrimitive({
-        positions: cargo,show:showbool,
+        positions: liftedPositions, // 🚀 抬高 2m,
+        show: showbool,
         style: {
           color: linecolor,
-        //  materialType: mars3d.MaterialType.LineFlowColor,
-          lastMaterialType: "PolylineArrow",
           width: 3,
           materialOptions: {
             color: linecolor,
             speed: 0.3,
             percent: 0.35,
             alpha: 0.55
-          }
-        },
+          },
+          depthTest: false   // 🚀 永远显示在最上面
+        }
       })
       graphicLayer.addGraphic(graphicq)
-    }    
+    }
+
+    // === 起点 ===
     const graphics = new mars3d.graphic.BillboardEntity({
-      position:[ cargo[0][0],cargo[0][1],0],show:showbool,
+      position: [cargo[0][0], cargo[0][1], (cargo[0][2] || 0) + 28], // 🚀 抬高 2m
+      show: showbool,
       style: {
         image: startpng,
         scale: 1,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        label: {
-          text: "",
-          font_size: 18,
-          color: "#ffffff",
-          pixelOffsetY: 0,
-        }
+        // 关键参数：禁用深度检测
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        depthTest: false  // 🚀 永远在上面
       },
       attr: { remark: "" }
     })
     graphicLayer.addGraphic(graphics)
+
+    // === 终点 ===
     const graphice = new mars3d.graphic.BillboardEntity({
-      position:[ cargo[cargo.length - 1][0],cargo[cargo.length - 1][1],0],show:showbool,
+      position: [cargo[cargo.length - 1][0], cargo[cargo.length - 1][1], (cargo[cargo.length - 1][2] || 0) + 28],
+      show: showbool,
       style: {
         image: endpng,
         scale: 1,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        label: {
-          text: "",
-          font_size: 18,
-          color: "#ffffff",
-          pixelOffsetY: 0,
-        }
+        depthTest: false  // 🚀 永远在上面
       },
       attr: { remark: "" }
     })
     graphicLayer.addGraphic(graphice)
-    setTimeout(()=>{
+
+    setTimeout(() => {
       initype.value = bool
-    },0)
+    }, 0)
   }
   function listsetmor(newval) {
     const relist = []
