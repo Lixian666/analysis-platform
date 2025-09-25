@@ -1,10 +1,12 @@
 {
-  "center":{"lat":29.613132,"lng":106.733155,"alt":951,"heading":360,"pitch":-50},
+  "center":{"lat":36.760694,"lng":117.267956,"alt":951,"heading":360,"pitch":-50},
   "isSw_Order":false,
   "zkyxLogout":"http://192.168.10.6:30000/api/bjjw/openAuth/doLogout?account=",
   "tifimg": "http://ctrl.iptv-soft.com/3D/noblackyz/{z}/{x}/{y}.png",
+  "tdt_img": "http://t0.tianditu.gov.cn/img_w/wmts?tk=fcd603de1494edf1fbd5a159cc61c38a",
   "tdt": "http://ctrl.iptv-soft.com/3D/tdt/{z}/{x}/{y}.png",
   "model_car": "http://ctrl.iptv-soft.com/3D/1.glb",
+  "model_dongjiazhen": "/data/dongjiazheng-3D/tileset.json",
   "model_yuzui": "http://ctrl.iptv-soft.com/3DNM/tileset.json",
   "kuqu_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuqu&outputFormat=application/json",
   "kuwei_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuwei&outputFormat=application/json"

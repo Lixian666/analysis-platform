@@ -86,11 +86,13 @@ axios.get('/config.json').then(response => {
   const config = response.data
 
   // 设置全局属性
+  app.config.globalProperties.$modelMapDongJiaZhen = config.model_dongjiazhen
   app.config.globalProperties.$modelMapYuzui = config.model_yuzui
   app.config.globalProperties.$modelCar = config.model_car
   app.config.globalProperties.$kuquMapYuzui = config.kuqu_yuzui
   app.config.globalProperties.$kuweiMapYuzui = config.kuwei_yuzui
   app.config.globalProperties.$tifimg = config.tifimg
+  app.config.globalProperties.tdt_img = config.tdt_img
   app.config.globalProperties.$tdt = config.tdt
   app.config.globalProperties.$isSw_Order = config.isSw_Order
   app.config.globalProperties.$center = config.center
