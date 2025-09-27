@@ -288,7 +288,8 @@ function setMsaaSamples(samples) {
     let cargo = pos
     let linecolor = color
     // === 线条点位 ===
-    const liftedPositions = cargo.map(([lon, lat, height]) => [lon, lat, (height || 0) + 28])
+    const number = 10;
+    const liftedPositions = cargo.map(([lon, lat, height]) => [lon, lat, (height || 0) + number])
     if (num <= 1) {
       // === 线条 ===
       const graphicqa = new mars3d.graphic.PolylinePrimitive({
@@ -347,7 +348,7 @@ function setMsaaSamples(samples) {
 
     // === 起点 ===
     const graphics = new mars3d.graphic.BillboardEntity({
-      position: [cargo[0][0], cargo[0][1], (cargo[0][2] || 0) + 28], // 🚀 抬高 2m
+      position: [cargo[0][0], cargo[0][1], (cargo[0][2] || 0) + number], // 🚀 抬高 2m
       show: showbool,
       style: {
         image: startpng,
@@ -364,7 +365,7 @@ function setMsaaSamples(samples) {
 
     // === 终点 ===
     const graphice = new mars3d.graphic.BillboardEntity({
-      position: [cargo[cargo.length - 1][0], cargo[cargo.length - 1][1], (cargo[cargo.length - 1][2] || 0) + 28],
+      position: [cargo[cargo.length - 1][0], cargo[cargo.length - 1][1], (cargo[cargo.length - 1][2] || 0) + number],
       show: showbool,
       style: {
         image: endpng,
