@@ -12,6 +12,8 @@ import com.jwzt.modules.experiment.domain.LocationPoint2;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.JsonUtils;
+import com.jwzt.modules.experiment.utils.third.manage.CenterWorkHttpUtils;
+import com.jwzt.modules.experiment.utils.third.manage.domain.ReqVehicleCode;
 import com.jwzt.modules.experiment.utils.third.zq.FusionData;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +42,9 @@ public class RyTask
 
     @Autowired
     private ZQOpenApi zqOpenApi;
+
+    @Autowired
+    private CenterWorkHttpUtils centerWorkHttpUtils;
 
     @Autowired
     private RealTimeDriverTracker realTimeDriverTracker;
@@ -165,11 +170,15 @@ public class RyTask
 //        String cardId = "1918B3000BA3";
 //        String startTimeStr = "2025-08-06 18:20:00";
 //        String endTimeStr = "2025-08-06 21:00:00";
-        String cardId = "1918B3000BA3";
-        String startTimeStr = "2025-09-22 18:24:00";
-        String endTimeStr = "2025-09-22 18:52:00";
+//        String cardId = "1918B3000BA8";
+//        String startTimeStr = "2025-09-24 18:00:00";
+//        String endTimeStr = "2025-09-24 19:40:00";
+        String cardId = "1918B3000A79";
+        String startTimeStr = "2025-09-28 17:00:00";
+        String endTimeStr = "2025-09-28 19:00:00";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
         LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+//        List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
         JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
         JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
         JSONArray points = jsonObject.getJSONArray("data");
@@ -194,6 +203,12 @@ public class RyTask
         }
         LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
         if (LocationPoints.size() > 0){
+//            int batchSize = 10;
+//            for (int i = 0; i < LocationPoints.size(); i += batchSize) {
+//                int end = Math.min(i + batchSize, LocationPoints.size());
+//                List<LocationPoint> batch = LocationPoints.subList(i, end);
+//                realTimeDriverTracker.ingest(batch);
+//            }
             realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
         }
     }
