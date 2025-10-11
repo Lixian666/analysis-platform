@@ -7,12 +7,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.*;
 import java.io.*;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 
 /**
  * 通用http发送方法
@@ -22,7 +20,6 @@ import java.security.cert.X509Certificate;
 public class HttpUtils
 {
     private static final Logger log = LoggerFactory.getLogger(HttpUtils.class);
-
     /**
      * 向指定 URL 发送GET方法的请求
      *
@@ -116,7 +113,7 @@ public class HttpUtils
      * @param param 请求参数，请求参数应该是 name1=value1&name2=value2 的形式。
      * @return 所代表远程资源的响应结果
      */
-    public static String sendPost(String url, String param)
+    public static String sendPost(String url, Map<String, String> headers, String param)
     {
         PrintWriter out = null;
         BufferedReader in = null;
@@ -126,13 +123,16 @@ public class HttpUtils
             log.info("sendPost - {}", url);
             URL realUrl = new URL(url);
             URLConnection conn = realUrl.openConnection();
-            conn.setRequestProperty("accept", "*/*");
-            conn.setRequestProperty("connection", "Keep-Alive");
-            conn.setRequestProperty("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-            conn.setRequestProperty("Accept-Charset", "utf-8");
-            conn.setRequestProperty("contentType", "utf-8");
             conn.setDoOutput(true);
             conn.setDoInput(true);
+            conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+            if (headers != null) {
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                    if (entry.getValue() != null) {
+                        conn.setRequestProperty(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
             out = new PrintWriter(conn.getOutputStream());
             out.print(param);
             out.flush();

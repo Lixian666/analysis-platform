@@ -3,6 +3,7 @@ package com.jwzt.modules.experiment;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.jwzt.modules.experiment.config.BaseConfig;
+import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.*;
 import com.jwzt.modules.experiment.filter.LocationSmoother;
@@ -35,8 +36,8 @@ import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 public class RealTimeDriverTracker {
     @Autowired
     private BaseConfig baseConfig;
-//    @Autowired
-//    private FilePathConfig filePathConfig;
+    @Autowired
+    private FilePathConfig filePathConfig;
 //    @Autowired
 //    private FilterConfig filterConfig;
     // —— 依赖与基础工具 ——
@@ -70,6 +71,7 @@ public class RealTimeDriverTracker {
     /** 每张卡的运行态 */
     private static class PerCardState {
         Deque<LocationPoint> window = new ArrayDeque<>();
+        List<LocationPoint> historyPoints = new ArrayList<>();
         TrackSession activeSession; // null 表示当前不在一段会话中
         long lastSeenTs = Long.MIN_VALUE; // 去重/乱序截断
     }
@@ -117,7 +119,9 @@ public class RealTimeDriverTracker {
         if (batch == null || batch.isEmpty()) return;
         PerCardState st = stateByCard.computeIfAbsent(cardKey, k -> new PerCardState());
         VehicleType vt = vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR);
-
+        if (baseConfig.isDevelopEnvironment()){
+            st.lastSeenTs = Long.MIN_VALUE;
+        }
         // 1) 预处理：时间戳、去异常、排序、去重（<= lastSeenTs）
         List<LocationPoint> cleaned = preprocessBatch(batch, st.lastSeenTs);
 
@@ -133,7 +137,7 @@ public class RealTimeDriverTracker {
             if (st.window.size() > recordPointsSize) {
                 st.window.removeFirst();
             }
-
+            st.historyPoints.add(p);
             // 窗口未满，不触发检测
             if (st.window.size() < recordPointsSize) {
                 // 如果会话已开启，仍要接着收点
@@ -151,6 +155,7 @@ public class RealTimeDriverTracker {
 
             if (es == null || es.getEvent() == null) {
                 if (st.activeSession != null) st.activeSession.points.add(p);
+//                st.historyPoints.add(p) ;
                 continue;
             }
 
@@ -174,6 +179,7 @@ public class RealTimeDriverTracker {
                 default:
                     // 其它状态：仅在活动会话中持续累积
                     if (st.activeSession != null) st.activeSession.points.add(p);
+//                    st.historyPoints.add(p) ;
             }
         }
     }
@@ -188,7 +194,7 @@ public class RealTimeDriverTracker {
         st.activeSession.kind = kind;
 
         // 回填窗口后一半（包含触发点附近的历史）
-        int from = Math.max(0, win.size() - backfillHalf);
+        int from = Math.max(0, win.size() - backfillHalf) - 1;
         st.activeSession.points.addAll(win.subList(from, win.size()));
 
         System.out.println("📥 [" + cardKey + "] 启动会话 " + kind + " @" + new Date(es.getTimestamp()));
@@ -202,12 +208,15 @@ public class RealTimeDriverTracker {
             return;
         }
 
-        // 完结前把窗口中的后半段也补齐（减少尾部截断）
-        int from = Math.max(0, win.size() - backfillHalf);
-        st.activeSession.points.addAll(win.subList(from, win.size()));
+//        // 完结前把窗口中的后半段也补齐（减少尾部截断）
+        int from = Math.max(0, win.size() - backfillHalf) - 2;
+//        st.activeSession.points.addAll(win.subList(from, win.size()));
+        List<LocationPoint> frontPoints = new ArrayList<>(
+                st.activeSession.points.subList(0, st.activeSession.points.size() - from)
+        );
 
         // 去重 & 按时间排序（会话内可能因回填/累积产生重复）
-        List<LocationPoint> sessionPoints = st.activeSession.points.stream()
+        List<LocationPoint> sessionPoints = frontPoints.stream()
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(LocationPoint::getTimestamp, x -> x, (a, b) -> a, TreeMap::new),
                         m -> new ArrayList<>(m.values())));
@@ -270,7 +279,7 @@ public class RealTimeDriverTracker {
         // 2) 主表
         TakBehaviorRecords rec = new TakBehaviorRecords();
         rec.setCardId(resolveCardIdForDB(sess.cardId));
-        rec.setYardId("YUZUI"); // 保持与你现有逻辑一致，可抽配置
+            rec.setYardId(baseConfig.getYardName()); // 保持与你现有逻辑一致，可抽配置
         rec.setTrackId(sess.sessionId);
         rec.setStartTime(new Date(sess.startTime));
         rec.setEndTime(new Date(endTime));

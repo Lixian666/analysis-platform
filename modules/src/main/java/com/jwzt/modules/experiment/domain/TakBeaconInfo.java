@@ -50,6 +50,14 @@ public class TakBeaconInfo extends BaseEntity
     @Excel(name = "状态，0-正常，1-异常")
     private Integer status;
 
+    public TakBeaconInfo(String buildId, String type, String location, String area) {
+        super();
+    }
+
+    public TakBeaconInfo() {
+
+    }
+
     public void setId(String id) 
     {
         this.id = id;

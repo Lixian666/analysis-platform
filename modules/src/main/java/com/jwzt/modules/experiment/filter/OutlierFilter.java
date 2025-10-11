@@ -90,11 +90,11 @@ public class OutlierFilter {
             lastPoint = newPoint;
             return 1;
         }
-
-        if (!zoneChecker.isInDrivingZone(newPoint)){
-            lastPoint = newPoint;
-            return 3;
-        }
+//         在不在货场区域
+//        if (!zoneChecker.isInDrivingZone(newPoint)){
+//            lastPoint = newPoint;
+//            return 3;
+//        }
         double speed = distance / (timeDiff / 1000.0); // m/s
         newPoint.setSpeed(speed);
         // 速度过大 or 跳跃距离过远
