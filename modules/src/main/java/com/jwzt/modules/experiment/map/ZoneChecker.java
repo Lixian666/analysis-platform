@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 
 /**
@@ -26,6 +27,15 @@ public class ZoneChecker {
     }
 
     public ZoneChecker(FilePathConfig filePathConfig) {
+        this.filePathConfig = filePathConfig;
+        this.yard = filePathConfig.getYardName();
+        loadZoneGeometries();
+    }
+
+    @PostConstruct
+    public void init() {
+        System.out.println("ZoneChecker 初始化");
+        System.out.println("filePathConfig = " + filePathConfig); // 这里不再是 null
         this.filePathConfig = filePathConfig;
         this.yard = filePathConfig.getYardName();
         loadZoneGeometries();
