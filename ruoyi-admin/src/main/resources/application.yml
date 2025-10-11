@@ -53,9 +53,12 @@ spring:
     # 国际化资源文件路径
     basename: i18n/messages
   profiles:
+    # 默认开发环境
 #    active: druid
-    dbType: dameng
     active: dameng
+    # 数据库类型
+#    dbType: mysql
+    dbType: dameng
   # 文件上传
   servlet:
     multipart:
@@ -136,23 +139,27 @@ xss:
 experiment:
   base:
     stay-verify: false
+    ranging-verify: true
     output-shp: false
-    output-shp-path: D:/PlatformData/output
-    delete-datetime: 2025-09-11 14:00:00
+    output-shp-path: /Users/lixian/Cache/Platform/PlatformData/output
+    delete-datetime: 2025-09-24 14:00:00
+#    yard-name: yuzui
+    yard-name: dongjiazhen
     location-card-type: other
     card-type: car
 
     joysuch:
-      building-name: 鱼嘴
-      building-id: 209885
-#      building-name: 董家镇
-#      building-id: 209983
+#      building-name: 鱼嘴
+#      building-id: 209885
+      building-name: 董家镇
+      building-id: 209983
 #      username: 18911091136
 #      password: 3W.163.com
 #      base-url: https://api.joysuch.com:46000
       username: client
       password: JoySuch@client10
       base-url: http://61.50.136.180:46000
+#      base-url: http://172.30.17.116/zqapi
       api:
         # 获取建筑列表
         build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
@@ -168,10 +175,44 @@ experiment:
         unsubscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/unsubscribe
         # 获取标签和uwb扫描历史（测距）
         tag-scan-uwb-history: ${experiment.base.joysuch.base-url}/api/v1/device/tagScanUwbHistory
+    sw-center:
+      tenant-id: 10003
+      #中心服务地址
+      status: 1
+#      center-ip: http://10.4.230.56:8000/sw-centralOpen-api
+      center-ip: http://192.168.6.15/sw-centralOpen-api
+      #RFID识别记录列表
+      get-list: /api/station/getCompleteRfidList
   file-path:
-    yard-name: yuzui
-    base-path: D:/PlatformData/shp
+    yard-name: ${experiment.base.yard-name}
+    base-path: /Users/lixian/Cache/Platform/PlatformData/shp
     yards:
+      dongjiazhen:
+        driving:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuqu.shp
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇道路/zhugandao.shp
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线J车/huoyunxianjc.shp
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线作业台/huoyunxianzyt.shp
+        parking:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuqu.shp
+        road:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇道路/zhugandao.shp
+        parking2road:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇道路/zhugandao.shp
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuqu.shp
+        huoyunxin:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线J车/huoyunxianjc.shp
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线作业台/huoyunxianzyt.shp
+        huoyunxinzyt:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线作业台/huoyunxianzyt.shp
+        huoyunxinjc:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线J车/huoyunxianjc.shp
+        banche:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇板车作业区/banchezuoyequ.shp
+        zikuqu:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/zikuqu.shp
+        kuwei:
+          - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuwei.shp
       minhang:
         driving:
           - ${experiment.file-path.base-path}/minhang/行车道路/xingcdaolu.shp

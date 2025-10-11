@@ -13,6 +13,7 @@ public class LocationPoint {
     private String acceptTime;
     private Long timestamp;
     private Double speed;
+    private Double thirdSpeed;
     private MovementAnalyzer.MovementState state;
     private String event;
 

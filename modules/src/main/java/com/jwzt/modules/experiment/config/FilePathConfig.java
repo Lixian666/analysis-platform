@@ -2,18 +2,15 @@ package com.jwzt.modules.experiment.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
-@Component
+@Configuration
 @ConfigurationProperties(prefix = "experiment.file-path")
 @Data
 public class FilePathConfig {
-
-    public static final String MINHANG = "minhang";
-    public static final String YUZUI = "yuzui";
-    public static final String HUOCHANG = YUZUI;
 
     private String yardName;
     private String basePath;
@@ -30,6 +27,9 @@ public class FilePathConfig {
     }
 
 // 旧配置兼容之前的算法
+    public static final String MINHANG = "minhang";
+    public static final String YUZUI = "yuzui";
+    public static final String HUOCHANG = YUZUI;
 //    public static final String PATH = "";
     public static final String BASE_PATH = "D:/PlatformData/shp";
 

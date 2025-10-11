@@ -7,15 +7,20 @@ public class FilterConfig {
     public static final int RECORD_POINTS_SIZE = 51;        // 上下车识别窗口大小
 
     // 行为识别配置
-    public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
-    public static final double MIN_SPEED_MPS = 0.0; // 最小速度，单位 m/s（比如步行 < 2，驾驶 < 17）
-    public static final double MIN_WALKING_SPEED = 0.3; // 最小步行速度，单位 m/s
-    public static final double MAX_WALKING_SPEED = 2.0; // 最大速度，单位 m/s
-    public static final double MAX_RUNING_SPEED = 3.0; // 最大小跑速度，单位 m/s
-    public static final double MAX_LOW_DRIVING_SPEED = 7.0; // 最大低速驾驶速度，单位 m/s
-    public static final double MAX_JUMP_DISTANCE = 20.0; // 每点最大跳变距离（米）
-    public static final int MIN_TIME_INTERVAL_MS = 1; // 最小时间间隔 （毫秒）
-    public static final int WINDOW_STATE_SIZE = 2;      // 行为状态识别窗口大小
+        // 感应距离配置
+        public static final double SENSING_DISTANCE_THRESHOLD = 1.5 * 10000;  // 感应距离阈值（毫米）
+        public static final int SEND_AFTER_DOWN_UWB_SIZE = 2;
+
+        // 速度配置
+        public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
+        public static final double MIN_SPEED_MPS = 0.0; // 最小速度，单位 m/s（比如步行 < 2，驾驶 < 17）
+        public static final double MIN_WALKING_SPEED = 0.3; // 最小步行速度，单位 m/s
+        public static final double MAX_WALKING_SPEED = 2.0; // 最大速度，单位 m/s
+        public static final double MAX_RUNING_SPEED = 3.0; // 最大小跑速度，单位 m/s
+        public static final double MAX_LOW_DRIVING_SPEED = 7.0; // 最大低速驾驶速度，单位 m/s
+        public static final double MAX_JUMP_DISTANCE = 20.0; // 每点最大跳变距离（米）
+        public static final int MIN_TIME_INTERVAL_MS = 1; // 最小时间间隔 （毫秒）
+        public static final int WINDOW_STATE_SIZE = 2;      // 行为状态识别窗口大小
 
     // 时间间隔配置
     public static final int ADJACENT_POINTS_TIME_INTERVAL_MS = 1000000;   // 相邻点位时间间隔 （毫秒）  0：不进行时间间隔判定

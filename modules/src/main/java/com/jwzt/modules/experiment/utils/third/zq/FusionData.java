@@ -55,9 +55,14 @@ public class FusionData {
 
             // 找到合适的标签，绑定进去
             if (bestMatch != null) {
+                Double speedKmh = bestMatch.getGnssInfo().getSpeedKmh();
+                if (speedKmh != null) {
+                    loc.setThirdSpeed(speedKmh / 3.6);
+                }else {
+                    loc.setThirdSpeed(0.0);
+                }
                 loc.setTagScanUwbData(bestMatch);
             }
-
             fusedResults.add(loc);
         }
 

@@ -9,11 +9,15 @@ import org.springframework.context.annotation.Configuration;
 @Data
 public class BaseConfig {
     // 功能开关
+    private boolean developEnvironment = true;
     private boolean stayVerify;     // 是否进行停留点验证
+    private boolean rangingVerify;  // 行为识别以测距为第一优先级
     // 调试使用配置
     private boolean outputShp;      // 是否输出定位点shp文件
     private String outputShpPath;      // 输出shp文件路径
     private String deleteDatetime;     // 数据删除时间
+
+    private String yardName;    // 货场名称
 
     // 定位卡类型
     private String locationCardType;
@@ -21,6 +25,7 @@ public class BaseConfig {
     private String cardType;
 
     private Joysuch joysuch = new Joysuch();
+    private swCenter swCenter = new swCenter();
 
     @Data
     public class Joysuch {
@@ -41,6 +46,11 @@ public class BaseConfig {
             private String unsubscribe;
             private String tagScanUwbHistory;
         }
+    }
+
+    @Data
+    public class swCenter {
+        private long tenantId;
     }
 
     // 真趣定位服务
