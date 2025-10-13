@@ -8,7 +8,7 @@ public class FilterConfig {
 
     // 行为识别配置
         // 感应距离配置
-        public static final double SENSING_DISTANCE_THRESHOLD = 1.5 * 10000;  // 感应距离阈值（毫米）
+        public static final double SENSING_DISTANCE_THRESHOLD = 1.5 * 10000;  // 靠近感应距离阈值（毫米）
         public static final int SEND_AFTER_DOWN_UWB_SIZE = 2;
 
         // 速度配置
@@ -26,6 +26,8 @@ public class FilterConfig {
     public static final int ADJACENT_POINTS_TIME_INTERVAL_MS = 1000000;   // 相邻点位时间间隔 （毫秒）  0：不进行时间间隔判定
     public static final int IDENTIFY_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 上下车识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
 
+    // 交通车状态标记数设置
+    public static final int TRAFFICCAR_STATE_SIZE = 15;
 
     // 上下车识别配置
     public static final int WINDOW_SIZE = 5; // 数据缓存大小
