@@ -27,10 +27,8 @@ import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 /**
  * 实时轨迹增量分析（10s/批等），与批处理 DriverTracker 并行。
- * 目标：
- *  1）成对事件间的“全部点”入库，不仅是识别窗口；
- *  2）支持多卡并发、乱序与重复；
- *  3）可按车辆类型切换阈值（预留）。
+ * 修改点：增加了“先下后上”的回溯识别逻辑（针对发运业务 SEND），
+ *       当检测到下车但未检测到上车时，会回溯历史轨迹查找上车点并将上下车段落入库。
  */
 @Service
 public class RealTimeDriverTracker {
@@ -59,6 +57,9 @@ public class RealTimeDriverTracker {
     private final int recordPointsSize = FilterConfig.RECORD_POINTS_SIZE;  // 事件识别窗口大小
     private final int backfillHalf = Math.max(1, recordPointsSize / 2);    // 启动会话时向后回填窗口的一半
 
+    // 回溯查找上车点的最大时间（毫秒），避免无限回溯；可按需调整或放到配置中
+    private final long SEND_LOOKBACK_MS = 30L * 60L * 1000L; // 30 分钟
+
     // —— 运行态：按卡维护 ——
     private final Map<String, PerCardState> stateByCard = new ConcurrentHashMap<>();
     private final Map<String, VehicleType> vehicleTypeByCard = new ConcurrentHashMap<>();
@@ -72,8 +73,11 @@ public class RealTimeDriverTracker {
     private static class PerCardState {
         Deque<LocationPoint> window = new ArrayDeque<>();
         List<LocationPoint> historyPoints = new ArrayList<>();
+        long sendLastEventTime = Long.MIN_VALUE;
+        String sendLastEventTimeStr = "";
         TrackSession activeSession; // null 表示当前不在一段会话中
         long lastSeenTs = Long.MIN_VALUE; // 去重/乱序截断
+
     }
 
     /** 上/下车会话（成对闭环） */
@@ -96,7 +100,6 @@ public class RealTimeDriverTracker {
     /** 注册/更新某张卡的车辆类型（可选调用，不调用则默认 CAR） */
     public void upsertVehicleType(String cardId, VehicleType type) {
         vehicleTypeByCard.put(cardId, type == null ? VehicleType.CAR : type);
-        // 若需按类型切换阈值，可在 detector 内部做 thread-safe 配置切换
     }
 
     /**
@@ -149,13 +152,12 @@ public class RealTimeDriverTracker {
             // 定位修增
             List<LocationPoint> win = new ArrayList<>(st.window);
 //            List<LocationPoint> fixesPoints = new OutlierFilter().fixTheData(win);
-            // 3) 调用原有检测器（窗口大小固定）
+            // 调用原有检测器（窗口大小固定）
             List<LocationPoint> newPoints = outlierFilter.stateAnalysis(win);
-            EventState es = detector.updateState(newPoints); // 建议给 detector 增加一个重载支持车辆类型；若暂不支持，仍可用原方法
+            EventState es = detector.updateState(newPoints, st.historyPoints);
 
             if (es == null || es.getEvent() == null) {
                 if (st.activeSession != null) st.activeSession.points.add(p);
-//                st.historyPoints.add(p) ;
                 continue;
             }
 
@@ -169,17 +171,22 @@ public class RealTimeDriverTracker {
                     break;
 
                 case SEND_BOARDING:
-                    onStart(cardKey, st, EventKind.SEND, es, win);
+//                    onStart(cardKey, st, EventKind.SEND, es, win);
                     break;
 
                 case SEND_DROPPING:
-                    onEnd(cardKey, st, EventKind.SEND, es, win);
+                    // **修改点**：如果已有活动会话按原来的 onEnd；如果没有活动会话（未检测到上车），尝试回溯历史查找上车并直接入库
+                    if (st.activeSession != null && st.activeSession.kind == EventKind.SEND) {
+                        onEnd(cardKey, st, EventKind.SEND, es, win);
+                    } else {
+                        // 回溯并持久化发运段（先下后上）
+                        backfillAndPersistSendSession(cardKey, st, es);
+                    }
                     break;
 
                 default:
                     // 其它状态：仅在活动会话中持续累积
                     if (st.activeSession != null) st.activeSession.points.add(p);
-//                    st.historyPoints.add(p) ;
             }
         }
     }
@@ -195,6 +202,7 @@ public class RealTimeDriverTracker {
 
         // 回填窗口后一半（包含触发点附近的历史）
         int from = Math.max(0, win.size() - backfillHalf) - 1;
+        if (from < 0) from = 0;
         st.activeSession.points.addAll(win.subList(from, win.size()));
 
         System.out.println("📥 [" + cardKey + "] 启动会话 " + kind + " @" + new Date(es.getTimestamp()));
@@ -208,11 +216,12 @@ public class RealTimeDriverTracker {
             return;
         }
 
-//        // 完结前把窗口中的后半段也补齐（减少尾部截断）
+        // 完结前把窗口中的后半段也补齐（减少尾部截断）
         int from = Math.max(0, win.size() - backfillHalf) - 2;
-//        st.activeSession.points.addAll(win.subList(from, win.size()));
+        if (from < 0) from = 0;
+
         List<LocationPoint> frontPoints = new ArrayList<>(
-                st.activeSession.points.subList(0, st.activeSession.points.size() - from)
+                st.activeSession.points.subList(0, Math.max(0, st.activeSession.points.size() - from))
         );
 
         // 去重 & 按时间排序（会话内可能因回填/累积产生重复）
@@ -236,6 +245,163 @@ public class RealTimeDriverTracker {
 
         // 清空会话
         st.activeSession = null;
+    }
+
+    /**
+     * 回溯历史轨迹查找发运上车点，并将 上车->本次下车 之间的完整轨迹段入库。
+     * 说明：
+     *  - 以 st.historyPoints 为数据源向后回溯；
+     *  - 对候选历史点构造窗口（recordPointsSize 大小）并再次调用 detector.updateState(...)，
+     *    若返回 SEND_BOARDING 则视为上车点。
+     */
+    private void backfillAndPersistSendSession(String cardKey, PerCardState st, EventState downEs) {
+        try {
+            List<LocationPoint> history = st.historyPoints;
+            if (history == null || history.isEmpty()) {
+                System.out.println("⚠️ [" + cardKey + "] 回溯失败：history 为空");
+                return;
+            }
+            long dropTs = downEs.getTimestamp();
+            // 找到历史中与当前下车时间对应的索引（最近的 <= dropTs）
+            int endIndex = -1;
+            for (int i = history.size() - 1; i >= 0; i--) {
+                if (history.get(i).getTimestamp() <= dropTs) {
+                    endIndex = i;
+                    break;
+                }
+            }
+            if (endIndex < 0) {
+                System.out.println("⚠️ [" + cardKey + "] 回溯失败：未在 history 找到对应下车点时间");
+                return;
+            }
+            int listStartIndex = -1;
+            for (int i = 0; i < history.size(); i++) {
+                if (history.get(i).getTimestamp() > st.sendLastEventTime) {
+                    listStartIndex = i;
+                    break;
+                }
+            }
+            if (listStartIndex < 0) {
+                System.out.println("⚠️ [" + cardKey + "] 回溯失败：未在 history 找到对应上车识别开始时间");
+                return;
+            }
+            // 向前回溯查找上车（限制最大回溯时间）
+            long earliestAllowedTs = Math.max(0L, st.sendLastEventTime);
+            int foundStartWindowStartIndex = -1;
+            EventState foundStartEventState = null;
+
+            // 从 endIndex 向前扫描，寻找一个 candidate 做为“当前点”去重建窗口
+            for (int candidate = listStartIndex; candidate >= 0; candidate++) {
+                LocationPoint candPoint = history.get(candidate);
+                if (candPoint.getTimestamp() < earliestAllowedTs) break; // 超过回溯上限
+
+                // 构造窗口：以 candidate 为窗口中的中间偏移（尽量保证窗口长度为 recordPointsSize）
+                int windowStart = candidate - (recordPointsSize / 2);
+                if (windowStart < 0) windowStart = 0;
+                int windowEnd = windowStart + recordPointsSize;
+                if (windowEnd > history.size()) {
+                    // 如果末尾超出，尝试把窗口向前移
+                    windowStart = Math.max(0, history.size() - recordPointsSize);
+                    windowEnd = windowStart + recordPointsSize;
+                }
+                if (windowEnd > history.size() || windowEnd - windowStart < recordPointsSize) {
+                    // 无法构建完整窗口，跳过
+                    continue;
+                }
+                List<LocationPoint> candidateWindow = new ArrayList<>(history.subList(windowStart, windowEnd));
+                // 预处理（去异常/修正），保持与实时一致
+                List<LocationPoint> newPoints = outlierFilter.stateAnalysis(candidateWindow);
+                EventState es = detector.updateState(newPoints, history);
+                if (es != null && es.getEvent() != null && es.getEvent() == BoardingDetector.Event.SEND_BOARDING) {
+                    // 找到上车事件
+                    foundStartWindowStartIndex = windowStart;
+                    foundStartEventState = es;
+                    break;
+                }
+            }
+
+            if (foundStartWindowStartIndex < 0) {
+                System.out.println("⚠️ [" + cardKey + "] 回溯未找到发运上车点（回溯时段内未检测到 SEND_BOARDING），以上一个流程结束的点位的后一个点为上车点");
+
+                // 计算“候选上车点时间”
+                long fallbackTs = st.sendLastEventTime + 1000; // 回溯时间结束点 +1秒
+
+                // 在历史点中找到最接近 fallbackTs 的点（时间 >= fallbackTs）
+                LocationPoint fallbackPoint = null;
+                for (LocationPoint p : history) {
+                    if (p.getTimestamp() >= fallbackTs) {
+                        // 判断是否在停车区域（发运上车区域）
+                        if (detector.isnParkingArea(fallbackPoint)){
+                            fallbackPoint = p;
+                        }
+                        break;
+                    }
+                }
+
+                if (fallbackPoint == null) {
+                    // 如果仍然没找到，则使用最后一个点兜底
+                    fallbackPoint = history.get(history.size() - 1);
+                    System.out.println("⚠️ [" + cardKey + "] 未找到 fallbackTs 对应点，使用最后一个点兜底");
+                }
+
+                // 构造一个模拟的 SEND_BOARDING 事件
+                EventState es = new EventState();
+                es.setEvent(BoardingDetector.Event.SEND_BOARDING);
+                es.setTimestamp(fallbackPoint.getTimestamp());
+
+                foundStartEventState = es;
+                foundStartWindowStartIndex = history.indexOf(fallbackPoint);
+
+                System.out.println("✅ [" + cardKey + "] 使用 fallbackTs 对应点作为上车点：" + fallbackPoint.getTimestamp());
+            }
+
+            // 确定上车点的 timestamp（使用 foundStartEventState 的时间或窗口中间点）
+            long startTs = (foundStartEventState != null && foundStartEventState.getTimestamp() > 0)
+                    ? foundStartEventState.getTimestamp()
+                    : history.get(foundStartWindowStartIndex + backfillHalf).getTimestamp();
+
+            // 确定上车点在 history 中的索引（取第一个 timestamp >= startTs 的索引）
+            int startIndex = -1;
+            for (int i = 0; i < history.size(); i++) {
+                if (history.get(i).getTimestamp() >= startTs) {
+                    startIndex = i;
+                    break;
+                }
+            }
+            if (startIndex < 0) startIndex = 0;
+
+            // 最终截取：从 startIndex 到 endIndex（包含）
+            List<LocationPoint> tripPoints = new ArrayList<>(history.subList(startIndex, endIndex + 1));
+
+            // 去重 & 按时间排序
+            List<LocationPoint> sessionPoints = tripPoints.stream()
+                    .collect(Collectors.collectingAndThen(
+                            Collectors.toMap(LocationPoint::getTimestamp, x -> x, (a, b) -> a, TreeMap::new),
+                            m -> new ArrayList<>(m.values())));
+
+            // 构造虚拟会话并持久化（与 persistSession 兼容）
+            TrackSession sess = new TrackSession();
+            sess.sessionId = IdUtils.fastSimpleUUID();
+            sess.cardId = cardKey;
+            sess.startTime = startTs;
+            sess.kind = EventKind.SEND;
+            sess.points.addAll(sessionPoints);
+
+            persistSession(sess, dropTs, sessionPoints);
+            st.sendLastEventTime = downEs.getTimestamp();
+            st.sendLastEventTimeStr = DateTimeUtils.timestampToDateTimeStr(downEs.getTimestamp());
+            System.out.println("📤 [" + cardKey + "] 回溯并持久化发运轨迹段 成功 起=" + new Date(startTs) + " 止=" + new Date(dropTs) + " 点数=" + sessionPoints.size());
+
+            // 可选：输出 shp
+            if (baseConfig.isOutputShp()) {
+                String shp = ensureShpPath(shpFileRoot, sess.sessionId, EventKind.SEND);
+                outputVectorFiles(sessionPoints, shp);
+            }
+
+        } catch (Exception ex) {
+            System.out.println("❌ [" + cardKey + "] 回溯持久化过程中发生异常: " + ex.getMessage());
+            ex.printStackTrace();
+        }
     }
 
     /** 批次预处理：修正 timestamp、过滤异常、排序、去重 */
@@ -279,7 +445,7 @@ public class RealTimeDriverTracker {
         // 2) 主表
         TakBehaviorRecords rec = new TakBehaviorRecords();
         rec.setCardId(resolveCardIdForDB(sess.cardId));
-            rec.setYardId(baseConfig.getYardName()); // 保持与你现有逻辑一致，可抽配置
+        rec.setYardId(baseConfig.getYardName()); // 保持与你现有逻辑一致，可抽配置
         rec.setTrackId(sess.sessionId);
         rec.setStartTime(new Date(sess.startTime));
         rec.setEndTime(new Date(endTime));
