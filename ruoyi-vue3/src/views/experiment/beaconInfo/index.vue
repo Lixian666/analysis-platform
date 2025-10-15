@@ -105,7 +105,16 @@
           v-hasPermi="['experiment:beaconInfo:export']"
         >导出</el-button>
       </el-col>
-      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
+      <el-col :span="1.5">
+        <el-button
+          type="info"
+          plain
+          icon="Upload"
+          @click="handleImport"
+          v-hasPermi="['experiment:beaconInfo:import']"
+        >导入</el-button>
+      </el-col>
+      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
     <el-table v-loading="loading" :data="beaconInfoList" @selection-change="handleSelectionChange">
@@ -144,8 +153,8 @@
     <pagination
       v-show="total>0"
       :total="total"
-      v-model:page="queryParams.pageNum"
-      v-model:limit="queryParams.pageSize"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
       @pagination="getList"
     />
 
@@ -208,11 +217,47 @@
         </div>
       </template>
     </el-dialog>
+    
+    <!-- 导入对话框 -->
+    <el-dialog :title="upload.title" v-model="upload.open" width="400px" append-to-body>
+      <el-upload
+        ref="uploadRef"
+        :limit="1"
+        accept=".xlsx, .xls"
+        :headers="upload.headers"
+        :action="upload.url + '?updateSupport=' + upload.updateSupport"
+        :disabled="upload.isUploading"
+        :on-progress="handleFileUploadProgress"
+        :on-success="handleFileSuccess"
+        :auto-upload="false"
+        drag
+      >
+        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+        <template #tip>
+          <div class="el-upload__tip text-center">
+            <div class="el-upload__tip">
+              <el-checkbox v-model="upload.updateSupport" />覆盖已有数据
+            </div>
+            <span>仅允许导入xls、xlsx格式文件。</span>
+            <el-link type="primary" :underline="false" style="font-size:12px;vertical-align: baseline;" @click="downloadImportTemplate">下载模板</el-link>
+          </div>
+        </template>
+      </el-upload>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="submitFileForm">确 定</el-button>
+          <el-button @click="upload.open = false">取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="BeaconInfo">
-import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo, listBeaconId } from "@/api/experiment/beaconInfo";
+import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo, listBeaconId, importTemplate } from "@/api/experiment/beaconInfo";
+import { getToken } from "@/utils/auth";
+import { UploadFilled } from '@element-plus/icons-vue';
 
 const { proxy } = getCurrentInstance();
 const { tracker_beacon_type } = proxy.useDict('tracker_beacon_type');
@@ -227,6 +272,15 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
+
+const upload = reactive({
+  open: false,
+  title: "信标信息导入",
+  isUploading: false,
+  updateSupport: 0,
+  headers: { Authorization: "Bearer " + getToken() },
+  url: import.meta.env.VITE_APP_BASE_API + "/experiment/beaconInfo/importData"
+});
 
 const statusOptions = ref([{
   "label": "启用",
@@ -430,6 +484,36 @@ function handleExport() {
   proxy.download('experiment/beaconInfo/export', {
     ...queryParams.value
   }, `beaconInfo_${new Date().getTime()}.xlsx`)
+}
+
+/** 导入按钮操作 */
+function handleImport() {
+  upload.open = true;
+}
+
+/** 下载模板操作 */
+function downloadImportTemplate() {
+  // 直接使用window.location.href来下载，确保使用GET方法
+  window.location.href = import.meta.env.VITE_APP_BASE_API + "/experiment/beaconInfo/importTemplate";
+}
+
+// 文件上传中处理
+function handleFileUploadProgress() {
+  upload.isUploading = true;
+}
+
+// 文件上传成功处理
+function handleFileSuccess(response) {
+  upload.open = false;
+  upload.isUploading = false;
+  proxy.$refs["uploadRef"].clearFiles();
+  proxy.$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.msg + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
+  getList();
+}
+
+// 提交上传文件
+function submitFileForm() {
+  proxy.$refs["uploadRef"].submit();
 }
 
 getList();

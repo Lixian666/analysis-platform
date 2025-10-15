@@ -50,3 +50,12 @@ export function delBeaconInfo(id) {
     method: 'delete'
   })
 }
+
+// 下载信标信息导入模板
+export function importTemplate() {
+  return request({
+    url: '/experiment/beaconInfo/importTemplate',
+    method: 'get',
+    responseType: 'blob'
+  })
+}
