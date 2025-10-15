@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
@@ -135,5 +136,31 @@ public class TakBeaconInfoController extends BaseController
     public AjaxResult remove(@PathVariable String[] ids)
     {
         return toAjax(takBeaconInfoService.deleteTakBeaconInfoByIds(ids));
+    }
+    
+    /**
+     * 导入信标信息数据
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:beaconInfo:import')")
+    @Log(title = "信标信息", businessType = BusinessType.IMPORT)
+    @PostMapping("/importData")
+    public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception
+    {
+        ExcelUtil<TakBeaconInfo> util = new ExcelUtil<TakBeaconInfo>(TakBeaconInfo.class);
+        List<TakBeaconInfo> beaconInfoList = util.importExcel(file.getInputStream());
+        String operName = getUsername();
+        String message = takBeaconInfoService.importTakBeaconInfo(beaconInfoList, updateSupport, operName);
+        return success(message);
+    }
+    
+    /**
+     * 下载导入模板
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:beaconInfo:import')")
+    @GetMapping("/importTemplate")
+    public void importTemplate(HttpServletResponse response)
+    {
+        ExcelUtil<TakBeaconInfo> util = new ExcelUtil<TakBeaconInfo>(TakBeaconInfo.class);
+        util.importTemplateExcel(response, "信标信息数据");
     }
 }

@@ -58,4 +58,14 @@ public interface ITakBeaconInfoService
      * @return 结果
      */
     public int deleteTakBeaconInfoById(String id);
+    
+    /**
+     * 导入信标信息数据
+     * 
+     * @param beaconInfoList 信标信息数据列表
+     * @param updateSupport 是否更新支持，如果已存在，是否更新
+     * @param operName 操作用户
+     * @return 结果
+     */
+    public String importTakBeaconInfo(List<TakBeaconInfo> beaconInfoList, boolean updateSupport, String operName);
 }
