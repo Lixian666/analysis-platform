@@ -32,13 +32,19 @@
   const initype = ref(false)
   const arrayList = ref([])
   const graphicYellow = ref(null)
+  // 点位选择相关
+  const selectedPointIndex = ref(-1)  // 当前选中的点位索引
+  const currentTrackPoints = ref([])  // 当前轨迹的所有点位图形对象
+  const currentTrackData = ref([])    // 当前轨迹的原始数据
   //data return end
   //生命周期start
   onBeforeMount(()=>{
 
   })
   onMounted(()=>{
-
+    // 添加键盘事件监听
+    window.addEventListener('keydown', handleKeyDown)
+    
     //initMap()
     // this.initMap()
     //   if (this.list && this.list.length !== 0) {
@@ -47,6 +53,9 @@
 
   })
   onUnmounted(()=>{
+    // 移除键盘事件监听
+    window.removeEventListener('keydown', handleKeyDown)
+    
     if(cameraHistory.value){
         cameraHistory.value.remove()
         cameraHistory.value = null
@@ -117,6 +126,92 @@
   }
   //生命周期 end
   //methods start
+  
+  // 键盘事件处理
+  function handleKeyDown(event) {
+    // 只在有选中点位时响应
+    if (selectedPointIndex.value === -1 || currentTrackPoints.value.length === 0) {
+      return
+    }
+    
+    // 左箭头 = 上一个点，右箭头 = 下一个点
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      selectPreviousPoint()
+    } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault()
+      selectNextPoint()
+    }
+  }
+  
+  // 选择上一个点
+  function selectPreviousPoint() {
+    if (selectedPointIndex.value > 0) {
+      selectPointByIndex(selectedPointIndex.value - 1)
+    }
+  }
+  
+  // 选择下一个点
+  function selectNextPoint() {
+    if (selectedPointIndex.value < currentTrackPoints.value.length - 1) {
+      selectPointByIndex(selectedPointIndex.value + 1)
+    }
+  }
+  
+  // 根据索引选择点位
+  function selectPointByIndex(index) {
+    if (index < 0 || index >= currentTrackPoints.value.length) {
+      return
+    }
+    
+    // 取消之前的高亮
+    if (selectedPointIndex.value >= 0 && currentTrackPoints.value[selectedPointIndex.value]) {
+      const prevPoint = currentTrackPoints.value[selectedPointIndex.value]
+      const normalCanvas = prevPoint.attr.normalCanvas
+      if (normalCanvas) {
+        prevPoint.setStyle({ image: normalCanvas })  // 恢复普通状态
+      }
+    }
+    
+    // 设置新的选中点
+    selectedPointIndex.value = index
+    const currentPoint = currentTrackPoints.value[index]
+    
+    // 高亮当前点（替换为带黄色外圈的图标）
+    const selectedCanvas = currentPoint.attr.selectedCanvas
+    if (selectedCanvas) {
+      currentPoint.setStyle({ image: selectedCanvas })
+    }
+    
+    // 显示弹窗
+    currentPoint.openPopup()
+    
+    // 相机飞到该点位（可选）
+    // map.value.flyToGraphic(currentPoint, { duration: 0.5 })
+  }
+  
+  // 格式化日期时间
+  function formatDateTime(dateTimeStr) {
+    if (!dateTimeStr || dateTimeStr === '暂无数据') {
+      return { date: '暂无数据', time: '暂无数据' }
+    }
+    
+    try {
+      // 假设格式为 "yyyy-MM-dd HH:mm:ss"
+      const parts = dateTimeStr.split(' ')
+      if (parts.length === 2) {
+        return {
+          date: parts[0],  // yyyy-MM-dd
+          time: parts[1]   // HH:mm:ss
+        }
+      }
+    } catch (e) {
+      console.error('日期格式化错误:', e)
+    }
+    
+    return { date: dateTimeStr, time: '' }
+  }
+  
   function initMap(newlist) {
     arrayList.value = newlist
     // mars3d初始化
@@ -394,22 +489,48 @@ function setMsaaSamples(samples) {
     })
     graphicLayer.addGraphic(graphice)
 
-    // === 所有轨迹点（性能优化版）===
+    // === 所有轨迹点（性能优化版 + 键盘选择）===
     const showTrackPoints = true  // 是否显示轨迹点
     
     if (showTrackPoints) {
+      // 清空之前的点位数据
+      currentTrackPoints.value = []
+      currentTrackData.value = dataPoints
+      selectedPointIndex.value = -1
+      
       // 性能优化：复用 canvas，只创建一次
-      const canvas = document.createElement('canvas')
-      canvas.width = 16
-      canvas.height = 16
-      const ctx = canvas.getContext('2d')
-      ctx.beginPath()
-      ctx.arc(8, 8, 6, 0, 2 * Math.PI)
-      ctx.fillStyle = num <= 1 ? '#f50620' : linecolor
-      ctx.fill()
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2
-      ctx.stroke()
+      // 普通状态的点（缩小尺寸，半径从6px改为4px）
+      const normalCanvas = document.createElement('canvas')
+      normalCanvas.width = 14
+      normalCanvas.height = 14
+      const normalCtx = normalCanvas.getContext('2d')
+      normalCtx.beginPath()
+      normalCtx.arc(7, 7, 4, 0, 2 * Math.PI)  // 半径4px
+      normalCtx.fillStyle = num <= 1 ? '#f50620' : linecolor
+      normalCtx.fill()
+      normalCtx.strokeStyle = '#ffffff'
+      normalCtx.lineWidth = 1.5
+      normalCtx.stroke()
+      
+      // 选中状态的点（外圈黄色，更大）
+      const selectedCanvas = document.createElement('canvas')
+      selectedCanvas.width = 22
+      selectedCanvas.height = 22
+      const selectedCtx = selectedCanvas.getContext('2d')
+      // 绘制黄色外圈
+      selectedCtx.beginPath()
+      selectedCtx.arc(11, 11, 8, 0, 2 * Math.PI)
+      selectedCtx.strokeStyle = '#FFD700'  // 金黄色
+      selectedCtx.lineWidth = 3
+      selectedCtx.stroke()
+      // 绘制内部圆点
+      selectedCtx.beginPath()
+      selectedCtx.arc(11, 11, 5, 0, 2 * Math.PI)  // 半径5px（比普通状态稍大）
+      selectedCtx.fillStyle = num <= 1 ? '#f50620' : linecolor
+      selectedCtx.fill()
+      selectedCtx.strokeStyle = '#ffffff'
+      selectedCtx.lineWidth = 1.5
+      selectedCtx.stroke()
       
       cargo.forEach((point, index) => {
         // 跳过起点和终点（已经有独立图标）
@@ -417,7 +538,8 @@ function setMsaaSamples(samples) {
         
         // 获取对应的原始数据
         const originalPoint = dataPoints[index] || {}
-        const recordTime = originalPoint.recordTime || '暂无数据'
+        const recordTimeStr = originalPoint.recordTime || '暂无数据'
+        const { date, time } = formatDateTime(recordTimeStr)
         const speed = originalPoint.speed !== undefined && originalPoint.speed !== null 
           ? originalPoint.speed.toFixed(2) + ' m/s' 
           : '暂无数据'
@@ -427,7 +549,7 @@ function setMsaaSamples(samples) {
           position: [point[0], point[1], fixedHeight],  // 固定高度0米
           show: showbool,
           style: {
-            image: canvas,  // 复用同一个 canvas
+            image: normalCanvas,  // 默认使用普通状态的canvas
             scale: 1,
             horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
             verticalOrigin: Cesium.VerticalOrigin.CENTER,
@@ -439,12 +561,16 @@ function setMsaaSamples(samples) {
             longitude: point[0],
             latitude: point[1],
             totalPoints: cargo.length,
-            recordTime: recordTime,
-            speed: speed
+            recordTime: recordTimeStr,
+            date: date,
+            time: time,
+            speed: speed,
+            normalCanvas: normalCanvas,      // 保存普通状态canvas
+            selectedCanvas: selectedCanvas   // 保存选中状态canvas
           },
           // 添加点击弹窗
           popup: `
-            <div style="padding: 12px; min-width: 240px; background: #fff;">
+            <div style="padding: 12px; min-width: 260px; background: #fff;">
               <h4 style="margin: 0 0 12px 0; color: #333; font-size: 16px; border-bottom: 2px solid #409EFF; padding-bottom: 8px;">
                 📍 轨迹点信息
               </h4>
@@ -462,18 +588,35 @@ function setMsaaSamples(samples) {
                   <span style="color: #333; font-weight: 500;">${point[1].toFixed(6)}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; padding: 4px 0; border-top: 1px dashed #eee; margin-top: 4px; padding-top: 8px;">
-                  <span style="color: #666;">记录时间：</span>
-                  <span style="color: #333; font-weight: 500;">${recordTime}</span>
+                  <span style="color: #666;">日期：</span>
+                  <span style="color: #333; font-weight: 500;">${date}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span style="color: #666;">时间：</span>
+                  <span style="color: #333; font-weight: 500;">${time}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; padding: 4px 0;">
                   <span style="color: #666;">速度：</span>
                   <span style="color: #409EFF; font-weight: 600;">${speed}</span>
                 </div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; color: #999; font-size: 12px; text-align: center;">
+                  💡 选中后显示黄色外圈，使用 ← → 方向键切换
+                </div>
               </div>
             </div>
           `
         })
+        
+        // 添加点击事件监听
+        pointGraphic.on('click', function(event) {
+          const pointIndex = currentTrackPoints.value.indexOf(pointGraphic)
+          if (pointIndex >= 0) {
+            selectPointByIndex(pointIndex)
+          }
+        })
+        
         graphicLayer.addGraphic(pointGraphic)
+        currentTrackPoints.value.push(pointGraphic)  // 保存点位引用
       })
     }
 
