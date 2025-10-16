@@ -209,7 +209,20 @@ function setMsaaSamples(samples) {
     addTileLayer()
     camerahistory()
     initdraw(newlist)
+    
+    // 将视角移动到董家镇TIFDOM中心区域，正视角度
+    // setTimeout(() => {
+    //   map.value.setCameraView({
+    //     lat: 36.760777,  // 董家镇中心纬度
+    //     lng: 117.268876,  // 董家镇中心经度
+    //     alt: 800,  // 高度800米，适合查看整个区域
+    //     heading: 0,  // 正北方向
+    //     pitch: -90,  // 正视（俯视）角度
+    //     roll: 0
+    //   }, { duration: 2 })  // 2秒过渡动画
+    // }, 500)  // 等待图层加载完成
   }
+  
   function initdraw(newlist){
     graphicLayer_carlines.value = {} //new mars3d.layer.GraphicLayer()
     for (let index = 0; index < newlist.length; index++) {
@@ -225,7 +238,7 @@ function setMsaaSamples(samples) {
     }
   }
   function addTileLayer() {
-    add3DTileLayer()
+    add2DTileLayer()
   }
 
   function add3DTileLayer(){
@@ -251,14 +264,43 @@ function setMsaaSamples(samples) {
   }
 
   function add2DTileLayer(){
-    graphicLayer_map2Dtdt.value = new mars3d.layer.XyzLayer({
-      url: proxy.$tdt,
-      opacity: 1
+    // graphicLayer_map2Dtdt.value = new mars3d.layer.XyzLayer({
+    //   url: proxy.$tdt,
+    //   opacity: 1
+    // })
+    // map.value.addLayer(graphicLayer_map2Dtdt.value)
+    // 使用天地图影像服务作为底图
+    graphicLayer_map2Dtdt.value = new mars3d.layer.WmtsLayer({
+      url: proxy.$tdt_img,
+      layer: "img",
+      style: "default",
+      tileMatrixSetID: "w",
+      format: "tiles",
+      maximumLevel: 18,
+      show: true,
+      zIndex: 1  // 底图层级
     })
     map.value.addLayer(graphicLayer_map2Dtdt.value)
+    
+    // 叠加董家镇本地TIF切片图层（TMS格式）
     graphicLayer_map2D.value = new mars3d.layer.XyzLayer({
-      url: proxy.$tifimg,
-      opacity: 1
+      name: "董家镇DOM影像",
+      url: proxy.$dongjiazhenTiles,
+      tms: true, // 使用TMS坐标系（Y轴从下往上）
+      minimumLevel: 10,
+      maximumLevel: 18,
+      opacity: 1,  // 完全不透明
+      show: true,
+      zIndex: 10,  // 更高的层级，显示在天地图之上
+      // 使用tilemapresource.xml中的精确边界（EPSG:4326）
+      rectangle: {
+        xmin: 117.25785175068449,
+        ymin: 36.75709311589477,
+        xmax: 117.27989964583475,
+        ymax: 36.76446135333450
+      },
+      // 仅在覆盖范围内加载切片
+      enablePickFeatures: false
     })
     map.value.addLayer(graphicLayer_map2D.value)
   }
@@ -287,96 +329,121 @@ function setMsaaSamples(samples) {
     }
     let cargo = pos
     let linecolor = color
-    // === 线条点位 ===
-    const number = 10;
-    const liftedPositions = cargo.map(([lon, lat, height]) => [lon, lat, (height || 0) + number])
+    
+    // === 性能优化：线条抽稀，减少顶点数量 ===
+    let simplifiedPositions = cargo
+    // 高度设为固定2米（不使用clampToGround以提升性能）
+    const positions = simplifiedPositions.map(([lon, lat, height]) => [lon, lat, 2])
+    
     if (num <= 1) {
-      // === 线条 ===
-      const graphicqa = new mars3d.graphic.PolylinePrimitive({
-        positions: liftedPositions,
-        show: showbool,
-        style: {
-          width: 7,
-          materialType: mars3d.MaterialType.LineFlow,
-          materialOptions: {
-            image: linepng,
-            speed: 8
-          },
-          depthTest: false   // 🚀 永远显示在最上面
-        }
-      })
-      graphicLayer.addGraphic(graphicqa)
-
-      // === 线条 ===
+      // === 主线条（性能优化版）===
       const graphicq = new mars3d.graphic.PolylinePrimitive({
-        positions: liftedPositions,
+        positions: positions,
         show: showbool,
         style: {
-          color: "#f5062",
-          materialType: mars3d.MaterialType.LineFlowColor,
-          lastMaterialType: "PolylineArrow",
-          width: 3,
-          materialOptions: {
-            color: "#f50620",
-            speed: 0.3,
-            percent: 0.35,
-            alpha: 0.55
-          },
-          depthTest: false   // 🚀 永远显示在最上面
+          color: "#f50620",
+          width: 5
         }
       })
       graphicLayer.addGraphic(graphicq)
     } else {
       // === 线条 ===
       const graphicq = new mars3d.graphic.PolylinePrimitive({
-        positions: liftedPositions, // 🚀 抬高 2m,
+        positions: positions,
         show: showbool,
         style: {
           color: linecolor,
-          width: 3,
-          materialOptions: {
-            color: linecolor,
-            speed: 0.3,
-            percent: 0.35,
-            alpha: 0.55
-          },
-          depthTest: false   // 🚀 永远显示在最上面
+          width: 3
         }
       })
       graphicLayer.addGraphic(graphicq)
     }
 
-    // === 起点 ===
+    // === 起点 ===（贴地显示）
     const graphics = new mars3d.graphic.BillboardEntity({
-      position: [cargo[0][0], cargo[0][1], (cargo[0][2] || 0) + number], // 🚀 抬高 2m
+      position: [cargo[0][0], cargo[0][1], 0],
       show: showbool,
       style: {
         image: startpng,
         scale: 1,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        // 关键参数：禁用深度检测
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        depthTest: false  // 🚀 永远在上面
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,  // 贴地
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       attr: { remark: "" }
     })
     graphicLayer.addGraphic(graphics)
 
-    // === 终点 ===
+    // === 终点 ===（贴地显示）
     const graphice = new mars3d.graphic.BillboardEntity({
-      position: [cargo[cargo.length - 1][0], cargo[cargo.length - 1][1], (cargo[cargo.length - 1][2] || 0) + number],
+      position: [cargo[cargo.length - 1][0], cargo[cargo.length - 1][1], 0],
       show: showbool,
       style: {
         image: endpng,
         scale: 1,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        depthTest: false  // 🚀 永远在上面
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,  // 贴地
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       attr: { remark: "" }
     })
     graphicLayer.addGraphic(graphice)
+
+    // === 所有轨迹点 ===（显示所有点，不抽稀）
+    const showTrackPoints = true  // 是否显示轨迹点
+    
+    if (showTrackPoints) {
+      cargo.forEach((point, index) => {
+        // 跳过起点和终点（已经有独立图标）
+        if (index === 0 || index === cargo.length - 1) return
+        
+        // 显示所有中间点 - 改用BillboardEntity以支持点击事件
+        // 创建一个小圆点图标
+        const canvas = document.createElement('canvas')
+        canvas.width = 16
+        canvas.height = 16
+        const ctx = canvas.getContext('2d')
+        ctx.beginPath()
+        ctx.arc(8, 8, 6, 0, 2 * Math.PI)
+        ctx.fillStyle = num <= 1 ? '#f50620' : linecolor
+        ctx.fill()
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 2
+        ctx.stroke()
+        
+        const pointGraphic = new mars3d.graphic.BillboardEntity({
+          position: [point[0], point[1], 2],  // 高度2米，与线条一致
+          show: showbool,
+          style: {
+            image: canvas,
+            scale: 1,
+            horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY
+          },
+          attr: {
+            index: index,
+            longitude: point[0],
+            latitude: point[1],
+            totalPoints: cargo.length
+          },
+          // 添加点击弹窗
+          popup: `
+            <div style="padding: 10px; min-width: 200px;">
+              <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">轨迹点信息</h4>
+              <div style="line-height: 1.8; font-size: 14px;">
+                <div><strong>点位序号：</strong>${index + 1} / ${cargo.length}</div>
+                <div><strong>经度：</strong>${point[0].toFixed(6)}</div>
+                <div><strong>纬度：</strong>${point[1].toFixed(6)}</div>
+              </div>
+            </div>
+          `
+        })
+        graphicLayer.addGraphic(pointGraphic)
+      })
+    }
 
     setTimeout(() => {
       initype.value = bool
