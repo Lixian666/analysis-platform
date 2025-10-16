@@ -1,5 +1,5 @@
 {
-  "center":{"lat":36.760694,"lng":117.267956,"alt":951,"heading":360,"pitch":-50},
+  "center":{"lat":36.751274,"lng":117.270252,"alt":2593.5,"heading":360,"pitch":-70},
   "isSw_Order":false,
   "zkyxLogout":"http://192.168.10.6:30000/api/bjjw/openAuth/doLogout?account=",
   "tifimg": "http://ctrl.iptv-soft.com/3D/noblackyz/{z}/{x}/{y}.png",
@@ -9,5 +9,7 @@
   "model_dongjiazhen": "/data/dongjiazheng-3D/tileset.json",
   "model_yuzui": "http://ctrl.iptv-soft.com/3DNM/tileset.json",
   "kuqu_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuqu&outputFormat=application/json",
-  "kuwei_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuwei&outputFormat=application/json"
+  "kuwei_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuwei&outputFormat=application/json",
+  "dongjiazhen_tif": "/Users/lixian/Cache/Platform/PlatformData/img/董家镇tif/TIFDOM/1/1_DOM.tif",
+  "dongjiazhen_tiles": "http://localhost:8089/董家镇tif/tiles/{z}/{x}/{y}.png"
 }

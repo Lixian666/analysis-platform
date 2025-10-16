@@ -92,11 +92,13 @@ axios.get('/config.json').then(response => {
   app.config.globalProperties.$kuquMapYuzui = config.kuqu_yuzui
   app.config.globalProperties.$kuweiMapYuzui = config.kuwei_yuzui
   app.config.globalProperties.$tifimg = config.tifimg
-  app.config.globalProperties.tdt_img = config.tdt_img
+  app.config.globalProperties.$tdt_img = config.tdt_img
   app.config.globalProperties.$tdt = config.tdt
   app.config.globalProperties.$isSw_Order = config.isSw_Order
   app.config.globalProperties.$center = config.center
   app.config.globalProperties.$zkyxLogout = config.zkyxLogout
+  app.config.globalProperties.$dongjiazhenTif = config.dongjiazhen_tif
+  app.config.globalProperties.$dongjiazhenTiles = config.dongjiazhen_tiles
 
   // 挂载应用
   app.mount('#app')
