@@ -47,6 +47,9 @@ public class TakBehaviorRecordDetail extends BaseEntity
     /** 维度 */
     @Excel(name = "维度")
     private Double latitude;
+    /** 速度 */
+    @Excel(name = "速度")
+    private Double speed;
 
     public void setId(Long id) 
     {

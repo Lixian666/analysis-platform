@@ -96,7 +96,7 @@
     
 
     // console.log(item)
-    moveCarDirection(grap, listsetmor(item.takBehaviorRecordDetailList),true,item.color,1,true)
+    moveCarDirection(grap, listsetmor(item.takBehaviorRecordDetailList),true,item.color,1,true, item.takBehaviorRecordDetailList)
   }
 
 
@@ -113,7 +113,7 @@
     let grap = new mars3d.layer.GraphicLayer()
     map.value.addLayer(grap)
     graphicLayer_carlines.value['draw' + item.id] = grap
-    moveCarDirection(grap, listsetmor(item.takBehaviorRecordDetailList),true,item.color,arrayList.value.length,true)
+    moveCarDirection(grap, listsetmor(item.takBehaviorRecordDetailList),true,item.color,arrayList.value.length,true, item.takBehaviorRecordDetailList)
   }
   //生命周期 end
   //methods start
@@ -234,7 +234,7 @@ function setMsaaSamples(samples) {
       if(index == newlist.length-1){
         end = true
       }
-      moveCarDirection(grap, listsetmor(element.takBehaviorRecordDetailList),end,element.color,newlist.length,true)
+      moveCarDirection(grap, listsetmor(element.takBehaviorRecordDetailList),end,element.color,newlist.length,true, element.takBehaviorRecordDetailList)
     }
   }
   function addTileLayer() {
@@ -323,120 +323,152 @@ function setMsaaSamples(samples) {
     //   eventTarget.fire("changeCamera", { count })
     // })
   }
-  function moveCarDirection(graphicLayer, pos, bool, color, num, showbool) {
+  function moveCarDirection(graphicLayer, pos, bool, color, num, showbool, originalData) {
     if (!pos || pos.length === 0) {
       return
     }
     let cargo = pos
     let linecolor = color
+    // 保存原始数据，用于显示详细信息（recordTime, speed等）
+    const dataPoints = originalData || []
     
-    // === 性能优化：线条抽稀，减少顶点数量 ===
-    let simplifiedPositions = cargo
-    // 高度设为固定2米（不使用clampToGround以提升性能）
-    const positions = simplifiedPositions.map(([lon, lat, height]) => [lon, lat, 2])
+    // === 性能优化：使用固定高度2米，不使用 clampToGround ===
+    const fixedHeight = 0  // 固定高度0米
+    const positions = cargo.map(([lon, lat, height]) => [lon, lat, fixedHeight])
     
     if (num <= 1) {
-      // === 主线条（性能优化版）===
+      // === 主线条（性能优化：固定高度）===
       const graphicq = new mars3d.graphic.PolylinePrimitive({
         positions: positions,
         show: showbool,
         style: {
           color: "#f50620",
           width: 5
+          // 移除 clampToGround 以提升性能
         }
       })
       graphicLayer.addGraphic(graphicq)
     } else {
-      // === 线条 ===
+      // === 线条（性能优化：固定高度）===
       const graphicq = new mars3d.graphic.PolylinePrimitive({
         positions: positions,
         show: showbool,
         style: {
           color: linecolor,
           width: 3
+          // 移除 clampToGround 以提升性能
         }
       })
       graphicLayer.addGraphic(graphicq)
     }
 
-    // === 起点 ===（贴地显示）
+    // === 起点（性能优化：固定高度）===
     const graphics = new mars3d.graphic.BillboardEntity({
-      position: [cargo[0][0], cargo[0][1], 0],
+      position: [cargo[0][0], cargo[0][1], fixedHeight],
       show: showbool,
       style: {
         image: startpng,
         scale: 1,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,  // 贴地
+        // 移除 heightReference 以提升性能
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       attr: { remark: "" }
     })
     graphicLayer.addGraphic(graphics)
 
-    // === 终点 ===（贴地显示）
+    // === 终点（性能优化：固定高度）===
     const graphice = new mars3d.graphic.BillboardEntity({
-      position: [cargo[cargo.length - 1][0], cargo[cargo.length - 1][1], 0],
+      position: [cargo[cargo.length - 1][0], cargo[cargo.length - 1][1], fixedHeight],
       show: showbool,
       style: {
         image: endpng,
         scale: 1,
         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,  // 贴地
+        // 移除 heightReference 以提升性能
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       attr: { remark: "" }
     })
     graphicLayer.addGraphic(graphice)
 
-    // === 所有轨迹点 ===（显示所有点，不抽稀）
+    // === 所有轨迹点（性能优化版）===
     const showTrackPoints = true  // 是否显示轨迹点
     
     if (showTrackPoints) {
+      // 性能优化：复用 canvas，只创建一次
+      const canvas = document.createElement('canvas')
+      canvas.width = 16
+      canvas.height = 16
+      const ctx = canvas.getContext('2d')
+      ctx.beginPath()
+      ctx.arc(8, 8, 6, 0, 2 * Math.PI)
+      ctx.fillStyle = num <= 1 ? '#f50620' : linecolor
+      ctx.fill()
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      
       cargo.forEach((point, index) => {
         // 跳过起点和终点（已经有独立图标）
         if (index === 0 || index === cargo.length - 1) return
         
-        // 显示所有中间点 - 改用BillboardEntity以支持点击事件
-        // 创建一个小圆点图标
-        const canvas = document.createElement('canvas')
-        canvas.width = 16
-        canvas.height = 16
-        const ctx = canvas.getContext('2d')
-        ctx.beginPath()
-        ctx.arc(8, 8, 6, 0, 2 * Math.PI)
-        ctx.fillStyle = num <= 1 ? '#f50620' : linecolor
-        ctx.fill()
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 2
-        ctx.stroke()
+        // 获取对应的原始数据
+        const originalPoint = dataPoints[index] || {}
+        const recordTime = originalPoint.recordTime || '暂无数据'
+        const speed = originalPoint.speed !== undefined && originalPoint.speed !== null 
+          ? originalPoint.speed.toFixed(2) + ' m/s' 
+          : '暂无数据'
         
+        // 显示所有中间点 - 使用固定高度，复用 canvas
         const pointGraphic = new mars3d.graphic.BillboardEntity({
-          position: [point[0], point[1], 2],  // 高度2米，与线条一致
+          position: [point[0], point[1], fixedHeight],  // 固定高度0米
           show: showbool,
           style: {
-            image: canvas,
+            image: canvas,  // 复用同一个 canvas
             scale: 1,
             horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
             verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            // 移除 heightReference 以提升性能
             disableDepthTestDistance: Number.POSITIVE_INFINITY
           },
           attr: {
             index: index,
             longitude: point[0],
             latitude: point[1],
-            totalPoints: cargo.length
+            totalPoints: cargo.length,
+            recordTime: recordTime,
+            speed: speed
           },
           // 添加点击弹窗
           popup: `
-            <div style="padding: 10px; min-width: 200px;">
-              <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">轨迹点信息</h4>
-              <div style="line-height: 1.8; font-size: 14px;">
-                <div><strong>点位序号：</strong>${index + 1} / ${cargo.length}</div>
-                <div><strong>经度：</strong>${point[0].toFixed(6)}</div>
-                <div><strong>纬度：</strong>${point[1].toFixed(6)}</div>
+            <div style="padding: 12px; min-width: 240px; background: #fff;">
+              <h4 style="margin: 0 0 12px 0; color: #333; font-size: 16px; border-bottom: 2px solid #409EFF; padding-bottom: 8px;">
+                📍 轨迹点信息
+              </h4>
+              <div style="line-height: 2; font-size: 14px;">
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span style="color: #666;">点位序号：</span>
+                  <span style="color: #333; font-weight: 500;">${index + 1} / ${cargo.length}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span style="color: #666;">经度：</span>
+                  <span style="color: #333; font-weight: 500;">${point[0].toFixed(6)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span style="color: #666;">纬度：</span>
+                  <span style="color: #333; font-weight: 500;">${point[1].toFixed(6)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-top: 1px dashed #eee; margin-top: 4px; padding-top: 8px;">
+                  <span style="color: #666;">记录时间：</span>
+                  <span style="color: #333; font-weight: 500;">${recordTime}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span style="color: #666;">速度：</span>
+                  <span style="color: #409EFF; font-weight: 600;">${speed}</span>
+                </div>
               </div>
             </div>
           `

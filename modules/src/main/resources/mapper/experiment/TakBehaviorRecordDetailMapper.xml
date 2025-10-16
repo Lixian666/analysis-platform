@@ -12,17 +12,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="timestampMs"    column="timestamp_ms"    />
         <result property="longitude"    column="longitude"    />
         <result property="latitude"    column="latitude"    />
+        <result property="speed"    column="speed"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateTime"    column="update_time"    />
     </resultMap>
 
     <sql id="selectTakBehaviorRecordDetailVo">
-        select id, card_id, track_id, record_time, timestamp_ms, longitude, latitude, create_time, update_time from tak_behavior_record_detail
+        select id, card_id, track_id, record_time, timestamp_ms, longitude, latitude, speed, create_time, update_time from tak_behavior_record_detail
     </sql>
 
     <sql id="selectTakBehaviorRecordAndDetailVo">
         select yard_id, start_time, end_time, point_count, type, duration, state, tak_behavior_record_detail.card_id,
-               tak_behavior_record_detail.track_id, record_time, timestamp_ms, longitude, latitude from tak_behavior_record_detail
+               tak_behavior_record_detail.track_id, record_time, timestamp_ms, longitude, latitude, speed from tak_behavior_record_detail
     </sql>
 
     <select id="selectTakBehaviorRecordDetailList" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail" resultMap="TakBehaviorRecordDetailResult">
@@ -34,6 +35,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="timestampMs != null "> and timestamp_ms = #{timestampMs}</if>
             <if test="longitude != null "> and longitude = #{longitude}</if>
             <if test="latitude != null "> and latitude = #{latitude}</if>
+             <if test="speed != null "> and speed = #{speed}</if>
         </where>
     </select>
     
@@ -60,6 +62,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="timestampMs != null">timestamp_ms,</if>
             <if test="longitude != null">longitude,</if>
             <if test="latitude != null">latitude,</if>
+            <if test="speed != null">speed,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateTime != null">update_time,</if>
          </trim>
@@ -71,16 +74,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="timestampMs != null">#{timestampMs},</if>
             <if test="longitude != null">#{longitude},</if>
             <if test="latitude != null">#{latitude},</if>
+            <if test="speed != null">#{speed},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateTime != null">#{updateTime},</if>
          </trim>
     </insert>
 
     <insert id="insertTakBehaviorRecordDetailAll" parameterType="java.util.List">
-        insert into tak_behavior_record_detail (id, card_id, track_id, record_time, timestamp_ms, longitude, latitude, create_time, update_time)
+        insert into tak_behavior_record_detail (id, card_id, track_id, record_time, timestamp_ms, longitude, latitude, speed, create_time, update_time)
         values
         <foreach item="item" index="index" collection="list" separator=",">
-            (#{item.id}, #{item.cardId}, #{item.trackId}, #{item.recordTime}, #{item.timestampMs}, #{item.longitude}, #{item.latitude}, #{item.createTime}, #{item.updateTime})
+            (#{item.id}, #{item.cardId}, #{item.trackId}, #{item.recordTime}, #{item.timestampMs}, #{item.longitude}, #{item.latitude}, #{item.speed}, #{item.createTime}, #{item.updateTime})
         </foreach>
     </insert>
 
@@ -93,6 +97,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="timestampMs != null">timestamp_ms = #{timestampMs},</if>
             <if test="longitude != null">longitude = #{longitude},</if>
             <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="speed != null">speed = #{speed},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </trim>
