@@ -56,8 +56,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         MAX(r.end_time) AS end_time
         FROM tak_behavior_records r
         <where>
-            <if test="cardId != null and cardId != ''">
-                AND r.card_id = #{cardId}
+            <if test="cardId != null and cardId != '' and cardId != 'null'">
+                AND r.card_id LIKE CONCAT('%', #{cardId}, '%')
+            </if>
+            <if test="yardId != null and yardId != '' and yardId != 'null'">
+                AND r.yard_id LIKE CONCAT('%', #{yardId}, '%')
+            </if>
+            <if test="params != null and params.beginDate != null and params.beginDate != '' and params.beginDate != 'null'">
+                AND TRUNC(r.start_time) &gt;= TO_DATE(#{params.beginDate}, 'YYYY-MM-DD')
+            </if>
+            <if test="params != null and params.endDate != null and params.endDate != '' and params.endDate != 'null'">
+                AND TRUNC(r.start_time) &lt;= TO_DATE(#{params.endDate}, 'YYYY-MM-DD')
             </if>
         </where>
         GROUP BY
