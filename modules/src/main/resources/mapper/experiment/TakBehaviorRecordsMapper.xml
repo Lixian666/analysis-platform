@@ -21,7 +21,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <resultMap type="com.jwzt.modules.experiment.domain.TakBehaviorRecords" id="TakBehaviorRecordsUserResult">
         <result property="cardId"    column="card_id"    />
+        <result property="yardId"    column="yard_id"    />
         <result property="taskCount"    column="task_count"    />
+        <result property="startTime"    column="start_time"    />
+        <result property="endTime"    column="end_time"    />
         <result property="taskLastTime"    column="task_last_time"    />
     </resultMap>
 
@@ -45,9 +48,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </sql>
     <sql id="selectTakBehaviorRecordsUserVo">
         SELECT
-        r.card_id,
+        r.card_id AS card_id,
+        r.yard_id AS yard_id,
+        TRUNC(r.start_time) AS task_date,
         COUNT(r.track_id) AS task_count,
-        MAX(r.end_time) AS task_last_time
+        MIN(r.start_time) AS start_time,
+        MAX(r.end_time) AS end_time
         FROM tak_behavior_records r
         <where>
             <if test="cardId != null and cardId != ''">
@@ -55,7 +61,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             </if>
         </where>
         GROUP BY
-            r.card_id
+            r.card_id,
+            r.yard_id,
+            TRUNC(r.start_time)
     </sql>
 
     <select id="selectTakBehaviorRecordsList" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecords" resultMap="TakBehaviorRecordsResult">
