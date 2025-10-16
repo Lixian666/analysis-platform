@@ -1,48 +1,32 @@
 <template>
   <div v-if="diagnosisRoles('order:list')" id="body-box">
 
-    <div ref="conment" class="CommercialVehicle" v-if="false">
-      <div class="LibraryLocationName">
-        <p>VIN码：</p>
-        <el-input v-model="listQuery.searcher.vehicleCode" placeholder="VIN码" maxlength="50"
-          @input="vehicleCodechange" />
-      </div>
-      <div class="ArrivalTime">
-        <p>开始时间：</p>
-        <el-date-picker v-model="listQuery.searcher.arriveTime" type="datetimerange" range-separator="至"
-          start-placeholder="开始日期" end-placeholder="结束日期" />
-      </div>
-      <div class="StartTime">
-        <p>结束时间：</p>
-        <el-date-picker v-model="listQuery.searcher.leaveTime" type="datetimerange" range-separator="至"
-          start-placeholder="开始日期" end-placeholder="结束日期" />
-      </div>
-
-      <div class="State">
-        <p>库区：</p>
-        <el-select v-model="listQuery.searcher.partitionId" placeholder="请选择库区">
-          <el-option v-for="item in ReservoirAreaData" :key="item.partitionId" :label="item.partitionName"
-            :value="item.partitionId" />
-        </el-select>
-      </div>
-      <div v-if="seares" class="TopRight TopRight_novw">
-        <el-button type="success" @click="search">查询</el-button>
-        <el-button type="info" @click="reset">重置</el-button>
-      </div>
-      <div v-if="!seares" class="TopRight TopRight_novw">
-        <el-popover popper-class="searicon" placement="top" title="" width="70" trigger="hover" content="搜索">
-          <el-button slot="reference" class="littesea" @click="search">
-            <i class="el-icon-search" />
-          </el-button>
-        </el-popover>
-        <el-popover popper-class="searicon" placement="top" title="" width="70" trigger="hover" content="重置">
-          <el-button slot="reference" class="littesea" @click="reset">
-            <i class="el-icon-refresh" />
-          </el-button>
-        </el-popover>
-
-      </div>
-    </div>
+     <div ref="conment" class="CommercialVehicle">
+       <div class="LibraryLocationName">
+         <p>卡ID：</p>
+         <el-input v-model="listQuery.searcher.cardId" placeholder="请输入卡ID" maxlength="50" clearable />
+       </div>
+       <div class="LibraryLocationName">
+         <p>货场ID：</p>
+         <el-input v-model="listQuery.searcher.yardId" placeholder="请输入货场ID" maxlength="50" clearable />
+       </div>
+       <div class="ArrivalTime">
+         <p>任务日期：</p>
+         <el-date-picker 
+           v-model="listQuery.searcher.taskDate" 
+           type="daterange" 
+           range-separator="至"
+           start-placeholder="开始日期" 
+           end-placeholder="结束日期"
+           value-format="YYYY-MM-DD"
+           clearable
+         />
+       </div>
+       <div class="TopRight TopRight_novw">
+         <el-button type="success" @click="search">查询</el-button>
+         <el-button type="info" @click="reset">重置</el-button>
+       </div>
+     </div>
     <div v-loading="dataTable_loading" class="main main_novw">
       <el-table :data="TaskList" border style="width: 100%" height="100%">
         <el-table-column align="center" label="卡ID" class="mainCell1">
@@ -155,23 +139,16 @@ import { onMounted, ref } from "vue"
 const route = useRoute()
 const router = useRouter()
 //data return start
-const listQuery = ref({
-  page: 1, // 当前表格显示第几页数据
-  limit: 20, // 表格一页显示几条数据
-  total: 0,
-  searcher: {
-    orderId: null,
-    partitionId: null,
-    positionId: null,
-    vehicleCode: '',
-    leaveStartTime: null,
-    leaveEndTime: null,
-    arriveStartTime: null,
-    arriveEndTime: null,
-    arriveTime: [], // 出发时间[new Date(2000, 10, 10, 10, 10), new Date(2000, 10, 11, 10, 10)]
-    leaveTime: [] // 到达时间
-  }
-})
+ const listQuery = ref({
+   page: 1, // 当前表格显示第几页数据
+   limit: 20, // 表格一页显示几条数据
+   total: 0,
+   searcher: {
+     cardId: '',      // 卡ID
+     yardId: '',      // 货场ID
+     taskDate: []     // 任务日期范围 [开始日期, 结束日期]
+   }
+ })
 const TaskList = ref([
   // {
   //   recordThirdId:7845645646,
@@ -243,12 +220,88 @@ function getcartype(val) {
   return data
 }
 async function init() {
-  let res = await getexperimentuserlist()
-  // console.log('ngsb',res)
-  if ((res.code == 200 || res.code == '200') && res.rows) {
-    TaskList.value = res.rows
+  dataTable_loading.value = true
+  try {
+    let res = await getexperimentuserlist()
+    // console.log('ngsb',res)
+    if ((res.code == 200 || res.code == '200') && res.rows) {
+      TaskList.value = res.rows
+    }
+  } finally {
+    dataTable_loading.value = false
   }
 }
+
+// 格式化日期为 YYYY-MM-DD
+function formatDate(date) {
+  if (!date) return ''
+  
+  // 如果已经是字符串格式，直接返回
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return date
+  }
+  
+  // 如果是 Date 对象，格式化
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
+  
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 查询功能 - 后端查询
+function search() {
+  dataTable_loading.value = true
+  
+  // 构建查询参数
+  const queryParams = {}
+  
+  // 卡ID
+  if (listQuery.value.searcher.cardId && listQuery.value.searcher.cardId.trim() !== '') {
+    queryParams.cardId = listQuery.value.searcher.cardId.trim()
+  }
+  
+  // 货场ID
+  if (listQuery.value.searcher.yardId && listQuery.value.searcher.yardId.trim() !== '') {
+    queryParams.yardId = listQuery.value.searcher.yardId.trim()
+  }
+  
+  // 任务日期范围 - 只在有效值时才添加，并手动格式化
+  if (listQuery.value.searcher.taskDate && 
+      listQuery.value.searcher.taskDate.length === 2 &&
+      listQuery.value.searcher.taskDate[0] && 
+      listQuery.value.searcher.taskDate[1]) {
+    const beginDate = formatDate(listQuery.value.searcher.taskDate[0])
+    const endDate = formatDate(listQuery.value.searcher.taskDate[1])
+    
+    if (beginDate && endDate) {
+      queryParams['params[beginDate]'] = beginDate
+      queryParams['params[endDate]'] = endDate
+    }
+  }
+  
+  // 调用后端查询
+  getexperimentuserlist(queryParams).then(res => {
+    if ((res.code == 200 || res.code == '200') && res.rows) {
+      TaskList.value = res.rows
+    }
+    dataTable_loading.value = false
+  }).catch(err => {
+    console.error('查询失败:', err)
+    dataTable_loading.value = false
+  })
+}
+
+// 重置功能
+function reset() {
+  listQuery.value.searcher.cardId = ''
+  listQuery.value.searcher.yardId = ''
+  listQuery.value.searcher.taskDate = []
+  init()
+}
+
 function handleEdit(vehicleThirdId, id) {
   // 操作
   // router.push('/mapcar/vehiclePath-detail?id='+id+'&vehicleThirdId=' + vehicleThirdId )
@@ -419,7 +472,7 @@ function formatTimeLong(num) {
         height: 100%;
 
         .main_novw {
-          height: calc(100% - 120px);
+          height: calc(100% - 60px);
         }
       }
     }

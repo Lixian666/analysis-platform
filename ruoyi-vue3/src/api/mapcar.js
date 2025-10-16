@@ -21,10 +21,11 @@ export const getexperimentid = (id) => {
 ///experiment/experiment/list
 
 
-export const getexperimentuserlist = () => {
+export const getexperimentuserlist = (params) => {
   return request({
     url: '/experiment/experiment/userList',
-    method: 'get'
+    method: 'get',
+    params: params
   })
 }
 export const getlistByUserId = (data) => {
