@@ -33,13 +33,13 @@
             <span>路线{{ scope.$index + 1 }}</span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="到达时间">
+        <el-table-column align="center" label="开始时间">
           <template v-slot="scope">
             <span v-if="scope.row.startTime">{{ scope.row.startTime.split(' ')[1] }}</span>
             <span v-else class="ml10">-</span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="离开时间">
+        <el-table-column align="center" label="结束时间">
           <template v-slot="scope">
             <span v-if="scope.row.endTime">{{ scope.row.endTime.split(' ')[1] }}</span>
             <span v-else>-</span>

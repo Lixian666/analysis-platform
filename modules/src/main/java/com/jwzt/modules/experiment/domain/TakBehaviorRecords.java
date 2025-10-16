@@ -55,7 +55,6 @@ public class TakBehaviorRecords extends BaseEntity {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date taskLastTime;
-
     /**
      * 轨迹起始时间
      */

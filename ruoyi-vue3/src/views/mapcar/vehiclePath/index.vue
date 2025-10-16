@@ -12,7 +12,7 @@
              />
            </div>
            <div class="ArrivalTime">
-             <p>到达时间：</p>
+             <p>开始时间：</p>
              <el-date-picker
                v-model="listQuery.searcher.arriveTime"
                type="datetimerange"
@@ -22,7 +22,7 @@
              />
            </div>
            <div class="StartTime">
-             <p>离开时间：</p>
+             <p>结束时间：</p>
              <el-date-picker
                v-model="listQuery.searcher.leaveTime"
                type="datetimerange"
@@ -80,24 +80,39 @@
          </div>
          <div v-loading="dataTable_loading" class="main main_novw">
            <el-table :data="TaskList" border style="width: 100%" height="100%">
-             <el-table-column align="center" label="卡ID" class="mainCell1">
-               <template v-slot="scope">
-                 <span class="ml10">{{ scope.row.cardId }}</span>
-               </template>
-             </el-table-column>
-             <!-- <el-table-column align="center" label="VIN" class="mainCell2">
-               <template v-slot="scope">
-                 <span v-if="scope.row.vehicleCode " class="ml10">{{ scope.row.vehicleCode }}</span>
-                 <span v-else class="ml10">-</span>
-               </template>
-             </el-table-column> -->
-             <el-table-column align="center" label="到达时间">
-               <template v-slot="scope">
-                 <span v-if="scope.row.startTime">{{ scope.row.startTime }}</span>
-                 <span v-else class="ml10">-</span>
-               </template>
-             </el-table-column>
-             <el-table-column align="center" label="离开时间">
+            <el-table-column align="center" label="卡ID" class="mainCell1">
+              <template v-slot="scope">
+                <span class="ml10">{{ scope.row.cardId }}</span>
+              </template>
+            </el-table-column>
+            
+            <el-table-column align="center" label="货场ID" width="120px">
+              <template v-slot="scope">
+                <span v-if="scope.row.yardId">{{ scope.row.yardId }}</span>
+                <span v-else class="ml10">-</span>
+              </template>
+            </el-table-column>
+            
+            <el-table-column align="center" label="任务日期" width="120px">
+              <template v-slot="scope">
+                <span v-if="scope.row.startTime">{{ getTaskDate(scope.row.startTime) }}</span>
+                <span v-else class="ml10">-</span>
+              </template>
+            </el-table-column>
+            
+            <!-- <el-table-column align="center" label="VIN" class="mainCell2">
+              <template v-slot="scope">
+                <span v-if="scope.row.vehicleCode " class="ml10">{{ scope.row.vehicleCode }}</span>
+                <span v-else class="ml10">-</span>
+              </template>
+            </el-table-column> -->
+            <el-table-column align="center" label="开始时间">
+              <template v-slot="scope">
+                <span v-if="scope.row.startTime">{{ scope.row.startTime }}</span>
+                <span v-else class="ml10">-</span>
+              </template>
+            </el-table-column>
+             <el-table-column align="center" label="结束时间">
                <template v-slot="scope">
                  <span v-if="scope.row.endTime">{{ scope.row.endTime  }}</span>
                  <span v-else>-</span>
@@ -130,17 +145,6 @@
                  <span>{{ scope.row.taskCount }}</span>
                </template>
              </el-table-column>
-
-             <el-table-column align="center" label="最后作业时间" width="170px">
-               <template v-slot="scope">
-                 <span>{{ scope.row.taskLastTime }}</span>
-               </template>
-             </el-table-column>
-
-
-             
- 
- 
           
              <!-- <el-table-column align="center" label="颜色" width="80px">
                <template v-slot="scope">
@@ -235,6 +239,30 @@
   })
 
   //methods start
+  // 提取日期部分（从 "yyyy-MM-dd HH:mm:ss" 提取 "yyyy-MM-dd"）
+  function getTaskDate(dateTimeStr) {
+    if (!dateTimeStr) {
+      return '-'
+    }
+    try {
+      // 如果是字符串格式 "yyyy-MM-dd HH:mm:ss"，直接截取前10位
+      if (typeof dateTimeStr === 'string' && dateTimeStr.includes(' ')) {
+        return dateTimeStr.split(' ')[0]
+      }
+      // 如果是其他格式，尝试转换
+      const date = new Date(dateTimeStr)
+      if (isNaN(date.getTime())) {
+        return '-'
+      }
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    } catch (e) {
+      return '-'
+    }
+  }
+  
   function getcartype(val){
     // console.log('a',val)
     let data = val
