@@ -69,6 +69,8 @@ public class RealTimeDriverTracker {
 
     public enum VehicleType { TRUCK, CAR }
 
+    private VehicleType vt;
+
     /** 每张卡的运行态 */
     private static class PerCardState {
         Deque<LocationPoint> window = new ArrayDeque<>();
@@ -121,7 +123,7 @@ public class RealTimeDriverTracker {
     public void ingestForCard(String cardKey, List<LocationPoint> batch) {
         if (batch == null || batch.isEmpty()) return;
         PerCardState st = stateByCard.computeIfAbsent(cardKey, k -> new PerCardState());
-        VehicleType vt = vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR);
+        vt = vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR);
         if (baseConfig.isDevelopEnvironment()){
             st.lastSeenTs = Long.MIN_VALUE;
         }
@@ -154,7 +156,13 @@ public class RealTimeDriverTracker {
 //            List<LocationPoint> fixesPoints = new OutlierFilter().fixTheData(win);
             // 调用原有检测器（窗口大小固定）
             List<LocationPoint> newPoints = outlierFilter.stateAnalysis(win);
-            EventState es = detector.updateState(newPoints, st.historyPoints);
+            EventState es = null;
+            if (vt == VehicleType.CAR){
+                es = detector.updateState(newPoints, st.historyPoints);
+            }
+            else if (vt == VehicleType.TRUCK){
+                es = detector.updateStateTruck(newPoints, st.historyPoints);
+            }
 
             if (es == null || es.getEvent() == null) {
                 if (st.activeSession != null) st.activeSession.points.add(p);
@@ -311,7 +319,13 @@ public class RealTimeDriverTracker {
                 List<LocationPoint> candidateWindow = new ArrayList<>(history.subList(windowStart, windowEnd));
                 // 预处理（去异常/修正），保持与实时一致
                 List<LocationPoint> newPoints = outlierFilter.stateAnalysis(candidateWindow);
-                EventState es = detector.updateState(newPoints, history);
+                if (vt == VehicleType.CAR){
+                    EventState es = detector.updateState(newPoints, history);
+                }
+                else if (vt == VehicleType.TRUCK){
+                    EventState es = detector.updateStateTruck(newPoints, history);
+                }
+                EventState es = null;
                 if (es != null && es.getEvent() != null && es.getEvent() == BoardingDetector.Event.SEND_BOARDING) {
                     // 找到上车事件
                     foundStartWindowStartIndex = windowStart;
@@ -439,6 +453,7 @@ public class RealTimeDriverTracker {
             d.setTimestampMs(p.getTimestamp());
             d.setLongitude(p.getLongitude());
             d.setLatitude(p.getLatitude());
+            d.setSpeed(p.getSpeed());
             detailList.add(d);
         }
 

@@ -38,6 +38,8 @@ public class BoardingDetector {
 
     private TheUWBRecords theUWBRecords = new TheUWBRecords();
 
+    private TheUWBRecordsTruck theUWBRecordsTruck = new TheUWBRecordsTruck();
+
     /** 每张卡的运行态 */
     @Data
     private static class TheUWBRecords {
@@ -45,6 +47,11 @@ public class BoardingDetector {
         long theUWBSendDropsZytALastTime = 0;
         int theUWBSendDropsZytB = 0;
         long theUWBSendDropsZytBLastTime = 0;
+    }
+
+    @Data
+    private static class TheUWBRecordsTruck {
+        int theUWBSendDropsRFID = 0;
     }
 
     public boolean detect(LocationPoint currentPoint) {
@@ -73,8 +80,8 @@ public class BoardingDetector {
 
     private EventState  lastEventState = new EventState();
     // 发运/到达状态记录
-    private EventState  sendOutLastEventState = new EventState();       // 发运
-    private EventState  sendInLastEventState = new EventState();        // 到达
+    private EventState  sendOutLastEventState = null;       // 发运
+    private EventState  sendInLastEventState = null;        // 到达
 
     public Boolean isnParkingArea(LocationPoint currentPoint) {
         // 判断是否在停车区域（发运上车区域）
@@ -82,6 +89,19 @@ public class BoardingDetector {
         return isnParkingArea;
     }
 
+    private void speedJudgment(LocationPoint point) {
+        if (point.getState() == MovementAnalyzer.MovementState.DRIVING) {
+            System.out.println("🚗 当前正在驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+        } else if (point.getState() == MovementAnalyzer.MovementState.LOW_DRIVING) {
+            System.out.println("🚗🐢 当前正在低速驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+        } else if (point.getState() == MovementAnalyzer.MovementState.WALKING) {
+            System.out.println("🚶 当前在步行，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+        } else if (point.getState() == MovementAnalyzer.MovementState.RUNNING) {
+            System.out.println("🏃 当前在小跑，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
+        } else {
+            System.out.println("⛔ 当前静止，时间为：" + point.getAcceptTime());
+        }
+    }
     public EventState updateState(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints){
         Event result = Event.NONE;
         if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) return new EventState();
@@ -116,6 +136,7 @@ public class BoardingDetector {
 //                2,
 //                true
 //        );
+        // 统计最后10个点是否接近作业台J车附近
         int theLastTenPointsNotInZYTCount = tagBeacon.countTagsCloseToBeacons(
                 theLastTenPoints,
                 baseConfig.getJoysuch().getBuildingId(),
@@ -341,6 +362,113 @@ public class BoardingDetector {
         }
         return new EventState();
     }
+
+    public EventState updateStateTruck(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints){
+        Event result = Event.NONE;
+        if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) return new EventState();
+        List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, FilterConfig.RECORD_POINTS_SIZE / 2);
+        LocationPoint currentPoint = recordPoints.get(FilterConfig.RECORD_POINTS_SIZE / 2);
+        speedJudgment(currentPoint);
+        List<LocationPoint> theLastTenPoints = recordPoints.subList(recordPoints.size() - (FilterConfig.RECORD_POINTS_SIZE / 2), recordPoints.size());
+        // 判断是否在停车区域（发运上车区域）
+        boolean isnParkingArea = zoneChecker.isInParkingZone(currentPoint);
+        // 统计最后10个点是否接近板车作业区附近
+        int theLastTenPointsNotInRFIDCount = tagBeacon.countTagsCloseToBeacons(
+                theLastTenPoints,
+                baseConfig.getJoysuch().getBuildingId(),
+                "板车作业区",
+                null,
+                null
+        );
+
+        // 判断是否靠近作业台J车附近
+        boolean isRFIDWithin = tagBeacon.theTagIsCloseToTheBeacon(
+                currentPoint,
+                baseConfig.getJoysuch().getBuildingId(),
+                "板车作业区",
+                null,
+                null
+        );
+        if (isRFIDWithin){
+            theUWBRecordsTruck.theUWBSendDropsRFID++;
+        }
+        System.out.println("rfid数" + theUWBRecordsTruck.theUWBSendDropsRFID);
+        if (currentPoint.getAcceptTime().equals("2025-10-16 18:30:10")){
+            System.out.println("触发断点");
+        }
+        // 判断上次流程是否超时
+        if (curPoint != null && currentPoint.getTimestamp() - curPoint.getTimestamp() > ADJACENT_POINTS_TIME_INTERVAL_MS) {
+            // 重置状态
+            lastEvent = Event.NONE;
+            currentEvent = Event.NONE;
+            curPoint = null;
+            return new EventState(currentEvent, currentPoint.getTimestamp(),1);
+        }
+        // 监测板车上车事件
+        if (sendInLastEventState == null && theUWBRecordsTruck.theUWBSendDropsRFID >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE){
+            // 检测板车卸车事件
+            if (theLastTenPointsNotInRFIDCount <= 0){
+                // 检测板车上车事件（离开RFID范围就算上车）
+                if (lastEvent == Event.NONE) {
+                    System.out.println("⚠️ 检测到车辆已进入板车卸车上车区域");
+                    lastEvent = Event.ARRIVED_BOARDING;
+                    currentEvent = Event.ARRIVED_BOARDING;
+                    sendInLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(),currentPoint.getAcceptTime());
+                    lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(),currentPoint.getAcceptTime());
+                    return new EventState(currentEvent, currentPoint.getTimestamp());
+                }
+            }
+        }
+        // 检测板车卸车下车事件
+        if (sendInLastEventState != null && currentPoint.getState() == MovementAnalyzer.MovementState.STOPPED && isnParkingArea) {
+            System.out.println("⚠️ 检测到车辆已进入板车卸车下车区域");
+            // 发运上车点前后状态标签数量
+            int arrivedStoppedTag = 0;
+            int arrivedDrivingTag = 0;
+            int arrivedFirstTag = 0;
+            int arrivedLastTag = 0;
+            // 判断板车卸车下车点前10个点状态
+            for (LocationPoint point : theFirstTenPoints){
+                if (point.getState() == MovementAnalyzer.MovementState.WALKING
+                        || point.getState() == MovementAnalyzer.MovementState.RUNNING
+                        || point.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
+                        || point.getState() == MovementAnalyzer.MovementState.DRIVING) {
+                    arrivedFirstTag++;
+                }
+                if (point.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
+                        || point.getState() == MovementAnalyzer.MovementState.DRIVING
+                        || point.getState() == MovementAnalyzer.MovementState.RUNNING) {
+                    arrivedDrivingTag++;
+                }
+            }
+            // 判断板车卸车下车点后10个点状态
+            for (LocationPoint point : theLastTenPoints){
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED
+                        || point.getState() == MovementAnalyzer.MovementState.WALKING) {
+                    arrivedLastTag++;
+                }
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED) {
+                    arrivedStoppedTag++;
+                }
+            }
+            // 判断状态标签数量是否满足发运区域上车条件
+            if (arrivedFirstTag >= FilterConfig.ARRIVED_BEFORE_UP_STATE_SIZE
+                    && arrivedLastTag >= FilterConfig.ARRIVED_AFTER_UP_STATE_SIZE
+                    && arrivedStoppedTag >= FilterConfig.STOPPED_STATE_SIZE
+                    && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE) {
+                System.out.println("⚠️ 检测到板车卸车下车");
+                initTruck();
+                curPoint = currentPoint;
+                lastEvent = Event.NONE;
+                currentEvent = Event.ARRIVED_DROPPING;
+                lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(),currentPoint.getAcceptTime());
+                sendInLastEventState = null;
+                return new EventState(currentEvent, currentPoint.getTimestamp());
+            }
+        }
+        return new EventState();
+    }
+
     public EventState updateState(List<LocationPoint> recordPoints){
         Event result = Event.NONE;
         if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) return new EventState();
@@ -576,6 +704,10 @@ public class BoardingDetector {
         theUWBRecords.theUWBSendDropsZytALastTime = 0;
         theUWBRecords.theUWBSendDropsZytB = 0;
         theUWBRecords.theUWBSendDropsZytBLastTime = 0;
+    }
+
+    private void initTruck() {
+        theUWBRecordsTruck.theUWBSendDropsRFID = 0;
     }
 
     public Event updateState(MovementAnalyzer.MovementState newState) {
