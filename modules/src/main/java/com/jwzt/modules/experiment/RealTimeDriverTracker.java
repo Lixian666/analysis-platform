@@ -319,13 +319,13 @@ public class RealTimeDriverTracker {
                 List<LocationPoint> candidateWindow = new ArrayList<>(history.subList(windowStart, windowEnd));
                 // 预处理（去异常/修正），保持与实时一致
                 List<LocationPoint> newPoints = outlierFilter.stateAnalysis(candidateWindow);
+                EventState es = null;
                 if (vt == VehicleType.CAR){
-                    EventState es = detector.updateState(newPoints, history);
+                    es = detector.updateState(newPoints, history);
                 }
                 else if (vt == VehicleType.TRUCK){
-                    EventState es = detector.updateStateTruck(newPoints, history);
+                    es = detector.updateStateTruck(newPoints, history);
                 }
-                EventState es = null;
                 if (es != null && es.getEvent() != null && es.getEvent() == BoardingDetector.Event.SEND_BOARDING) {
                     // 找到上车事件
                     foundStartWindowStartIndex = windowStart;
