@@ -73,6 +73,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             r.card_id,
             r.yard_id,
             TRUNC(r.start_time)
+        ORDER BY
+            TRUNC(r.start_time) DESC,
+            MIN(r.start_time) DESC,
+            r.card_id DESC,
+            r.yard_id DESC
     </sql>
 
     <select id="selectTakBehaviorRecordsList" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecords" resultMap="TakBehaviorRecordsResult">
@@ -87,6 +92,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="type != null "> and type = #{type}</if>
             <if test="duration != null  and duration != ''"> and duration = #{duration}</if>
             <if test="state != null  and state != ''"> and state = #{state}</if>
+            <!-- 时间范围查询：查找与指定时间范围有交集的记录 -->
+            <if test="queryStartTime != null and queryStartTime != '' and queryEndTime != null and queryEndTime != ''">
+                and start_time &lt;= TO_DATE(#{queryEndTime}, 'YYYY-MM-DD HH24:MI:SS')
+                and end_time &gt;= TO_DATE(#{queryStartTime}, 'YYYY-MM-DD HH24:MI:SS')
+            </if>
         </where>
     </select>
     

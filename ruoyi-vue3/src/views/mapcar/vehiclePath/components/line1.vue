@@ -224,7 +224,9 @@
   }
   async function init(){
     let vid ={
-      cardId: route.query.vehicleThirdId
+      cardId: route.query.vehicleThirdId,
+      startTime: route.query.startTime || '',
+      endTime: route.query.endTime || ''
     } 
     let jsonvid = JSON.stringify(vid)
     let res = await getlistByUserId(jsonvid)

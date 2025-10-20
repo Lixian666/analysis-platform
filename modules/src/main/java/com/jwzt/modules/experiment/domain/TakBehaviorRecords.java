@@ -96,6 +96,16 @@ public class TakBehaviorRecords extends BaseEntity {
      */
     private List<TakBehaviorRecordDetail> takBehaviorRecordDetailList;
 
+    /**
+     * 查询条件：开始时间（用于范围查询）
+     */
+    private String queryStartTime;
+
+    /**
+     * 查询条件：结束时间（用于范围查询）
+     */
+    private String queryEndTime;
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -198,6 +208,22 @@ public class TakBehaviorRecords extends BaseEntity {
 
     public void setTakBehaviorRecordDetailList(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList) {
         this.takBehaviorRecordDetailList = takBehaviorRecordDetailList;
+    }
+
+    public String getQueryStartTime() {
+        return queryStartTime;
+    }
+
+    public void setQueryStartTime(String queryStartTime) {
+        this.queryStartTime = queryStartTime;
+    }
+
+    public String getQueryEndTime() {
+        return queryEndTime;
+    }
+
+    public void setQueryEndTime(String queryEndTime) {
+        this.queryEndTime = queryEndTime;
     }
 
     @Override

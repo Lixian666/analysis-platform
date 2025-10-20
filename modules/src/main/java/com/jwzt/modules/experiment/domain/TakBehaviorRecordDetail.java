@@ -51,6 +51,12 @@ public class TakBehaviorRecordDetail extends BaseEntity
     @Excel(name = "速度")
     private Double speed;
 
+    /** 查询条件：开始时间 */
+    private String startTime;
+
+    /** 查询条件：结束时间 */
+    private String endTime;
+
     public void setId(Long id) 
     {
         this.id = id;
