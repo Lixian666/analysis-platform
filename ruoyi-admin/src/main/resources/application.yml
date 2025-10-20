@@ -140,9 +140,10 @@ experiment:
   base:
     stay-verify: false
     ranging-verify: true
+    push-data: false
     output-shp: false
     output-shp-path: /Users/lixian/Cache/Platform/PlatformData/output
-    delete-datetime: 2025-09-24 14:00:00
+    delete-datetime: 2025-10-20 09:00:00
 #    yard-name: yuzui
     yard-name: dongjiazhen
     location-card-type: other
@@ -183,6 +184,17 @@ experiment:
       center-ip: http://192.168.6.15/sw-centralOpen-api
       #RFID识别记录列表
       get-list: /api/station/getCompleteRfidList
+    card-analysis:
+      #车辆进场、出场推送
+      vehicle-entry-exit: /api/cardAnalysis/vehicleEntryAndExit
+      #车辆停放车位、车辆离开车位
+      assignment-record: /api/cardAnalysis/assignmentRecord
+      #实时轨迹
+      vehicle-track: /api/cardAnalysis/mqVehicleTrackVo
+      #UWB推送
+      beacon-push: /api/cardAnalysis/beaconPush
+      #车辆删除
+      remove-vehicle: /api/cardAnalysis/removeAssignmentRecord
   file-path:
     yard-name: ${experiment.base.yard-name}
     base-path: /Users/lixian/Cache/Platform/PlatformData/shp
