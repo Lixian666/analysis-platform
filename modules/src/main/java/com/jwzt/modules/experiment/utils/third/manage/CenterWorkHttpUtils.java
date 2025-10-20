@@ -6,11 +6,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.jwzt.modules.experiment.utils.http.HttpServiceUtils;
-import com.jwzt.modules.experiment.utils.http.HttpUtils;
+import com.jwzt.modules.experiment.utils.third.manage.domain.AssignmentRecordRequest;
+import com.jwzt.modules.experiment.utils.third.manage.domain.BeaconPushRequest;
 import com.jwzt.modules.experiment.utils.third.manage.domain.ReqVehicleCode;
+import com.jwzt.modules.experiment.utils.third.manage.domain.VehicleEntryExitRequest;
+import com.jwzt.modules.experiment.utils.third.manage.domain.VehicleTrackRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,21 @@ public class CenterWorkHttpUtils {
     // Rfid列表
     @Value("${experiment.base.sw-center.get-list}")
     private String getRfidList;
+    // 进场、出场推送
+    @Value("${experiment.base.card-analysis.vehicle-entry-exit}")
+    private String vehicleEntryExitUrl;
+    // 车辆停放车位、车辆离开车位
+    @Value("${experiment.base.card-analysis.assignment-record}")
+    private String assignmentRecordUrl;
+    // 实时轨迹
+    @Value("${experiment.base.card-analysis.vehicle-track}")
+    private String vehicleTrackUrl;
+    // UWB推送
+    @Value("${experiment.base.card-analysis.beacon-push}")
+    private String beaconPushUrl;
+    // 车辆删除
+    @Value("${experiment.base.card-analysis.remove-vehicle}")
+    private String removeVehicleUrl;
 
     /**
      * 查询RFID记录
@@ -115,5 +132,204 @@ public class CenterWorkHttpUtils {
             e.printStackTrace();
         }
         return vehicleCodes;
+    }
+
+    /**
+     * 车辆进场、出场推送
+     * @param request 请求参数
+     * @return
+     */
+    public JSONObject vehicleEntryAndExit(VehicleEntryExitRequest request) {
+        JSONObject result = null;
+        try {
+            if("1".equals(centerStatus)) {
+                log.info("车辆进场、出场推送-Start-开始推送：type={}, vehicleThirdId={}, vehicleTime={}", 
+                    request.getType(), request.getVehicleThirdId(), request.getVehicleTime());
+                
+                Map<String, Object> map = new HashMap<String, Object>();
+                map.put("type", request.getType());
+                map.put("vehicleThirdId", request.getVehicleThirdId());
+                map.put("vehicleTime", request.getVehicleTime());
+                map.put("recordFiles", request.getRecordFiles());
+                map.put("cameraId", request.getCameraId());
+                map.put("through", request.getThrough());
+                map.put("weft", request.getWeft());
+                map.put("vehicleCode", request.getVehicleCode());
+                map.put("vehicleThirdBrand", request.getVehicleThirdBrand());
+                map.put("vehicleColor", request.getVehicleColor());
+                map.put("vehicleType", request.getVehicleType());
+                map.put("vehicleShape", request.getVehicleShape());
+                map.put("regionType", request.getRegionType());
+                map.put("carType", request.getCarType());
+                
+                log.info("车辆进场、出场推送-请求参数："+JSON.toJSONString(map));
+                result = httpServiceUtils.POSTForEntityJson(map, centerIP + vehicleEntryExitUrl);
+                log.info("车辆进场、出场推送-响应结果："+result.toJSONString());
+                
+                int code = result.getIntValue("code");
+                if (code == 20000) {
+                    log.info("车辆进场、出场推送-Success-推送成功");
+                } else {
+                    log.error("车辆进场、出场推送-ERROR-推送失败："+result.toJSONString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("车辆进场、出场推送-Exception-异常：", e);
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
+     * 车辆停放车位、车辆离开车位
+     * @param request 请求参数
+     * @return
+     */
+    public JSONObject assignmentRecord(AssignmentRecordRequest request) {
+        JSONObject result = null;
+        try {
+            if("1".equals(centerStatus)) {
+                log.info("车辆停放/离开车位-Start-开始推送：type={}, vehicleThirdId={}, vehicleTime={}", 
+                    request.getType(), request.getVehicleThirdId(), request.getVehicleTime());
+                
+                Map<String, Object> map = new HashMap<String, Object>();
+                map.put("type", request.getType());
+                map.put("vehicleThirdId", request.getVehicleThirdId());
+                map.put("vehicleTime", request.getVehicleTime());
+                map.put("recordFiles", request.getRecordFiles());
+                map.put("cameraId", request.getCameraId());
+                map.put("through", request.getThrough());
+                map.put("weft", request.getWeft());
+                map.put("vehicleCode", request.getVehicleCode());
+                map.put("vehicleThirdBrand", request.getVehicleThirdBrand());
+                map.put("vehicleColor", request.getVehicleColor());
+                map.put("vehicleType", request.getVehicleType());
+                map.put("vehicleShape", request.getVehicleShape());
+                map.put("regionType", request.getRegionType());
+                map.put("carType", request.getCarType());
+                
+                log.info("车辆停放/离开车位-请求参数："+JSON.toJSONString(map));
+                result = httpServiceUtils.POSTForEntityJson(map, centerIP + assignmentRecordUrl);
+                log.info("车辆停放/离开车位-响应结果："+result.toJSONString());
+                
+                int code = result.getIntValue("code");
+                if (code == 20000) {
+                    log.info("车辆停放/离开车位-Success-推送成功");
+                } else {
+                    log.error("车辆停放/离开车位-ERROR-推送失败："+result.toJSONString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("车辆停放/离开车位-Exception-异常：", e);
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
+     * 实时轨迹推送
+     * @param request 请求参数
+     * @return
+     */
+    public JSONObject vehicleTrack(VehicleTrackRequest request) {
+        JSONObject result = null;
+        try {
+            if("1".equals(centerStatus)) {
+                log.info("实时轨迹推送-Start-开始推送：vehicleThirdId={}, vehicleTime={}", 
+                    request.getVehicleThirdId(), request.getVehicleTime());
+                
+                Map<String, Object> map = new HashMap<String, Object>();
+                map.put("vehicleThirdId", request.getVehicleThirdId());
+                map.put("vehicleTime", request.getVehicleTime());
+                map.put("cameraId", request.getCameraId());
+                map.put("through", request.getThrough());
+                map.put("weft", request.getWeft());
+                map.put("carType", request.getCarType());
+                
+                log.info("实时轨迹推送-请求参数："+JSON.toJSONString(map));
+                result = httpServiceUtils.POSTForEntityJson(map, centerIP + vehicleTrackUrl);
+                log.info("实时轨迹推送-响应结果："+result.toJSONString());
+                
+                int code = result.getIntValue("code");
+                if (code == 20000) {
+                    log.info("实时轨迹推送-Success-推送成功");
+                } else {
+                    log.error("实时轨迹推送-ERROR-推送失败："+result.toJSONString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("实时轨迹推送-Exception-异常：", e);
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
+     * UWB推送
+     * RFID绑定UWB信标数据推送、识别车车辆距离信标3米内时上报轨迹
+     * @param request 请求参数
+     * @return
+     */
+    public JSONObject beaconPush(BeaconPushRequest request) {
+        JSONObject result = null;
+        try {
+            if("1".equals(centerStatus)) {
+                log.info("UWB推送-Start-开始推送：type={}, vehicleTime={}, distance={}", 
+                    request.getType(), request.getVehicleTime(), request.getDistance());
+                
+                Map<String, Object> map = new HashMap<String, Object>();
+                map.put("type", request.getType());
+                map.put("vehicleTime", request.getVehicleTime());
+                map.put("cameraId", request.getCameraId());
+                map.put("through", request.getThrough());
+                map.put("weft", request.getWeft());
+                map.put("distance", request.getDistance());
+                
+                log.info("UWB推送-请求参数："+JSON.toJSONString(map));
+                result = httpServiceUtils.POSTForEntityJson(map, centerIP + beaconPushUrl);
+                log.info("UWB推送-响应结果："+result.toJSONString());
+                
+                int code = result.getIntValue("code");
+                if (code == 20000) {
+                    log.info("UWB推送-Success-推送成功");
+                } else {
+                    log.error("UWB推送-ERROR-推送失败："+result.toJSONString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("UWB推送-Exception-异常：", e);
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
+     * 车辆删除
+     * @param vehicleThirdId 视频分析系统生产车辆ID
+     * @return
+     */
+    public JSONObject removeVehicle(String vehicleThirdId) {
+        JSONObject result = null;
+        try {
+            if("1".equals(centerStatus)) {
+                log.info("车辆删除-Start-开始删除：vehicleThirdId={}", vehicleThirdId);
+                
+                String url = centerIP + removeVehicleUrl + "?vehicleThirdId=" + vehicleThirdId;
+                log.info("车辆删除-请求地址："+url);
+                result = httpServiceUtils.GETForEntity(url);
+                log.info("车辆删除-响应结果："+result.toJSONString());
+                
+                int code = result.getIntValue("code");
+                if (code == 20000) {
+                    log.info("车辆删除-Success-删除成功");
+                } else {
+                    log.error("车辆删除-ERROR-删除失败："+result.toJSONString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("车辆删除-Exception-异常：", e);
+            e.printStackTrace();
+        }
+        return result;
     }
 }
