@@ -66,6 +66,18 @@ public class TakBehaviorRecordDetailController extends BaseController
 //        startPage();
         TakBehaviorRecords takBehaviorRecords = new TakBehaviorRecords();
         takBehaviorRecords.setCardId(takBehaviorRecordDetail.getCardId());
+        
+        // 如果传入了时间范围参数，在数据库查询层面就进行过滤
+        if (takBehaviorRecordDetail.getStartTime() != null && !takBehaviorRecordDetail.getStartTime().isEmpty()
+                && takBehaviorRecordDetail.getEndTime() != null && !takBehaviorRecordDetail.getEndTime().isEmpty()) {
+            takBehaviorRecords.setQueryStartTime(takBehaviorRecordDetail.getStartTime());
+            takBehaviorRecords.setQueryEndTime(takBehaviorRecordDetail.getEndTime());
+        }
+        
+        // 先查询符合条件的行为记录（已在数据库层面过滤）
+        List<TakBehaviorRecords> RecordsList = takBehaviorRecordsService.selectTakBehaviorRecordsList(takBehaviorRecords);
+        
+        // 再查询详情数据并分组
         List<TakBehaviorRecordDetail> list = takBehaviorRecordDetailService.selectTakBehaviorRecordDetailList(takBehaviorRecordDetail);
         Map<String, List<TakBehaviorRecordDetail>> grouped = list.stream()
                 .collect(Collectors.groupingBy(TakBehaviorRecordDetail::getTrackId));
@@ -74,7 +86,8 @@ public class TakBehaviorRecordDetailController extends BaseController
                         .sorted(Comparator.comparing(TakBehaviorRecordDetail::getRecordTime))
                         .collect(Collectors.toList())
         );
-        List<TakBehaviorRecords> RecordsList = takBehaviorRecordsService.selectTakBehaviorRecordsList(takBehaviorRecords);
+        
+        // 为每个行为记录关联详情数据
         for (TakBehaviorRecords record : RecordsList){
             List<TakBehaviorRecordDetail> details = grouped.get(record.getTrackId());
             record.setTakBehaviorRecordDetailList(details);

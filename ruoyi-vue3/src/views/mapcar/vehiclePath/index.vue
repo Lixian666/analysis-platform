@@ -104,7 +104,7 @@
         <el-table-column align="center" label="操作" width="100">
           <template v-slot="scope">
             <el-button v-if="diagnosisRoles('vehicle:details') && scope.row.cardId" size="mini"
-              @click="handleEdit(scope.row.cardId, scope.row.id)">详情</el-button>
+              @click="handleEdit(scope.row.cardId, scope.row.id, scope.row.startTime, scope.row.endTime)">详情</el-button>
             <el-button v-if="false && diagnosisRoles('vehicle:update') && scope.row.recordThirdId" size="mini"
               @click="updateRecord(scope.row.recordThirdId)">修改</el-button>
           </template>
@@ -302,7 +302,7 @@ function reset() {
   init()
 }
 
-function handleEdit(vehicleThirdId, id) {
+function handleEdit(vehicleThirdId, id, startTime, endTime) {
   // 操作
   // router.push('/mapcar/vehiclePath-detail?id='+id+'&vehicleThirdId=' + vehicleThirdId )
   router.push({
@@ -310,6 +310,8 @@ function handleEdit(vehicleThirdId, id) {
     query: {
       id: String(id),
       vehicleThirdId: vehicleThirdId,
+      startTime: startTime || '',
+      endTime: endTime || ''
     }
   })
 }
