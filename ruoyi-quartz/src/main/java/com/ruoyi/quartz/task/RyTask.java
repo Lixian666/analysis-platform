@@ -174,8 +174,10 @@ public class RyTask
 //        String startTimeStr = "2025-09-24 18:00:00";
 //        String endTimeStr = "2025-09-24 19:40:00";
         String cardId = "1918B3000A79";
-        String startTimeStr = "2025-09-28 17:00:00";
-        String endTimeStr = "2025-09-28 19:00:00";
+//        String startTimeStr = "2025-09-28 17:00:00";
+//        String endTimeStr = "2025-09-28 19:00:00";
+        String startTimeStr = "2025-10-15 13:04:00";
+        String endTimeStr = "2025-10-15 13:06:00";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
         LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
 //        List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
@@ -210,6 +212,54 @@ public class RyTask
 //                realTimeDriverTracker.ingest(batch);
 //            }
             realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
+        }
+    }
+
+    /**
+     * 实时任务测试（历史数据模拟）
+     */
+    public void realDriverTrackerZQTruckTest(){
+
+        String data = baseConfig.LOCATION_CARD_TYPE;
+        String date = "未获取到日期";
+        String buildId = baseConfig.getJoysuch().getBuildingId();
+        String cardId = "1918B3000561";
+        String startTimeStr = "2025-10-16 18:25:00";
+        String endTimeStr = "2025-10-16 19:40:00";
+        LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
+        LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+//        List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
+        JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
+        JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
+        JSONArray points = jsonObject.getJSONArray("data");
+        JSONArray tagData = tagJsonObject.getJSONArray("data");
+        List<LocationPoint> LocationPoints = new ArrayList<>();
+        for (int i = 0; i < points.size(); i++){
+            JSONObject js = (JSONObject) points.get(i);
+            JSONArray plist = js.getJSONArray("points");
+            for (int j = 0; j < plist.size(); j++){
+                LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                if (date.equals("未获取到日期")){
+                    date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                }
+                LocationPoint point1 = new LocationPoint(
+                        cardId,
+                        point.getLongitude(),
+                        point.getLatitude(),
+                        DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                        Long.parseLong(point.getTime()));
+                LocationPoints.add(point1);
+            }
+        }
+        LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
+        if (LocationPoints.size() > 0){
+//            int batchSize = 10;
+//            for (int i = 0; i < LocationPoints.size(); i += batchSize) {
+//                int end = Math.min(i + batchSize, LocationPoints.size());
+//                List<LocationPoint> batch = LocationPoints.subList(i, end);
+//                realTimeDriverTracker.ingest(batch);
+//            }
+            realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.TRUCK);
         }
     }
 

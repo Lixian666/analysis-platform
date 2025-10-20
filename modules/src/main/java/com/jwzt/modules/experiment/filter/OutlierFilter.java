@@ -54,17 +54,6 @@ public class OutlierFilter {
             }
             // 通过windowSize个点判断当前运动状态
             MovementAnalyzer.MovementState state = MovementAnalyzer.analyzeState(new ArrayList<>(window));
-            if (state == MovementAnalyzer.MovementState.DRIVING) {
-                System.out.println("🚗 当前正在驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-            } else if (state == MovementAnalyzer.MovementState.LOW_DRIVING) {
-                System.out.println("🚗🐢 当前正在低速驾驶，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-            } else if (state == MovementAnalyzer.MovementState.WALKING) {
-                System.out.println("🚶 当前在步行，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-            } else if (state == MovementAnalyzer.MovementState.RUNNING) {
-                System.out.println("🏃 当前在小跑，时间为：" + point.getAcceptTime() + "速度为：" + point.getSpeed() + "m/s");
-            } else {
-                System.out.println("⛔ 当前静止，时间为：" + point.getAcceptTime());
-            }
             point.setState(state);
             result.add(point);
         }
