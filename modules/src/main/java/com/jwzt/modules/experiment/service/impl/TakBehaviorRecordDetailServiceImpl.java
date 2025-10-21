@@ -63,11 +63,42 @@ public class TakBehaviorRecordDetailServiceImpl implements ITakBehaviorRecordDet
 
     @Override
     public void insertTakBehaviorRecordDetailAll(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList){
+        if (takBehaviorRecordDetailList == null || takBehaviorRecordDetailList.isEmpty()) {
+            return;
+        }
+        
+        // 设置ID和创建时间
         takBehaviorRecordDetailList.forEach(takBehaviorRecordDetail -> {
             takBehaviorRecordDetail.setCreateTime(DateUtils.getNowDate());
             takBehaviorRecordDetail.setId(IdUtils.snowflakeId());
         });
-        takBehaviorRecordDetailMapper.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
+        
+        // 分批插入，避免超过数据库参数限制（达梦数据库最大参数65535）
+        // 每个点10个字段，安全起见每批最多1000个点（10000个参数）
+        final int BATCH_SIZE = 1000;
+        int totalSize = takBehaviorRecordDetailList.size();
+        
+        if (totalSize <= BATCH_SIZE) {
+            // 数据量小，直接插入
+            takBehaviorRecordDetailMapper.insertTakBehaviorRecordDetailAll(takBehaviorRecordDetailList);
+        } else {
+            // 数据量大，分批插入
+            int batchCount = (int) Math.ceil((double) totalSize / BATCH_SIZE);
+            System.out.println("📊 轨迹点位数量: " + totalSize + "，分 " + batchCount + " 批插入数据库");
+            
+            for (int i = 0; i < totalSize; i += BATCH_SIZE) {
+                int endIndex = Math.min(i + BATCH_SIZE, totalSize);
+                List<TakBehaviorRecordDetail> batch = takBehaviorRecordDetailList.subList(i, endIndex);
+                
+                try {
+                    takBehaviorRecordDetailMapper.insertTakBehaviorRecordDetailAll(batch);
+                    System.out.println("✓ 第 " + ((i / BATCH_SIZE) + 1) + "/" + batchCount + " 批插入成功: " + batch.size() + " 条");
+                } catch (Exception e) {
+                    System.err.println("数据库异常日志 ❌ 第 " + ((i / BATCH_SIZE) + 1) + " 批插入失败: " + e.getMessage());
+                    throw e; // 重新抛出异常，保证事务回滚
+                }
+            }
+        }
     }
 
     /**
