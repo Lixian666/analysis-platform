@@ -59,6 +59,14 @@ public interface ITakBehaviorRecordsService
      */
     public int deleteTakBehaviorRecordsById(Long id);
 
+    /**
+     * 根据条件删除行为记录（用于聚合查询结果的删除）
+     * 
+     * @param takBehaviorRecords 包含cardId、yardId、startTime、endTime的查询条件
+     * @return 结果
+     */
+    public int deleteTakBehaviorRecordsByCondition(TakBehaviorRecords takBehaviorRecords);
+
     public void deleteByCreationTime(String s);
 
     List<TakBehaviorRecords> selectTakBehaviorRecordsUserList(TakBehaviorRecords takBehaviorRecords);

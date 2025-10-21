@@ -27,8 +27,22 @@
          <el-button type="info" @click="reset">重置</el-button>
        </div>
      </div>
+
+     <!-- 批量操作按钮 -->
+     <div class="batch-operations">
+       <el-button
+         type="danger"
+         plain
+         icon="Delete"
+         :disabled="multiple"
+         @click="handleDelete()"
+         size="small"
+       >批量删除</el-button>
+     </div>
+
     <div v-loading="dataTable_loading" class="main main_novw">
-      <el-table :data="TaskList" border style="width: 100%" height="100%">
+      <el-table :data="TaskList" border style="width: 100%" height="100%" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" align="center" />
         <el-table-column align="center" label="卡ID" class="mainCell1">
           <template v-slot="scope">
             <span class="ml10">{{ scope.row.cardId }}</span>
@@ -101,12 +115,15 @@
                  <span v-else>-</span>
                </template>
              </el-table-column> -->
-        <el-table-column align="center" label="操作" width="100">
+        <el-table-column align="center" label="操作" width="150">
           <template v-slot="scope">
             <el-button v-if="diagnosisRoles('vehicle:details') && scope.row.cardId" size="mini"
               @click="handleEdit(scope.row.cardId, scope.row.id, scope.row.startTime, scope.row.endTime)">详情</el-button>
-            <el-button v-if="false && diagnosisRoles('vehicle:update') && scope.row.recordThirdId" size="mini"
-              @click="updateRecord(scope.row.recordThirdId)">修改</el-button>
+            <el-button 
+              type="danger"
+              size="mini"
+              @click="handleDelete(scope.row)"
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -134,21 +151,30 @@
 
 <script setup>
 import div401 from '@/views/error/401.vue'
-import { getexperimentuserlist } from '@/api/mapcar.js'
+import { getexperimentuserlist, deleteBehaviorRecords } from '@/api/mapcar.js'
 import { onMounted, ref } from "vue"
+import { ElMessage, ElMessageBox } from 'element-plus'
+
 const route = useRoute()
 const router = useRouter()
+
 //data return start
- const listQuery = ref({
-   page: 1, // 当前表格显示第几页数据
-   limit: 20, // 表格一页显示几条数据
-   total: 0,
-   searcher: {
-     cardId: '',      // 卡ID
-     yardId: '',      // 货场ID
-     taskDate: []     // 任务日期范围 [开始日期, 结束日期]
-   }
- })
+const listQuery = ref({
+  page: 1, // 当前表格显示第几页数据
+  limit: 20, // 表格一页显示几条数据
+  total: 0,
+  searcher: {
+    cardId: '',      // 卡ID
+    yardId: '',      // 货场ID
+    taskDate: []     // 任务日期范围 [开始日期, 结束日期]
+  }
+})
+
+// 多选相关状态
+const ids = ref([])
+const single = ref(true)
+const multiple = ref(true)
+
 const TaskList = ref([
   // {
   //   recordThirdId:7845645646,
@@ -315,6 +341,43 @@ function handleEdit(vehicleThirdId, id, startTime, endTime) {
     }
   })
 }
+
+// 多选相关状态 - 存储选中的完整行数据
+const selectedRows = ref([])
+
+// 多选框选中数据处理
+function handleSelectionChange(selection) {
+  selectedRows.value = selection
+  ids.value = selection.map(item => item.id)
+  single.value = selection.length !== 1
+  multiple.value = !selection.length
+}
+
+// 删除按钮操作
+function handleDelete(row) {
+  // 单行删除：传递单个对象；批量删除：传递对象数组
+  const deleteData = row ? [row] : selectedRows.value
+  const message = row 
+    ? `是否确认删除卡号为"${row.cardId}"、货场"${row.yardId}"、日期"${getTaskDate(row.startTime)}"的所有行为记录？此操作将同时删除这些记录的所有详情数据！`
+    : `是否确认删除选中的 ${selectedRows.value.length} 组行为记录？此操作将同时删除这些记录的所有详情数据！`
+  
+  ElMessageBox.confirm(message, '警告', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    return deleteBehaviorRecords(deleteData)
+  }).then(() => {
+    ElMessage.success('删除成功')
+    // 重新加载列表
+    search()
+  }).catch((error) => {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+    }
+  })
+}
+
 function diagnosisRoles(text) {
   return true
 }
@@ -384,6 +447,14 @@ function formatTimeLong(num) {
 </script>
 
 <style scoped lang="scss">
+// 批量操作按钮样式
+.batch-operations {
+  padding: 10px 20px;
+  background: #fff;
+  margin: 0 19px;
+  border-bottom: 1px solid #e4e4e4;
+}
+
 #body-box {
   // background-color: #04262b;
   height: calc(100vh - 84px);

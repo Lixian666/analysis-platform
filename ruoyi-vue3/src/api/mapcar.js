@@ -36,7 +36,23 @@ export const getlistByUserId = (data) => {
   })
 }
 
+// 删除行为记录（按条件删除）
+export const deleteBehaviorRecords = (data) => {
+  return request({
+    url: '/experiment/experiment/delete',
+    method: 'post',
+    data: data
+  })
+}
 
+// 删除行为记录（按ID删除）
+export const deleteBehaviorRecordsByIds = (ids) => {
+  return request({
+    url: '/experiment/experiment/deleteByIds',
+    method: 'post',
+    data: ids
+  })
+}
 
 // export const getexperimentid = (id) => {
 //   return request({
