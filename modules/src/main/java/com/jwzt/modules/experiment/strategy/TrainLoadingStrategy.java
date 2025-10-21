@@ -59,13 +59,35 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
     
     @Override
     public EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints) {
-        if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) {
+        // 第一层检查：必须至少有 RECORD_POINTS_SIZE 个点
+        if (recordPoints == null || recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) {
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: recordPoints 为 null 或大小不足: " +
+                (recordPoints == null ? "null" : recordPoints.size()) + 
+                ", 需要至少 " + FilterConfig.RECORD_POINTS_SIZE);
             return new EventState();
         }
         
-        List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, FilterConfig.RECORD_POINTS_SIZE / 2);
-        LocationPoint currentPoint = recordPoints.get(FilterConfig.RECORD_POINTS_SIZE / 2);
-        List<LocationPoint> theLastTenPoints = recordPoints.subList(recordPoints.size() - (FilterConfig.RECORD_POINTS_SIZE / 2), recordPoints.size());
+        // 第二层检查：确保可以安全访问 halfSize 索引
+        int halfSize = FilterConfig.RECORD_POINTS_SIZE / 2;
+        if (recordPoints.size() <= halfSize) {
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: recordPoints 大小不足以访问中间点: " +
+                recordPoints.size() + ", halfSize=" + halfSize);
+            return new EventState();
+        }
+        
+        // 安全地获取子列表和中间点，使用边界保护
+        List<LocationPoint> theFirstTenPoints = recordPoints.subList(0, Math.min(halfSize, recordPoints.size()));
+        int currentIndex = Math.min(halfSize, recordPoints.size() - 1);
+        LocationPoint currentPoint = recordPoints.get(currentIndex);
+        
+        // 确保计算 theLastTenPoints 时不越界
+        int lastStart = Math.max(0, recordPoints.size() - halfSize);
+        int lastEnd = recordPoints.size();
+        if (lastStart >= lastEnd) {
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: lastStart >= lastEnd: " + lastStart + " >= " + lastEnd);
+            return new EventState();
+        }
+        List<LocationPoint> theLastTenPoints = recordPoints.subList(lastStart, lastEnd);
         
         // 根据当前点位所在区域判断是火车装卸还是地跑装卸
         if (isInGroundVehicleZone(currentPoint)) {

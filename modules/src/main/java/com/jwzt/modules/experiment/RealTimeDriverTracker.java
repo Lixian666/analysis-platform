@@ -276,7 +276,12 @@ public class RealTimeDriverTracker {
         try {
             List<LocationPoint> history = st.historyPoints;
             if (history == null || history.isEmpty()) {
-                System.out.println("⚠️ [" + cardKey + "] 回溯失败：history 为空");
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：history 为空");
+                return;
+            }
+            // 增加最小点数检查，避免后续窗口构造出错
+            if (history.size() < 2) {
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：history 点数太少 (" + history.size() + ")，至少需要2个点");
                 return;
             }
             long dropTs = downEs.getTimestamp();
@@ -303,6 +308,13 @@ public class RealTimeDriverTracker {
                 System.out.println("⚠️ [" + cardKey + "] 回溯失败：未在 history 找到对应上车识别开始时间");
                 return;
             }
+            
+            // 边界检查：确保 listStartIndex 在有效范围内
+            if (listStartIndex >= history.size()) {
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：listStartIndex 超出范围: " + listStartIndex + " >= " + history.size());
+                return;
+            }
+            
             // 向前回溯查找上车（限制最大回溯时间）
             long earliestAllowedTs = Math.max(0L, st.sendLastEventTime);
             int foundStartWindowStartIndex = -1;
@@ -332,7 +344,35 @@ public class RealTimeDriverTracker {
                 
                 // 使用策略模式进行事件检测
                 LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vt);
-                EventState es = strategy.detectEvent(newPoints, history);
+                EventState es = null;
+                try {
+                    es = strategy.detectEvent(newPoints, history);
+                } catch (IndexOutOfBoundsException e) {
+                    // 详细日志：记录调用前的参数状态
+                    System.out.println("🔍 [" + cardKey + "] 准备调用 detectEvent: " +
+                            "newPoints.size=" + newPoints.size() +
+                            ", history.size=" + history.size() +
+                            ", candidate=" + candidate +
+                            ", windowStart=" + windowStart +
+                            ", windowEnd=" + windowEnd);
+                    System.err.println("异常日志 ❌ [" + cardKey + "] detectEvent异常 索引越界: " + e.getMessage());
+                    System.err.println("  newPoints.size=" + newPoints.size() + 
+                        ", history.size=" + history.size());
+                    e.printStackTrace();
+                    continue; // 检测异常，跳过
+                } catch (Exception e) {
+                    // 详细日志：记录调用前的参数状态
+                    System.out.println("🔍 [" + cardKey + "] 准备调用 detectEvent: " +
+                            "newPoints.size=" + newPoints.size() +
+                            ", history.size=" + history.size() +
+                            ", candidate=" + candidate +
+                            ", windowStart=" + windowStart +
+                            ", windowEnd=" + windowEnd);
+                    System.err.println("异常日志 ⚠️ [" + cardKey + "] detectEvent异常: " + e.getMessage() +
+                        ", newPoints.size=" + newPoints.size());
+                    e.printStackTrace();
+                    continue; // 检测异常，跳过
+                }
                 
                 if (es != null && es.getEvent() != null && es.getEvent() == BoardingDetector.Event.SEND_BOARDING) {
                     // 找到上车事件
@@ -343,7 +383,7 @@ public class RealTimeDriverTracker {
             }
 
             if (foundStartWindowStartIndex < 0) {
-                System.out.println("⚠️ [" + cardKey + "] 回溯未找到发运上车点（回溯时段内未检测到 SEND_BOARDING），以上一个流程结束的点位的后一个点为上车点");
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯未找到发运上车点（回溯时段内未检测到 SEND_BOARDING），以上一个流程结束的点位的后一个点为上车点");
 
                 // 计算“候选上车点时间”
                 long fallbackTs = st.sendLastEventTime + 1000; // 回溯时间结束点 +1秒
@@ -364,7 +404,7 @@ public class RealTimeDriverTracker {
                 if (fallbackPoint == null) {
                     // 如果仍然没找到，则使用最后一个点兜底
                     fallbackPoint = history.get(history.size() - 1);
-                    System.out.println("⚠️ [" + cardKey + "] 未找到 fallbackTs 对应点，使用最后一个点兜底");
+                    System.out.println("警告日志 ⚠️ [" + cardKey + "] 未找到 fallbackTs 对应点，使用最后一个点兜底");
                 }
 
                 // 构造一个模拟的 SEND_BOARDING 事件
@@ -392,6 +432,20 @@ public class RealTimeDriverTracker {
                 }
             }
             if (startIndex < 0) startIndex = 0;
+            
+            // 边界检查：确保 startIndex 和 endIndex 在有效范围内
+            if (startIndex >= history.size()) {
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：startIndex 超出范围");
+                return;
+            }
+            if (endIndex >= history.size()) {
+                endIndex = history.size() - 1;
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] endIndex 超出范围，已调整为 " + endIndex);
+            }
+            if (startIndex > endIndex) {
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：startIndex > endIndex");
+                return;
+            }
 
             // 最终截取：从 startIndex 到 endIndex（包含）
             List<LocationPoint> tripPoints = new ArrayList<>(history.subList(startIndex, endIndex + 1));
@@ -401,6 +455,16 @@ public class RealTimeDriverTracker {
                     .collect(Collectors.collectingAndThen(
                             Collectors.toMap(LocationPoint::getTimestamp, x -> x, (a, b) -> a, TreeMap::new),
                             m -> new ArrayList<>(m.values())));
+
+            // 验证 sessionPoints
+            if (sessionPoints == null || sessionPoints.isEmpty()) {
+                System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：去重后的轨迹点为空");
+                return;
+            }
+            
+            System.out.println("📍 [" + cardKey + "] 回溯轨迹段：起始索引=" + startIndex + 
+                ", 结束索引=" + endIndex + ", 原始点数=" + tripPoints.size() + 
+                ", 去重后点数=" + sessionPoints.size());
 
             // 构造虚拟会话并持久化（与 persistSession 兼容）
             TrackSession sess = new TrackSession();
@@ -422,7 +486,17 @@ public class RealTimeDriverTracker {
             }
 
         } catch (Exception ex) {
-            System.out.println("❌ [" + cardKey + "] 回溯持久化过程中发生异常: " + ex.getMessage());
+            String errorMsg = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+            System.out.println("异常日志 ❌ [" + cardKey + "] 回溯持久化过程中发生异常: " + errorMsg);
+            System.err.println("详细错误信息:");
+            System.err.println("  - 异常类型: " + ex.getClass().getName());
+            System.err.println("  - 错误消息: " + errorMsg);
+            if (ex instanceof IndexOutOfBoundsException) {
+                System.err.println("  - 这是索引越界异常，请检查列表访问");
+            } else if (ex instanceof NullPointerException) {
+                System.err.println("  - 这是空指针异常，请检查对象是否为 null");
+            }
+            System.err.println("堆栈跟踪:");
             ex.printStackTrace();
         }
     }
@@ -452,36 +526,65 @@ public class RealTimeDriverTracker {
 
     /** 成对会话入库（整段点） */
     private void persistSession(TrackSession sess, long endTime, List<LocationPoint> points) {
-        // 1) 详情表
-        List<TakBehaviorRecordDetail> detailList = new ArrayList<>(points.size());
-        for (LocationPoint p : points) {
-            TakBehaviorRecordDetail d = new TakBehaviorRecordDetail();
-            d.setCardId(resolveCardIdForDB(sess.cardId));
-            d.setTrackId(sess.sessionId);
-            d.setRecordTime(new Date(p.getTimestamp()));
-            d.setTimestampMs(p.getTimestamp());
-            d.setLongitude(p.getLongitude());
-            d.setLatitude(p.getLatitude());
-            d.setSpeed(p.getSpeed());
-            detailList.add(d);
+        // 安全检查
+        if (sess == null) {
+            System.err.println("异常日志 ⚠️ persistSession: sess 为 null");
+            return;
         }
+        if (points == null || points.isEmpty()) {
+            System.err.println("异常日志 ⚠️ persistSession: points 为空, trackId=" + sess.sessionId);
+            return;
+        }
+        
+        try {
+            // 1) 详情表
+            List<TakBehaviorRecordDetail> detailList = new ArrayList<>(points.size());
+            for (LocationPoint p : points) {
+                if (p == null) {
+                    System.err.println("异常日志 ⚠️ persistSession: 遇到 null 点，跳过");
+                    continue;
+                }
+                TakBehaviorRecordDetail d = new TakBehaviorRecordDetail();
+                d.setCardId(resolveCardIdForDB(sess.cardId));
+                d.setTrackId(sess.sessionId);
+                d.setRecordTime(new Date(p.getTimestamp()));
+                d.setTimestampMs(p.getTimestamp());
+                d.setLongitude(p.getLongitude());
+                d.setLatitude(p.getLatitude());
+                d.setSpeed(p.getSpeed());
+                detailList.add(d);
+            }
+            
+            if (detailList.isEmpty()) {
+                System.err.println("异常日志 ⚠️ persistSession: detailList 为空，无法入库");
+                return;
+            }
 
-        // 2) 主表
-        TakBehaviorRecords rec = new TakBehaviorRecords();
-        rec.setCardId(resolveCardIdForDB(sess.cardId));
-        rec.setYardId(baseConfig.getYardName()); // 保持与你现有逻辑一致，可抽配置
-        rec.setTrackId(sess.sessionId);
-        rec.setStartTime(new Date(sess.startTime));
-        rec.setEndTime(new Date(endTime));
-        rec.setPointCount((long) points.size());
-        rec.setType(sess.kind == EventKind.ARRIVED ? 0L : 1L); // 复用你原有 type 语义
-        rec.setDuration(DateTimeUtils.calculateTimeDifference(sess.startTime, endTime));
-        rec.setState("完成");
-        rec.setTakBehaviorRecordDetailList(detailList);
+            // 2) 主表
+            TakBehaviorRecords rec = new TakBehaviorRecords();
+            rec.setCardId(resolveCardIdForDB(sess.cardId));
+            rec.setYardId(baseConfig.getYardName()); // 保持与你现有逻辑一致，可抽配置
+            rec.setTrackId(sess.sessionId);
+            rec.setStartTime(new Date(sess.startTime));
+            rec.setEndTime(new Date(endTime));
+            rec.setPointCount((long) detailList.size());
+            rec.setType(sess.kind == EventKind.ARRIVED ? 0L : 1L); // 复用你原有 type 语义
+            rec.setDuration(DateTimeUtils.calculateTimeDifference(sess.startTime, endTime));
+            rec.setState("完成");
+            rec.setTakBehaviorRecordDetailList(detailList);
 
-        // 3) 入库（注意：实时服务不主动清表）
-        iTakBehaviorRecordsService.insertTakBehaviorRecords(rec);
-        iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(detailList);
+            // 3) 入库（注意：实时服务不主动清表）
+            iTakBehaviorRecordsService.insertTakBehaviorRecords(rec);
+            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(detailList);
+            
+            System.out.println("✅ persistSession 成功: trackId=" + sess.sessionId + 
+                ", 点数=" + detailList.size());
+                
+        } catch (Exception e) {
+            System.err.println("异常日志 ❌ persistSession 异常: " + e.getMessage());
+            e.printStackTrace();
+            throw e; // 重新抛出异常，让上层 catch 捕获
+        }
     }
 
     /** shp 输出 */

@@ -208,7 +208,30 @@ public class TakBehaviorRecordsServiceImpl implements ITakBehaviorRecordsService
             }
             if (list.size() > 0)
             {
-                takBehaviorRecordsMapper.batchTakBehaviorRecordDetail(list);
+                // 分批插入，避免超过数据库参数限制
+                final int BATCH_SIZE = 1000;
+                int totalSize = list.size();
+                
+                if (totalSize <= BATCH_SIZE) {
+                    // 数据量小，直接插入
+                    takBehaviorRecordsMapper.batchTakBehaviorRecordDetail(list);
+                } else {
+                    // 数据量大，分批插入
+                    int batchCount = (int) Math.ceil((double) totalSize / BATCH_SIZE);
+                    System.out.println("📊 轨迹详情点位数量: " + totalSize + "，分 " + batchCount + " 批插入数据库");
+                    
+                    for (int i = 0; i < totalSize; i += BATCH_SIZE) {
+                        int endIndex = Math.min(i + BATCH_SIZE, totalSize);
+                        List<TakBehaviorRecordDetail> batch = list.subList(i, endIndex);
+                        
+                        try {
+                            takBehaviorRecordsMapper.batchTakBehaviorRecordDetail(batch);
+                        } catch (Exception e) {
+                            System.err.println("数据库异常日志 ❌ 第 " + ((i / BATCH_SIZE) + 1) + " 批插入失败: " + e.getMessage());
+                            throw e;
+                        }
+                    }
+                }
             }
         }
     }
