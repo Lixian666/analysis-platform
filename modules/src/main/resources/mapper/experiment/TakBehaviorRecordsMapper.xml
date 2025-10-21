@@ -187,12 +187,27 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </delete>
 
-    <delete id="deleteTakBehaviorRecordDetailByTrackId" parameterType="Long">
+    <delete id="deleteTakBehaviorRecordDetailByTrackId" parameterType="String">
         delete from tak_behavior_record_detail where track_id = #{trackId}
     </delete>
     <delete id="deleteByCreationTime">
         delete from tak_behavior_records where create_time >= #{createTime};
     </delete>
+
+    <select id="selectTakBehaviorRecordsByCondition" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecords" resultMap="TakBehaviorRecordsResult">
+        <include refid="selectTakBehaviorRecordsVo"/>
+        <where>
+            <if test="cardId != null and cardId != ''">
+                and card_id = #{cardId}
+            </if>
+            <if test="yardId != null and yardId != ''">
+                and yard_id = #{yardId}
+            </if>
+            <if test="startTime != null and endTime != null">
+                and TRUNC(start_time) = TRUNC(TO_DATE(#{startTime}, 'YYYY-MM-DD HH24:MI:SS'))
+            </if>
+        </where>
+    </select>
 
     <insert id="batchTakBehaviorRecordDetail">
         insert into tak_behavior_record_detail(track_id, record_time, timestamp_ms, longitude, latitude, create_time, update_time) values

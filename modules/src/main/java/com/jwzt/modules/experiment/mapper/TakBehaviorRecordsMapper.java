@@ -61,12 +61,12 @@ public interface TakBehaviorRecordsMapper
     public int deleteTakBehaviorRecordsByIds(Long[] ids);
 
     /**
-     * 批量删除行为记录详情
+     * 批量删除行为记录详情（根据trackId）
      * 
-     * @param ids 需要删除的数据主键集合
+     * @param trackIds 需要删除的轨迹编号集合
      * @return 结果
      */
-    public int deleteTakBehaviorRecordDetailByTrackIds(Long[] ids);
+    public int deleteTakBehaviorRecordDetailByTrackIds(String[] trackIds);
     
     /**
      * 批量新增行为记录详情
@@ -78,14 +78,22 @@ public interface TakBehaviorRecordsMapper
     
 
     /**
-     * 通过行为记录主键删除行为记录详情信息
+     * 通过轨迹编号删除行为记录详情信息
      * 
-     * @param id 行为记录ID
+     * @param trackId 轨迹编号
      * @return 结果
      */
-    public int deleteTakBehaviorRecordDetailByTrackId(Long id);
+    public int deleteTakBehaviorRecordDetailByTrackId(String trackId);
 
     public void deleteByCreationTime(String createTime);
 
     List<TakBehaviorRecords> selectTakBehaviorRecordsUserList(TakBehaviorRecords takBehaviorRecords);
+
+    /**
+     * 根据条件查询行为记录（用于按条件删除前的查询）
+     * 
+     * @param takBehaviorRecords 查询条件（cardId、yardId、startTime、endTime）
+     * @return 行为记录集合
+     */
+    List<TakBehaviorRecords> selectTakBehaviorRecordsByCondition(TakBehaviorRecords takBehaviorRecords);
 }

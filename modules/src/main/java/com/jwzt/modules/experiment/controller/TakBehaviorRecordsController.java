@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -104,12 +103,36 @@ public class TakBehaviorRecordsController extends BaseController
     }
 
     /**
-     * 删除行为记录
+     * 删除行为记录（批量按条件删除）
      */
     @PreAuthorize("@ss.hasPermi('experiment:experiment:remove')")
     @Log(title = "行为记录", businessType = BusinessType.DELETE)
-	@DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids)
+	@PostMapping("/delete")
+    public AjaxResult remove(@RequestBody List<TakBehaviorRecords> deleteParams)
+    {
+        if (deleteParams == null || deleteParams.isEmpty()) {
+            return error("删除参数不能为空");
+        }
+        
+        int totalDeleted = 0;
+        for (TakBehaviorRecords deleteParam : deleteParams) {
+            // 按条件删除（cardId、yardId、startTime）
+            if (deleteParam.getCardId() != null && deleteParam.getYardId() != null && deleteParam.getStartTime() != null)
+            {
+                totalDeleted += takBehaviorRecordsService.deleteTakBehaviorRecordsByCondition(deleteParam);
+            }
+        }
+        
+        return totalDeleted > 0 ? success() : error("删除失败");
+    }
+    
+    /**
+     * 批量删除行为记录（按ID）
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:experiment:remove')")
+    @Log(title = "行为记录", businessType = BusinessType.DELETE)
+	@PostMapping("/deleteByIds")
+    public AjaxResult removeByIds(@RequestBody Long[] ids)
     {
         return toAjax(takBehaviorRecordsService.deleteTakBehaviorRecordsByIds(ids));
     }
