@@ -175,7 +175,7 @@ public class BoardingDetector {
 //                }
 //            }
         }
-        if (currentPoint.getAcceptTime().equals("2025-09-28 17:22:20")){
+        if (currentPoint.getAcceptTime().equals("2025-10-17 16:57:20")){
             System.out.println("触发断点");
         }
         if (currentPoint.getAcceptTime().equals("2025-09-28 17:41:54")){
