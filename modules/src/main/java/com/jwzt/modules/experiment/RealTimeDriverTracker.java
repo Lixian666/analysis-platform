@@ -10,6 +10,8 @@ import com.jwzt.modules.experiment.filter.LocationSmoother;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.service.ITakBehaviorRecordDetailService;
 import com.jwzt.modules.experiment.service.ITakBehaviorRecordsService;
+import com.jwzt.modules.experiment.strategy.LoadingStrategyFactory;
+import com.jwzt.modules.experiment.strategy.LoadingUnloadingStrategy;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
 import com.jwzt.modules.experiment.vo.EventState;
@@ -27,7 +29,8 @@ import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 /**
  * 实时轨迹增量分析（10s/批等），与批处理 DriverTracker 并行。
- * 修改点：增加了“先下后上”的回溯识别逻辑（针对发运业务 SEND），
+ * 重构说明：使用策略模式管理不同装卸业务（火车、板车、地跑等），提高代码可维护性和扩展性。
+ * 修改点：增加了"先下后上"的回溯识别逻辑（针对发运业务 SEND），
  *       当检测到下车但未检测到上车时，会回溯历史轨迹查找上车点并将上下车段落入库。
  */
 @Service
@@ -36,17 +39,18 @@ public class RealTimeDriverTracker {
     private BaseConfig baseConfig;
     @Autowired
     private FilePathConfig filePathConfig;
-//    @Autowired
-//    private FilterConfig filterConfig;
+    
     // —— 依赖与基础工具 ——
     @Autowired
     private OutlierFilter outlierFilter;
 
     @Autowired
     private BoardingDetector detector;
-//    private final OutlierFilter outlierFilter = new OutlierFilter();
+    
+    @Autowired
+    private LoadingStrategyFactory loadingStrategyFactory;
+    
     private final LocationSmoother smoother = new LocationSmoother();
-//    private final BoardingDetector detector = new BoardingDetector();
 
     @Resource
     private ITakBehaviorRecordsService iTakBehaviorRecordsService;
@@ -67,7 +71,17 @@ public class RealTimeDriverTracker {
     // shp 输出根目录（沿用你的静态字段/配置方式）
     public static String shpFileRoot = DriverTracker.shpFilePath; // 与现有保持一致
 
-    public enum VehicleType { TRUCK, CAR }
+    /**
+     * 车辆类型枚举（保持向后兼容）
+     * CAR - 火车装卸
+     * TRUCK - 板车装卸
+     */
+    public enum VehicleType { 
+        /** 板车装卸 */
+        TRUCK, 
+        /** 火车装卸 */
+        CAR 
+    }
 
     private VehicleType vt;
 
@@ -153,16 +167,12 @@ public class RealTimeDriverTracker {
             }
             // 定位修增
             List<LocationPoint> win = new ArrayList<>(st.window);
-//            List<LocationPoint> fixesPoints = new OutlierFilter().fixTheData(win);
             // 调用原有检测器（窗口大小固定）
             List<LocationPoint> newPoints = outlierFilter.stateAnalysis(win);
-            EventState es = null;
-            if (vt == VehicleType.CAR){
-                es = detector.updateState(newPoints, st.historyPoints);
-            }
-            else if (vt == VehicleType.TRUCK){
-                es = detector.updateStateTruck(newPoints, st.historyPoints);
-            }
+            
+            // 使用策略模式进行事件检测
+            LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vt);
+            EventState es = strategy.detectEvent(newPoints, st.historyPoints);
 
             if (es == null || es.getEvent() == null) {
                 if (st.activeSession != null) st.activeSession.points.add(p);
@@ -319,13 +329,11 @@ public class RealTimeDriverTracker {
                 List<LocationPoint> candidateWindow = new ArrayList<>(history.subList(windowStart, windowEnd));
                 // 预处理（去异常/修正），保持与实时一致
                 List<LocationPoint> newPoints = outlierFilter.stateAnalysis(candidateWindow);
-                EventState es = null;
-                if (vt == VehicleType.CAR){
-                    es = detector.updateState(newPoints, history);
-                }
-                else if (vt == VehicleType.TRUCK){
-                    es = detector.updateStateTruck(newPoints, history);
-                }
+                
+                // 使用策略模式进行事件检测
+                LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vt);
+                EventState es = strategy.detectEvent(newPoints, history);
+                
                 if (es != null && es.getEvent() != null && es.getEvent() == BoardingDetector.Event.SEND_BOARDING) {
                     // 找到上车事件
                     foundStartWindowStartIndex = windowStart;
@@ -342,10 +350,11 @@ public class RealTimeDriverTracker {
 
                 // 在历史点中找到最接近 fallbackTs 的点（时间 >= fallbackTs）
                 LocationPoint fallbackPoint = null;
+                LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vt);
                 for (LocationPoint p : history) {
                     if (p.getTimestamp() >= fallbackTs) {
                         // 判断是否在停车区域（发运上车区域）
-                        if (detector.isnParkingArea(fallbackPoint)){
+                        if (strategy.isInParkingArea(p)){
                             fallbackPoint = p;
                         }
                         break;
@@ -548,5 +557,23 @@ public class RealTimeDriverTracker {
             list.add(p);
         }
         replayHistorical(list, vt);
+    }
+    
+    /**
+     * 根据车辆类型获取对应的装卸策略
+     * 将 RealTimeDriverTracker 的 VehicleType 映射到 LoadingStrategyFactory 的 VehicleType
+     * 
+     * @param vehicleType 车辆类型
+     * @return 对应的装卸策略
+     */
+    private LoadingUnloadingStrategy getStrategyForVehicleType(VehicleType vehicleType) {
+        LoadingStrategyFactory.VehicleType strategyType;
+        if (vehicleType == VehicleType.TRUCK) {
+            strategyType = LoadingStrategyFactory.VehicleType.FLATBED;
+        } else {
+            // 默认为火车（CAR）
+            strategyType = LoadingStrategyFactory.VehicleType.TRAIN;
+        }
+        return loadingStrategyFactory.getStrategy(strategyType);
     }
 }
