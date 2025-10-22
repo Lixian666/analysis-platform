@@ -17,6 +17,7 @@ import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
 import com.jwzt.modules.experiment.vo.EventState;
 import com.ruoyi.common.utils.uuid.IdUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -34,6 +35,7 @@ import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
  *       当检测到下车但未检测到上车时，会回溯历史轨迹查找上车点并将上下车段落入库。
  */
 @Service
+@Scope("prototype")  // 改为原型模式，支持多线程独立实例，避免状态共享
 public class RealTimeDriverTracker {
     @Autowired
     private BaseConfig baseConfig;
@@ -63,10 +65,18 @@ public class RealTimeDriverTracker {
 
     // 回溯查找上车点的最大时间（毫秒），避免无限回溯；可按需调整或放到配置中
     private final long SEND_LOOKBACK_MS = 30L * 60L * 1000L; // 30 分钟
+    
+    // 历史点数量限制（避免内存无限增长）
+    // 根据 30 分钟回溯时间，假设每秒1个点 = 1800 个点，保留 3000 个点作为安全值
+    // 实时任务运行期间会持续累积，但有上限保护
+    private final int MAX_HISTORY_POINTS = 60000;
 
     // —— 运行态：按卡维护 ——
     private final Map<String, PerCardState> stateByCard = new ConcurrentHashMap<>();
     private final Map<String, VehicleType> vehicleTypeByCard = new ConcurrentHashMap<>();
+    
+    // 策略实例缓存：每个 tracker 实例持有自己的策略实例，避免多线程串扰，同时保持状态连续性
+    private final Map<VehicleType, LoadingUnloadingStrategy> strategyCache = new ConcurrentHashMap<>();
 
     // shp 输出根目录（沿用你的静态字段/配置方式）
     public static String shpFileRoot = DriverTracker.shpFilePath; // 与现有保持一致
@@ -82,8 +92,6 @@ public class RealTimeDriverTracker {
         /** 火车装卸 */
         CAR 
     }
-
-    private VehicleType vt;
 
     /** 每张卡的运行态 */
     private static class PerCardState {
@@ -137,7 +145,10 @@ public class RealTimeDriverTracker {
     public void ingestForCard(String cardKey, List<LocationPoint> batch) {
         if (batch == null || batch.isEmpty()) return;
         PerCardState st = stateByCard.computeIfAbsent(cardKey, k -> new PerCardState());
-        vt = vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR);
+        
+        // 使用局部变量，避免多线程竞态条件
+        VehicleType vehicleType = vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR);
+        
         if (baseConfig.isDevelopEnvironment()){
             st.lastSeenTs = Long.MIN_VALUE;
         }
@@ -156,7 +167,15 @@ public class RealTimeDriverTracker {
             if (st.window.size() > recordPointsSize) {
                 st.window.removeFirst();
             }
+            
+            // 添加到历史点，并限制大小避免无限内存增长
             st.historyPoints.add(p);
+            if (st.historyPoints.size() > MAX_HISTORY_POINTS) {
+                // 移除最旧的点，保持在限制范围内
+                // 这样即使实时任务长时间运行，也不会导致内存溢出
+                st.historyPoints.remove(0);
+            }
+            
             // 窗口未满，不触发检测
             if (st.window.size() < recordPointsSize) {
                 // 如果会话已开启，仍要接着收点
@@ -170,8 +189,8 @@ public class RealTimeDriverTracker {
             // 调用原有检测器（窗口大小固定）
             List<LocationPoint> newPoints = outlierFilter.stateAnalysis(win);
             
-            // 使用策略模式进行事件检测
-            LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vt);
+            // 使用策略模式进行事件检测（使用局部变量避免多线程竞态）
+            LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vehicleType);
             EventState es = strategy.detectEvent(newPoints, st.historyPoints);
 
             if (es == null || es.getEvent() == null) {
@@ -198,7 +217,7 @@ public class RealTimeDriverTracker {
                         onEnd(cardKey, st, EventKind.SEND, es, win);
                     } else {
                         // 回溯并持久化发运段（先下后上）
-                        backfillAndPersistSendSession(cardKey, st, es);
+                        backfillAndPersistSendSession(cardKey, st, es, vehicleType);
                     }
                     break;
 
@@ -271,8 +290,13 @@ public class RealTimeDriverTracker {
      *  - 以 st.historyPoints 为数据源向后回溯；
      *  - 对候选历史点构造窗口（recordPointsSize 大小）并再次调用 detector.updateState(...)，
      *    若返回 SEND_BOARDING 则视为上车点。
+     * 
+     * @param cardKey 卡号
+     * @param st 卡的状态
+     * @param downEs 下车事件状态
+     * @param vehicleType 车辆类型（用于选择正确的策略）
      */
-    private void backfillAndPersistSendSession(String cardKey, PerCardState st, EventState downEs) {
+    private void backfillAndPersistSendSession(String cardKey, PerCardState st, EventState downEs, VehicleType vehicleType) {
         try {
             List<LocationPoint> history = st.historyPoints;
             if (history == null || history.isEmpty()) {
@@ -342,8 +366,8 @@ public class RealTimeDriverTracker {
                 // 预处理（去异常/修正），保持与实时一致
                 List<LocationPoint> newPoints = outlierFilter.stateAnalysis(candidateWindow);
                 
-                // 使用策略模式进行事件检测
-                LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vt);
+                // 使用策略模式进行事件检测（使用传入的vehicleType，避免多线程竞态）
+                LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vehicleType);
                 EventState es = null;
                 try {
                     es = strategy.detectEvent(newPoints, history);
@@ -390,7 +414,7 @@ public class RealTimeDriverTracker {
 
                 // 在历史点中找到最接近 fallbackTs 的点（时间 >= fallbackTs）
                 LocationPoint fallbackPoint = null;
-                LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vt);
+                LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vehicleType);
                 for (LocationPoint p : history) {
                     if (p.getTimestamp() >= fallbackTs) {
                         // 判断是否在停车区域（发运上车区域）
@@ -663,20 +687,82 @@ public class RealTimeDriverTracker {
     }
     
     /**
+     * 清理所有卡的状态数据，释放内存
+     * 
+     * ⚠️ 注意：
+     * - 此方法会清空所有累积的状态数据
+     * - 仅在批处理任务结束后调用，不要在实时任务运行期间调用
+     * - 实时任务需要保持状态累积，直到任务停止
+     */
+    public void clearAllState() {
+        if (!stateByCard.isEmpty()) {
+            // 清理前记录状态，便于排查问题
+            int totalCards = stateByCard.size();
+            long totalHistoryPoints = stateByCard.values().stream()
+                    .mapToLong(state -> state.historyPoints.size())
+                    .sum();
+            
+            System.out.println("🧹 清理内存状态：" + totalCards + " 个卡，共 " + totalHistoryPoints + " 个历史点");
+            
+            // 清理每个卡的状态
+            stateByCard.values().forEach(state -> {
+                if (state.window != null) {
+                    state.window.clear();
+                }
+                if (state.historyPoints != null) {
+                    state.historyPoints.clear();
+                }
+                state.activeSession = null;
+            });
+            
+            // 清空整个Map
+            stateByCard.clear();
+            vehicleTypeByCard.clear();
+            
+            System.out.println("✅ 内存状态清理完成");
+        }
+    }
+    
+    /**
+     * 清理指定卡的状态数据
+     * 用于单个卡处理完成后的精细化清理
+     * 
+     * @param cardId 卡号
+     */
+    public void clearCardState(String cardId) {
+        PerCardState state = stateByCard.remove(cardId);
+        if (state != null) {
+            if (state.window != null) {
+                state.window.clear();
+            }
+            if (state.historyPoints != null) {
+                state.historyPoints.clear();
+            }
+            state.activeSession = null;
+        }
+        vehicleTypeByCard.remove(cardId);
+        System.out.println("🧹 已清理卡 " + cardId + " 的状态");
+    }
+    
+    /**
      * 根据车辆类型获取对应的装卸策略
-     * 将 RealTimeDriverTracker 的 VehicleType 映射到 LoadingStrategyFactory 的 VehicleType
+     * 使用缓存机制：同一个 tracker 实例对同一种车辆类型返回同一个策略实例，保持状态连续性
+     * 不同的 tracker 实例之间不共享策略实例，避免多线程串扰
      * 
      * @param vehicleType 车辆类型
      * @return 对应的装卸策略
      */
     private LoadingUnloadingStrategy getStrategyForVehicleType(VehicleType vehicleType) {
-        LoadingStrategyFactory.VehicleType strategyType;
-        if (vehicleType == VehicleType.TRUCK) {
-            strategyType = LoadingStrategyFactory.VehicleType.FLATBED;
-        } else {
-            // 默认为火车（CAR）
-            strategyType = LoadingStrategyFactory.VehicleType.TRAIN;
-        }
-        return loadingStrategyFactory.getStrategy(strategyType);
+        // 使用 computeIfAbsent 确保同一个 tracker 实例对同一种车辆类型只创建一次策略实例
+        return strategyCache.computeIfAbsent(vehicleType, vt -> {
+            LoadingStrategyFactory.VehicleType strategyType;
+            if (vt == VehicleType.TRUCK) {
+                strategyType = LoadingStrategyFactory.VehicleType.FLATBED;
+            } else {
+                // 默认为火车（CAR）
+                strategyType = LoadingStrategyFactory.VehicleType.TRAIN;
+            }
+            return loadingStrategyFactory.getStrategy(strategyType);
+        });
     }
 }

@@ -11,6 +11,7 @@ import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer
 import com.jwzt.modules.experiment.vo.EventState;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -22,6 +23,7 @@ import static com.jwzt.modules.experiment.config.FilterConfig.ADJACENT_POINTS_TI
  * 使用 updateStateTruck 方法进行事件检测
  */
 @Component
+@Scope("prototype")  // 改为原型模式，每次获取新实例，避免多线程竞争
 public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
     
     @Autowired
