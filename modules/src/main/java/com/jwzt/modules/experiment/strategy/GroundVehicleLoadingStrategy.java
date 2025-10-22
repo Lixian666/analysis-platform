@@ -2,6 +2,7 @@ package com.jwzt.modules.experiment.strategy;
 
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.vo.EventState;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.List;
  * TODO: 根据实际业务需求实现具体的检测逻辑
  */
 @Component
+@Scope("prototype")
 public class GroundVehicleLoadingStrategy implements LoadingUnloadingStrategy {
     
     @Override

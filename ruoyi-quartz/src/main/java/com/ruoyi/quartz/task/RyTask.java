@@ -18,7 +18,7 @@ import com.jwzt.modules.experiment.utils.third.zq.FusionData;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import com.ruoyi.common.utils.StringUtils;
+import org.springframework.context.ApplicationContext;
 import javax.annotation.Resource;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -49,7 +49,11 @@ public class RyTask
     private CenterWorkHttpUtils centerWorkHttpUtils;
 
     @Autowired
-    private RealTimeDriverTracker realTimeDriverTracker;
+    private ApplicationContext applicationContext;  // 用于获取 prototype bean
+    
+    // 注意：批处理任务使用 prototype，每次获取新实例
+    // 实时任务仍然需要共享实例，所以需要延迟初始化一个共享 tracker
+    private RealTimeDriverTracker sharedTracker;  // 用于实时任务的共享实例
 
     private BoardingDetector detector = new BoardingDetector();
 
@@ -72,9 +76,13 @@ public class RyTask
     private ConcurrentHashMap<String, AtomicInteger> cardErrorCountMap = new ConcurrentHashMap<>();
 
     /**
-     * 实时任务
+     * 实时任务（需要共享状态）
      */
     public void realDriverTrackerZQ() throws ParseException {
+        // 延迟初始化共享 tracker（实时任务需要保持状态）
+        if (sharedTracker == null) {
+            sharedTracker = applicationContext.getBean(RealTimeDriverTracker.class);
+        }
 
         String data = baseConfig.LOCATION_CARD_TYPE;
         String date = "未获取到日期";
@@ -122,7 +130,7 @@ public class RyTask
                 }
             }
             if (LocationPoints.size() > 0){
-                realTimeDriverTracker.ingest(LocationPoints);
+                sharedTracker.ingest(LocationPoints);
             }
 //            List<LocationPoint> normalPoints = new ArrayList<>();
 //            for (LocationPoint rawPoint : LocationPoints){
@@ -177,6 +185,7 @@ public class RyTask
     /**
      * 实时任务测试（历史数据模拟）多线程
      * 支持处理大量卡数据（几百甚至上千），自动根据可用资源调整并发数
+     * 模拟实时处理：每次处理10秒的数据
      */
     public void realDriverTrackerZQTestMultitasking(){
 
@@ -239,12 +248,15 @@ public class RyTask
             delayIndex++;
             
             executorService.submit(() -> {
+                RealTimeDriverTracker tracker = null;
                 try {
                     // 错峰启动，避免同时请求x
                     if (startDelay > 0) {
                         Thread.sleep(startDelay);
                     }
-                    processCardDataWithRetry(cardId, startTimeStr, endTimeStr, 3);
+                    // 每个线程获取独立的 tracker 实例（prototype 模式）
+                    tracker = applicationContext.getBean(RealTimeDriverTracker.class);
+                    processCardDataWithRetry(cardId, startTimeStr, endTimeStr, 3, tracker);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -313,6 +325,9 @@ public class RyTask
                 executorService.shutdownNow();
                 Thread.currentThread().interrupt();
             }
+            
+            // 不需要手动清理，每个线程的 tracker 实例会被 GC 回收
+            System.out.println("✅ 多线程批处理任务完成");
         }
     }
     
@@ -585,7 +600,7 @@ public class RyTask
             LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints, tagData);
             
             if (LocationPoints.size() > 0){
-                realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
+                sharedTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
                 System.out.println("[" + DateTimeUtils.localDateTime2String(now) + 
                                  "] ✓ 卡 " + cardId + " 处理了 " + LocationPoints.size() + " 个点");
             }
@@ -598,7 +613,7 @@ public class RyTask
     /**
      * 带重试机制的卡数据处理（解决并发token冲突问题）
      */
-    private void processCardDataWithRetry(String cardId, String startTimeStr, String endTimeStr, int maxRetries) throws Exception {
+    private void processCardDataWithRetry(String cardId, String startTimeStr, String endTimeStr, int maxRetries, RealTimeDriverTracker tracker) throws Exception {
         Exception lastException = null;
         
         for (int retry = 0; retry < maxRetries; retry++) {
@@ -610,7 +625,7 @@ public class RyTask
                     Thread.sleep(waitTime);
                 }
                 
-                processCardData(cardId, startTimeStr, endTimeStr);
+                processCardData(cardId, startTimeStr, endTimeStr, tracker);
                 return; // 成功则返回
                 
             } catch (Exception e) {
@@ -631,70 +646,118 @@ public class RyTask
     
     /**
      * 处理单个卡的数据（线程安全）- 用于历史数据批量处理
+     * 模拟实时处理：每次处理10秒的数据，而不是一次性处理全部
+     * 
+     * @param tracker 该线程独立的 RealTimeDriverTracker 实例
      */
-    private void processCardData(String cardId, String startTimeStr, String endTimeStr) {
-        System.out.println("线程 " + Thread.currentThread().getName() + " 开始处理卡: " + cardId);
+    private void processCardData(String cardId, String startTimeStr, String endTimeStr, RealTimeDriverTracker tracker) {
+        System.out.println("线程 " + Thread.currentThread().getName() + " 开始处理卡: " + cardId + " (一次查询，分批处理)");
         
         String buildId = baseConfig.getJoysuch().getBuildingId();
         String date = "未获取到日期";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
         LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
         
-        // 获取位置点数据 - 添加空值检查
-        String pointsResponse = zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr);
-        if (pointsResponse == null) {
-            throw new RuntimeException("获取位置点数据返回null");
-        }
-        JSONObject jsonObject = JSONObject.parseObject(pointsResponse);
-        
-        String tagResponse = zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, 
-                DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), 
-                DateTimeUtils.localDateTime2String(endTime.plusSeconds(2)));
-        if (tagResponse == null) {
-            throw new RuntimeException("获取标签状态数据返回null");
-        }
-        JSONObject tagJsonObject = JSONObject.parseObject(tagResponse);
-        
-        JSONArray points = jsonObject.getJSONArray("data");
-        JSONArray tagData = tagJsonObject.getJSONArray("data");
-        if (points.size() == 0) {
-            return;
-        }
-        List<LocationPoint> LocationPoints = new ArrayList<>();
-        if (points != null && !points.isEmpty()) {
-            for (int i = 0; i < points.size(); i++){
-                JSONObject js = (JSONObject) points.get(i);
-                JSONArray plist = js.getJSONArray("points");
-                if (plist != null) {
-                    for (int j = 0; j < plist.size(); j++){
-                        LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
-                        if (date.equals("未获取到日期")){
-                            date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+        try {
+            // 【优化】一次性获取整个时间段的所有数据
+            String pointsResponse = zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr);
+            if (pointsResponse == null) {
+                System.err.println("⚠️ 线程 " + Thread.currentThread().getName() + 
+                                 " 处理卡 " + cardId + " 未获取到数据");
+                return;
+            }
+            
+            JSONObject jsonObject = JSONObject.parseObject(pointsResponse);
+            String tagResponse = zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId,
+                    DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)),
+                    DateTimeUtils.localDateTime2String(endTime.plusSeconds(2)));
+            if (tagResponse == null) {
+                throw new RuntimeException("获取标签状态数据返回null");
+            }
+            JSONObject tagJsonObject = JSONObject.parseObject(tagResponse);
+
+            JSONArray points = jsonObject.getJSONArray("data");
+            JSONArray tagData = tagJsonObject.getJSONArray("data");
+            if (points == null || points.isEmpty()) {
+                System.out.println("⚠️ 线程 " + Thread.currentThread().getName() + 
+                                 " 处理卡 " + cardId + " 数据为空");
+                return;
+            }
+            
+            // 解析所有位置点到内存
+            List<LocationPoint> allPoints = new ArrayList<>();
+            if (points != null && !points.isEmpty()) {
+                for (int i = 0; i < points.size(); i++){
+                    JSONObject js = (JSONObject) points.get(i);
+                    JSONArray plist = js.getJSONArray("points");
+                    if (plist != null) {
+                        for (int j = 0; j < plist.size(); j++){
+                            LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                            if (date.equals("未获取到日期")){
+                                date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                            }
+                            LocationPoint point1 = new LocationPoint(
+                                    cardId,
+                                    point.getLongitude(),
+                                    point.getLatitude(),
+                                    DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                                    Long.parseLong(point.getTime()));
+                            allPoints.add(point1);
                         }
-                        LocationPoint point1 = new LocationPoint(
-                                cardId,
-                                point.getLongitude(),
-                                point.getLatitude(),
-                                DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
-                                Long.parseLong(point.getTime()));
-                        LocationPoints.add(point1);
                     }
                 }
             }
-        }
-        
-        // 融合位置数据和标签数据
-        if (!LocationPoints.isEmpty()) {
-            LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints, tagData);
-            
-            if (LocationPoints.size() > 0){
-                realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
-                System.out.println("✓ 线程 " + Thread.currentThread().getName() + " 完成处理卡: " + cardId + ", 处理点数: " + LocationPoints.size());
-            } else {
-                System.out.println("ℹ️ 线程 " + Thread.currentThread().getName() + " 卡: " + cardId + " 融合后没有有效数据");
+            if (allPoints.isEmpty()) {
+                                System.out.println("⚠️ 线程 " + Thread.currentThread().getName() +
+                                 " 处理卡 " + cardId + " 解析后数据为空");
+                return;
             }
-        } else {
-            System.out.println("ℹ️ 线程 " + Thread.currentThread().getName() + " 卡: " + cardId + " 没有原始数据");
+            // 融合位置数据和标签数据
+            if (!allPoints.isEmpty()) {
+                // 融合位置数据和标签数据
+                allPoints = FusionData.processesFusionLocationDataAndTagData(allPoints, tagData);
+            }
+            
+            // 按时间戳排序
+            allPoints.sort((p1, p2) -> Long.compare(p1.getTimestamp(), p2.getTimestamp()));
+            
+            // 【优化】按10秒时间窗口分批处理（在内存中分批，不再调用API）
+            int totalBatches = 0;
+            int totalPoints = allPoints.size();
+            
+            LocalDateTime current = startTime;
+            int pointIndex = 0;
+            
+            while (!current.isAfter(endTime) && pointIndex < allPoints.size()) {
+                LocalDateTime batchEnd = current.plusSeconds(10);
+                long batchEndTimestamp = DateTimeUtils.convertToTimestamp(DateTimeUtils.localDateTime2String(batchEnd));
+                
+                // 收集这10秒内的所有点
+                List<LocationPoint> batch = new ArrayList<>();
+                while (pointIndex < allPoints.size() && 
+                       allPoints.get(pointIndex).getTimestamp() < batchEndTimestamp) {
+                    batch.add(allPoints.get(pointIndex));
+                    pointIndex++;
+                }
+                
+                // 处理这一批（模拟实时处理）
+                if (!batch.isEmpty()) {
+                    tracker.ingest(batch);
+                    totalBatches++;
+                }
+                
+                current = batchEnd;
+            }
+            
+            System.out.println("✓ 线程 " + Thread.currentThread().getName() + 
+                             " 完成处理卡: " + cardId + 
+                             ", 总批次: " + totalBatches + 
+                             ", 总点数: " + totalPoints);
+            
+        } catch (Exception e) {
+            System.err.println("❌ 线程 " + Thread.currentThread().getName() + 
+                             " 处理卡 " + cardId + " 失败: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -702,103 +765,117 @@ public class RyTask
      * 实时任务测试（历史数据模拟）单线程
      */
     public void realDriverTrackerZQTest(){
-
-        String data = baseConfig.LOCATION_CARD_TYPE;
-        String date = "未获取到日期";
-        String buildId = baseConfig.getJoysuch().getBuildingId();
+        // 获取独立的 tracker 实例
+        RealTimeDriverTracker tracker = applicationContext.getBean(RealTimeDriverTracker.class);
+        
+        try {
+            String data = baseConfig.LOCATION_CARD_TYPE;
+            String date = "未获取到日期";
+            String buildId = baseConfig.getJoysuch().getBuildingId();
 //        String cardId = "1918B3000BA3";
 //        String startTimeStr = "2025-08-06 18:20:00";
 //        String endTimeStr = "2025-08-06 21:00:00";
 //        String cardId = "1918B3000BA8";
 //        String startTimeStr = "2025-09-24 18:00:00";
 //        String endTimeStr = "2025-09-24 19:40:00";
-        String cardId = "1918B3000BA3";
+            String cardId = "1918B3000BA3";
 //        String startTimeStr = "2025-09-28 17:00:00";
 //        String endTimeStr = "2025-09-28 19:00:00";
-        String startTimeStr = "2025-10-17 16:50:00";
-        String endTimeStr = "2025-10-17 19:00:00";
-        LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
-        LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+            String startTimeStr = "2025-10-17 16:50:00";
+            String endTimeStr = "2025-10-17 19:00:00";
+            LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
+            LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
 //        List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
-        JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
-        JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
-        JSONArray points = jsonObject.getJSONArray("data");
-        JSONArray tagData = tagJsonObject.getJSONArray("data");
-        List<LocationPoint> LocationPoints = new ArrayList<>();
-        for (int i = 0; i < points.size(); i++){
-            JSONObject js = (JSONObject) points.get(i);
-            JSONArray plist = js.getJSONArray("points");
-            for (int j = 0; j < plist.size(); j++){
-                LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
-                if (date.equals("未获取到日期")){
-                    date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+            JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
+            JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
+            JSONArray points = jsonObject.getJSONArray("data");
+            JSONArray tagData = tagJsonObject.getJSONArray("data");
+            List<LocationPoint> LocationPoints = new ArrayList<>();
+            for (int i = 0; i < points.size(); i++){
+                JSONObject js = (JSONObject) points.get(i);
+                JSONArray plist = js.getJSONArray("points");
+                for (int j = 0; j < plist.size(); j++){
+                    LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                    if (date.equals("未获取到日期")){
+                        date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                    }
+                    LocationPoint point1 = new LocationPoint(
+                            cardId,
+                            point.getLongitude(),
+                            point.getLatitude(),
+                            DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                            Long.parseLong(point.getTime()));
+                    LocationPoints.add(point1);
                 }
-                LocationPoint point1 = new LocationPoint(
-                        cardId,
-                        point.getLongitude(),
-                        point.getLatitude(),
-                        DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
-                        Long.parseLong(point.getTime()));
-                LocationPoints.add(point1);
             }
-        }
-        LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
-        if (LocationPoints.size() > 0){
+            LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
+            if (LocationPoints.size() > 0){
 //            int batchSize = 10;
 //            for (int i = 0; i < LocationPoints.size(); i += batchSize) {
 //                int end = Math.min(i + batchSize, LocationPoints.size());
 //                List<LocationPoint> batch = LocationPoints.subList(i, end);
-//                realTimeDriverTracker.ingest(batch);
+//                tracker.ingest(batch);
 //            }
-            realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
+                tracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.CAR);
+            }
+        } finally {
+            // 不需要手动清理，tracker 实例会被 GC 回收
+            System.out.println("✅ 批处理任务完成");
         }
     }
 
     /**
-     * 实时任务测试（历史数据模拟）板车
+     * 实时任务测试（历史数据模拟）板车 单线程
      */
     public void realDriverTrackerZQTruckTest(){
-
-        String data = baseConfig.LOCATION_CARD_TYPE;
-        String date = "未获取到日期";
-        String buildId = baseConfig.getJoysuch().getBuildingId();
-        String cardId = "1918B3000561";
-        String startTimeStr = "2025-10-16 18:25:00";
-        String endTimeStr = "2025-10-16 19:40:00";
-        LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
-        LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+        // 获取独立的 tracker 实例
+        RealTimeDriverTracker tracker = applicationContext.getBean(RealTimeDriverTracker.class);
+        
+        try {
+            String data = baseConfig.LOCATION_CARD_TYPE;
+            String date = "未获取到日期";
+            String buildId = baseConfig.getJoysuch().getBuildingId();
+            String cardId = "1918B3000561";
+            String startTimeStr = "2025-10-16 18:25:00";
+            String endTimeStr = "2025-10-16 19:40:00";
+            LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
+            LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
 //        List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
-        JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
-        JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
-        JSONArray points = jsonObject.getJSONArray("data");
-        JSONArray tagData = tagJsonObject.getJSONArray("data");
-        List<LocationPoint> LocationPoints = new ArrayList<>();
-        for (int i = 0; i < points.size(); i++){
-            JSONObject js = (JSONObject) points.get(i);
-            JSONArray plist = js.getJSONArray("points");
-            for (int j = 0; j < plist.size(); j++){
-                LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
-                if (date.equals("未获取到日期")){
-                    date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+            JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
+            JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
+            JSONArray points = jsonObject.getJSONArray("data");
+            JSONArray tagData = tagJsonObject.getJSONArray("data");
+            List<LocationPoint> LocationPoints = new ArrayList<>();
+            for (int i = 0; i < points.size(); i++){
+                JSONObject js = (JSONObject) points.get(i);
+                JSONArray plist = js.getJSONArray("points");
+                for (int j = 0; j < plist.size(); j++){
+                    LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                    if (date.equals("未获取到日期")){
+                        date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                    }
+                    LocationPoint point1 = new LocationPoint(
+                            cardId,
+                            point.getLongitude(),
+                            point.getLatitude(),
+                            DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                            Long.parseLong(point.getTime()));
+                    LocationPoints.add(point1);
                 }
-                LocationPoint point1 = new LocationPoint(
-                        cardId,
-                        point.getLongitude(),
-                        point.getLatitude(),
-                        DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
-                        Long.parseLong(point.getTime()));
-                LocationPoints.add(point1);
             }
-        }
-        LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
-        if (LocationPoints.size() > 0){
+            LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
+            if (LocationPoints.size() > 0){
 //            int batchSize = 10;
 //            for (int i = 0; i < LocationPoints.size(); i += batchSize) {
 //                int end = Math.min(i + batchSize, LocationPoints.size());
 //                List<LocationPoint> batch = LocationPoints.subList(i, end);
-//                realTimeDriverTracker.ingest(batch);
+//                tracker.ingest(batch);
 //            }
-            realTimeDriverTracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.TRUCK);
+                tracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.TRUCK);
+            }
+        } finally {
+            // 不需要手动清理，tracker 实例会被 GC 回收
+            System.out.println("✅ 批处理任务完成");
         }
     }
 

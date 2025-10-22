@@ -10,6 +10,7 @@ import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.GeoUtils;
 import com.jwzt.modules.experiment.map.ZoneChecker;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -22,6 +23,7 @@ import static com.jwzt.modules.experiment.utils.GeoUtils.calculateCenter;
  * 坐标点滤波器
  */
 @Component
+@Scope("prototype")  // 改为原型模式，每次获取新实例，避免多线程竞争
 public class OutlierFilter {
 
     @Autowired
@@ -45,6 +47,10 @@ public class OutlierFilter {
 
 
 
+    /**
+     * 状态分析方法
+     * 由于改为 prototype 作用域，每个线程有独立实例，不需要 synchronized
+     */
     public List<LocationPoint> stateAnalysis(List<LocationPoint> points) {
         List<LocationPoint> result = new ArrayList<>();
         for (LocationPoint point : points){
