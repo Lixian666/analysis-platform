@@ -36,6 +36,9 @@ public class CenterWorkHttpUtils {
     // 中心平台地址
     @Value("${experiment.base.sw-center.center-ip}")
     private String centerIP;
+    // 货场系统地址
+    @Value("${experiment.base.card-analysis.push-ip}")
+    private String yardSystemIP;
     // Rfid列表
     @Value("${experiment.base.sw-center.get-list}")
     private String getRfidList;
@@ -163,7 +166,7 @@ public class CenterWorkHttpUtils {
                 map.put("carType", request.getCarType());
                 
                 log.info("车辆进场、出场推送-请求参数："+JSON.toJSONString(map));
-                result = httpServiceUtils.POSTForEntityJson(map, centerIP + vehicleEntryExitUrl);
+                result = httpServiceUtils.POSTForEntityJson(map, yardSystemIP + vehicleEntryExitUrl);
                 log.info("车辆进场、出场推送-响应结果："+result.toJSONString());
                 
                 int code = result.getIntValue("code");
@@ -209,7 +212,7 @@ public class CenterWorkHttpUtils {
                 map.put("carType", request.getCarType());
                 
                 log.info("车辆停放/离开车位-请求参数："+JSON.toJSONString(map));
-                result = httpServiceUtils.POSTForEntityJson(map, centerIP + assignmentRecordUrl);
+                result = httpServiceUtils.POSTForEntityJson(map, yardSystemIP + assignmentRecordUrl);
                 log.info("车辆停放/离开车位-响应结果："+result.toJSONString());
                 
                 int code = result.getIntValue("code");
@@ -247,7 +250,7 @@ public class CenterWorkHttpUtils {
                 map.put("carType", request.getCarType());
                 
                 log.info("实时轨迹推送-请求参数："+JSON.toJSONString(map));
-                result = httpServiceUtils.POSTForEntityJson(map, centerIP + vehicleTrackUrl);
+                result = httpServiceUtils.POSTForEntityJson(map, yardSystemIP + vehicleTrackUrl);
                 log.info("实时轨迹推送-响应结果："+result.toJSONString());
                 
                 int code = result.getIntValue("code");
@@ -286,7 +289,7 @@ public class CenterWorkHttpUtils {
                 map.put("distance", request.getDistance());
                 
                 log.info("UWB推送-请求参数："+JSON.toJSONString(map));
-                result = httpServiceUtils.POSTForEntityJson(map, centerIP + beaconPushUrl);
+                result = httpServiceUtils.POSTForEntityJson(map, yardSystemIP + beaconPushUrl);
                 log.info("UWB推送-响应结果："+result.toJSONString());
                 
                 int code = result.getIntValue("code");
@@ -314,7 +317,7 @@ public class CenterWorkHttpUtils {
             if("1".equals(centerStatus)) {
                 log.info("车辆删除-Start-开始删除：vehicleThirdId={}", vehicleThirdId);
                 
-                String url = centerIP + removeVehicleUrl + "?vehicleThirdId=" + vehicleThirdId;
+                String url = yardSystemIP + removeVehicleUrl + "?vehicleThirdId=" + vehicleThirdId;
                 log.info("车辆删除-请求地址："+url);
                 result = httpServiceUtils.GETForEntity(url);
                 log.info("车辆删除-响应结果："+result.toJSONString());

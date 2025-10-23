@@ -107,7 +107,7 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                     currentEvent = BoardingDetector.Event.ARRIVED_BOARDING;
                     sendInLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                     lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
-                    return new EventState(currentEvent, currentPoint.getTimestamp());
+                    return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
                 }
             }
         }
@@ -161,7 +161,7 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 currentEvent = BoardingDetector.Event.ARRIVED_DROPPING;
                 lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                 sendInLastEventState = null;
-                return new EventState(currentEvent, currentPoint.getTimestamp());
+                return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
             }
         }
         
