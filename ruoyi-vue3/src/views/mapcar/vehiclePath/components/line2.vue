@@ -9,12 +9,25 @@
       </div>
     </div> -->
     <!-- 商品车信息开始 -->
-    <div class="activelist">
+    <div class="activelist" :class="{ 'collapsed': isListCollapsed }">
       <div class="title">
-        <span class="ptxt">路径信息方案二</span>
-        <span class="ptxt2 is-active">方案二</span>
-        <span class="ptxt1" @click="goputdown(0)">方案一</span>
-   
+        <div class="title-left">
+          <span class="ptxt">路径信息方案二</span>
+          <span class="ptxt-info" v-show="!isListCollapsed">
+            <span v-if="route.query.vehicleThirdId">卡号: {{ route.query.vehicleThirdId }}</span>
+            <span v-if="route.query.startTime || route.query.endTime" class="date-info">
+              {{ formatDateRange(route.query.startTime, route.query.endTime) }}
+            </span>
+          </span>
+        </div>
+        <div class="title-right">
+          <span class="ptxt2 is-active">方案二</span>
+          <span class="ptxt1" @click="goputdown(0)">方案一</span>
+          <span class="collapse-btn" @click="toggleListCollapse" :title="isListCollapsed ? '展开列表' : '收起列表'">
+            <el-icon v-if="isListCollapsed"><DArrowRight /></el-icon>
+            <el-icon v-else><DArrowLeft /></el-icon>
+          </span>
+        </div>
       </div>
       <el-table
         id="tablescroll"
@@ -27,40 +40,40 @@
         border
         :row-class-name="tableRowClassName"
       >
-        <el-table-column type="selection" width="35" />
-        <el-table-column align="center" label="名称">
+        <el-table-column type="selection" :width="isListCollapsed ? 40 : 35" />
+        <el-table-column align="center" label="名称" :width="isListCollapsed ? 70 : ''">
           <template v-slot="scope">
             <span>路线{{ scope.$index + 1 }}</span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="开始时间">
+        <el-table-column v-if="!isListCollapsed" align="center" label="开始时间">
           <template v-slot="scope">
             <span v-if="scope.row.startTime">{{ scope.row.startTime.split(' ')[1] }}</span>
             <span v-else class="ml10">-</span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="结束时间">
+        <el-table-column v-if="!isListCollapsed" align="center" label="结束时间">
           <template v-slot="scope">
             <span v-if="scope.row.endTime">{{ scope.row.endTime.split(' ')[1] }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="停留时间" width="100px">
+        <el-table-column v-if="!isListCollapsed" align="center" label="停留时间" width="100px">
           <template v-slot="scope">
             <span v-text="gettimetxt(scope.row.duration)"></span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="点数量" width="80px">
+        <el-table-column v-if="!isListCollapsed" align="center" label="点数量" width="80px">
           <template v-slot="scope">
             <span v-text="getlistlength(scope.row.takBehaviorRecordDetailList)"></span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="颜色" width="62px">
+        <el-table-column align="center" label="颜色" :width="isListCollapsed ? 55 : 62">
           <template v-slot="scope">
             <div class="block" :style="'background-color:' + scope.row.color + ';'"></div>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="类型" width="100px">
+        <el-table-column align="center" label="类型" :width="isListCollapsed ? '' : 100">
           <template v-slot="scope">
             <span v-text="getcartype(scope.row.type)"></span>
           </template>
@@ -68,7 +81,7 @@
       </el-table>
     </div>
 
-    <div class="activeName"  >
+    <div class="activeName" :class="{ 'expanded': isListCollapsed }">
       <div class="" style="height: 100%;">
         <carline :list="cargoline" ref="carlineRef"/>
       </div>
@@ -134,11 +147,13 @@
  <script setup>
   import div401 from '@/views/error/401.vue'
   import { onMounted, ref, nextTick, computed } from "vue"
+  import { DArrowLeft, DArrowRight } from '@element-plus/icons-vue'
   import carline from '@/components/mars3D/carline.vue'
   import { getlistByUserId } from '@/api/mapcar.js'
   const emits = defineEmits(['rest']);
   const route = useRoute()
   //data return start
+  const isListCollapsed = ref(false)
   const cargoline = ref(null)
   const listQuery = ref({
     page: 1,
@@ -194,6 +209,28 @@
   })
 
   //methods start
+  function formatDateRange(startTime, endTime) {
+    if (!startTime && !endTime) return ''
+    if (startTime && endTime) {
+      // 只显示日期部分，去掉时间
+      const start = startTime.split(' ')[0]
+      const end = endTime.split(' ')[0]
+      if (start === end) {
+        return `日期: ${start}`
+      }
+      return `日期: ${start} ~ ${end}`
+    }
+    if (startTime) {
+      return `日期: ${startTime.split(' ')[0]}`
+    }
+    if (endTime) {
+      return `日期: ${endTime.split(' ')[0]}`
+    }
+    return ''
+  }
+  function toggleListCollapse() {
+    isListCollapsed.value = !isListCollapsed.value
+  }
   function goputdown(id){
     emits('rest',id);
   }
@@ -584,34 +621,97 @@
     width: 645px;
     height: calc(100% - 90px);
     float: left;
+    transition: width 0.3s ease;
+    
+    &.collapsed {
+      width: 320px;
+    }
+    
     .title{
-      // span{
-      //   margin-right: 20px;
-      // }
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 40px;
+      
+      .title-left {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        overflow: hidden;
+      }
+      
+      .title-right {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      
       .ptxt{
         margin: 0 0 0 20px;
         padding: 0;
         height: 40px;
         line-height: 40px;
-        margin-right: 90px;
+        font-weight: 500;
+        white-space: nowrap;
       }
+      
+      .ptxt-info {
+        display: flex;
+        align-items: center;
+        height: 40px;
+        line-height: 40px;
+        font-size: 13px;
+        color: #666;
+        margin-left: 15px;
+        transition: opacity 0.3s ease;
+        
+        span {
+          margin-right: 15px;
+          white-space: nowrap;
+        }
+        
+        .date-info {
+          color: #888;
+        }
+      }
+      
       .ptxt1{
-        float: right;
         height: 40px;
         line-height: 40px;
-        margin-right: 20px;
+        margin-right: 10px;
+        margin-left: 10px;
         cursor: pointer;
+        white-space: nowrap;
       }
+      
       .ptxt2{
-        float: right;
         height: 40px;
         line-height: 40px;
-        margin-right: 20px;
+        margin-right: 10px;
         cursor: pointer;
+        white-space: nowrap;
       }
+      
       .is-active{
         color: #409EFF;
         cursor: context-menu;
+      }
+      
+      .collapse-btn {
+        height: 40px;
+        line-height: 40px;
+        margin-right: 10px;
+        margin-left: 5px;
+        cursor: pointer;
+        font-size: 18px;
+        color: #409EFF;
+        transition: transform 0.3s ease;
+        display: flex;
+        align-items: center;
+        
+        &:hover {
+          transform: scale(1.15);
+        }
       }
     }
     :deep(.el-table--border){
@@ -619,6 +719,26 @@
       height: calc(100% - 40px);
       // overflow: hidden;
       // overflow-y: scroll;
+    }
+    
+    // 收起状态下的表格样式优化
+    &.collapsed {
+      :deep(.el-table) {
+        font-size: 13px;
+        
+        th {
+          padding: 8px 0;
+          font-size: 13px;
+        }
+        
+        td {
+          padding: 6px 0;
+        }
+        
+        .el-checkbox {
+          transform: scale(0.9);
+        }
+      }
     }
   }
 
@@ -633,6 +753,11 @@
     height: calc(100% - 90px);
    // background-color: red;
     float: right;
+    transition: width 0.3s ease;
+    
+    &.expanded {
+      width: calc(100% - 325px);
+    }
   }
 
   // background: #04262b; //黑版
