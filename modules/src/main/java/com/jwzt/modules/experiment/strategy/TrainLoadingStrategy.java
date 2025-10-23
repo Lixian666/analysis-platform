@@ -213,7 +213,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                     currentEvent = BoardingDetector.Event.SEND_DROPPING;
                     sendOutLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                     lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
-                    return new EventState(currentEvent, currentPoint.getTimestamp());
+                    return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
                 }
             }
             
@@ -265,7 +265,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                         lastEvent = BoardingDetector.Event.ARRIVED_BOARDING;
                         currentEvent = BoardingDetector.Event.ARRIVED_BOARDING;
                         lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
-                        return new EventState(currentEvent, currentPoint.getTimestamp());
+                        return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
                     }
                 }
                 
@@ -316,7 +316,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                         lastEvent = BoardingDetector.Event.NONE;
                         currentEvent = BoardingDetector.Event.ARRIVED_DROPPING;
                         lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
-                        return new EventState(currentEvent, currentPoint.getTimestamp());
+                        return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
                     }
                 }
             }
@@ -371,7 +371,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                 currentEvent = BoardingDetector.Event.SEND_BOARDING;
                 lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                 sendOutLastEventState = null;
-                return new EventState(currentEvent, currentPoint.getTimestamp());
+                return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
             }
         }
         

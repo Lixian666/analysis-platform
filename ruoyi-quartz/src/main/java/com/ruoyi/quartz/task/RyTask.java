@@ -192,9 +192,9 @@ public class RyTask
         List<String> cards = new ArrayList<>(
                 Arrays.asList(
                         "1918B3000A79",
-                        "1918B3000BA3"
-//                        "1918B30005D6",
-//                        "1918B3000561"
+                        "1918B3000BA3",
+                        "1918B30005D6",
+                        "1918B3000561"
                 )
         );
 
@@ -779,10 +779,11 @@ public class RyTask
 //        String startTimeStr = "2025-09-24 18:00:00";
 //        String endTimeStr = "2025-09-24 19:40:00";
             String cardId = "1918B3000BA3";
-//        String startTimeStr = "2025-09-28 17:00:00";
-//        String endTimeStr = "2025-09-28 19:00:00";
-            String startTimeStr = "2025-10-17 16:50:00";
-            String endTimeStr = "2025-10-17 19:00:00";
+//            String cardId = "1918B3000A79";
+        String startTimeStr = "2025-09-28 17:00:00";
+        String endTimeStr = "2025-09-28 19:00:00";
+//            String startTimeStr = "2025-10-17 16:50:00";
+//            String endTimeStr = "2025-10-17 19:00:00";
             LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
             LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
 //        List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");

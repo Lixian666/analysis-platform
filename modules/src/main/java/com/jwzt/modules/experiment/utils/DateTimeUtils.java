@@ -166,6 +166,16 @@ public class DateTimeUtils {
     }
 
     /**
+     *  时间戳转日期时间字符串(yyyy-MM-dd HH:mm:ss:SSS)
+     * @param timestamp
+     * @return
+     */
+    public static String timestampToDateTimeSSSStr(long timestamp) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+        return sdf.format(new Date(timestamp));
+    }
+
+    /**
      *  时间戳转日期字符串
      * @param timestamp
      * @return

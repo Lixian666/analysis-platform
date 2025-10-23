@@ -14,6 +14,7 @@ import com.jwzt.modules.experiment.strategy.LoadingStrategyFactory;
 import com.jwzt.modules.experiment.strategy.LoadingUnloadingStrategy;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
+import com.jwzt.modules.experiment.utils.third.manage.DataSender;
 import com.jwzt.modules.experiment.vo.EventState;
 import com.ruoyi.common.utils.uuid.IdUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,10 @@ import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 @Service
 @Scope("prototype")  // 改为原型模式，支持多线程独立实例，避免状态共享
 public class RealTimeDriverTracker {
+
+    @Autowired
+    private DataSender dataSender;
+
     @Autowired
     private BaseConfig baseConfig;
     @Autowired
@@ -105,12 +110,17 @@ public class RealTimeDriverTracker {
     }
 
     /** 上/下车会话（成对闭环） */
-    private static class TrackSession {
-        String sessionId;
-        String cardId;
-        long startTime;
+    public static class TrackSession {
+        public String sessionId;
+        public String cardId;
+        public long startTime;
+        public double startLongitude;
+        public double startLatitude;
+        public long endTime;
+        public double endLongitude;
+        public double endLatitude;
         EventKind kind; // ARRIVED 或 SEND
-        final List<LocationPoint> points = new ArrayList<>();
+        public final List<LocationPoint> points = new ArrayList<>();
     }
 
     /** 事件类型归并：到达业务 与 发运业务 */
@@ -197,6 +207,10 @@ public class RealTimeDriverTracker {
                 if (st.activeSession != null) st.activeSession.points.add(p);
                 continue;
             }
+            if (st.activeSession != null){
+                // 推送实时轨迹
+                dataSender.trackPush(es, newPoints.get(FilterConfig.RECORD_POINTS_SIZE / 2), st.activeSession, vehicleType);
+            }
 
             switch (es.getEvent()) {
                 case ARRIVED_BOARDING:
@@ -235,13 +249,15 @@ public class RealTimeDriverTracker {
         st.activeSession.sessionId = IdUtils.fastSimpleUUID();
         st.activeSession.cardId = cardKey;
         st.activeSession.startTime = es.getTimestamp();
+        st.activeSession.startLongitude = win.get(0).getLongitude();
+        st.activeSession.startLatitude = win.get(0).getLatitude();
         st.activeSession.kind = kind;
 
         // 回填窗口后一半（包含触发点附近的历史）
         int from = Math.max(0, win.size() - backfillHalf) - 1;
         if (from < 0) from = 0;
         st.activeSession.points.addAll(win.subList(from, win.size()));
-
+        dataSender.inYardPush(st.activeSession, vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR));
         System.out.println("📥 [" + cardKey + "] 启动会话 " + kind + " @" + new Date(es.getTimestamp()));
     }
 
@@ -252,7 +268,6 @@ public class RealTimeDriverTracker {
             System.out.println("⚠️ [" + cardKey + "] 终点事件无匹配会话，忽略：" + expectKind);
             return;
         }
-
         // 完结前把窗口中的后半段也补齐（减少尾部截断）
         int from = Math.max(0, win.size() - backfillHalf) - 2;
         if (from < 0) from = 0;
@@ -267,8 +282,16 @@ public class RealTimeDriverTracker {
                         Collectors.toMap(LocationPoint::getTimestamp, x -> x, (a, b) -> a, TreeMap::new),
                         m -> new ArrayList<>(m.values())));
 
-        persistSession(st.activeSession, es.getTimestamp(), sessionPoints);
 
+        st.activeSession.endTime = es.getTimestamp();
+        try {
+            st.activeSession.endLongitude = sessionPoints.get(sessionPoints.size() - 1).getLongitude();
+            st.activeSession.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
+            persistSession(st.activeSession, es.getTimestamp(), sessionPoints);
+            dataSender.inParkPush(st.activeSession, vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 //        // 可选：输出 shp（整段轨迹）
 //        if (baseConfig.isOutputShp()) {
 //            String shp = ensureShpPath(shpFileRoot, st.activeSession.sessionId, expectKind);
@@ -495,10 +518,20 @@ public class RealTimeDriverTracker {
             sess.sessionId = IdUtils.fastSimpleUUID();
             sess.cardId = cardKey;
             sess.startTime = startTs;
+            sess.startLongitude = sessionPoints.get(0).getLongitude();
+            sess.startLatitude = sessionPoints.get(0).getLatitude();
+            sess.endTime = dropTs;
+            sess.endLongitude = sessionPoints.get(sessionPoints.size() - 1).getLongitude();
+            sess.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
             sess.kind = EventKind.SEND;
             sess.points.addAll(sessionPoints);
 
             persistSession(sess, dropTs, sessionPoints);
+            dataSender.outParkPush(sess, vehicleType);
+            for (LocationPoint p : sessionPoints){
+                dataSender.trackPush(null, p, sess, vehicleType);
+            }
+            dataSender.outYardPush(sess, vehicleType);
             st.sendLastEventTime = downEs.getTimestamp();
             st.sendLastEventTimeStr = DateTimeUtils.timestampToDateTimeStr(downEs.getTimestamp());
             System.out.println("📤 [" + cardKey + "] 回溯并持久化发运轨迹段 成功 起=" + new Date(startTs) + " 止=" + new Date(dropTs) + " 点数=" + sessionPoints.size());

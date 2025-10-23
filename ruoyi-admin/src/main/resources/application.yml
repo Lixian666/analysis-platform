@@ -185,6 +185,7 @@ experiment:
       #RFID识别记录列表
       get-list: /api/station/getCompleteRfidList
     card-analysis:
+      push-ip: http://192.168.6.8/sw-fusion-api/
       #车辆进场、出场推送
       vehicle-entry-exit: /api/cardAnalysis/vehicleEntryAndExit
       #车辆停放车位、车辆离开车位
