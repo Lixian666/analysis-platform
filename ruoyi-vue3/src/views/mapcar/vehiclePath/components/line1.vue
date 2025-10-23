@@ -23,6 +23,9 @@
         <div class="title-right">
           <span class="ptxt2" @click="goputdown(1)">方案二</span>
           <span class="ptxt1 is-active">方案一</span>
+          <el-button size="small" type="primary" plain @click="showMarkerDialog = true" :icon="Location" title="添加临时标记点" class="marker-btn">
+            标记
+          </el-button>
           <span class="collapse-btn" @click="toggleListCollapse" :title="isListCollapsed ? '展开列表' : '收起列表'">
             <el-icon v-if="isListCollapsed"><DArrowRight /></el-icon>
             <el-icon v-else><DArrowLeft /></el-icon>
@@ -138,23 +141,81 @@
         </div>
       </div>
     </div>
+    
+    <!-- 添加临时标记点对话框 -->
+    <el-dialog
+      v-model="showMarkerDialog"
+      title="添加临时标记点"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="markerForm" label-width="80px">
+        <el-form-item label="经度">
+          <el-input
+            v-model="markerForm.longitude"
+            placeholder="请输入经度（例如：116.397428）"
+            clearable
+            @keyup.enter="addMarkerToMap"
+          >
+            <template #append>°</template>
+          </el-input>
+          <div style="color: #999; font-size: 12px; margin-top: 5px;">
+            范围：-180 ~ 180
+          </div>
+        </el-form-item>
+        <el-form-item label="纬度">
+          <el-input
+            v-model="markerForm.latitude"
+            placeholder="请输入纬度（例如：39.909179）"
+            clearable
+            @keyup.enter="addMarkerToMap"
+          >
+            <template #append>°</template>
+          </el-input>
+          <div style="color: #999; font-size: 12px; margin-top: 5px;">
+            范围：-90 ~ 90
+          </div>
+        </el-form-item>
+        <el-form-item>
+          <div style="padding: 12px; background: #f0f9ff; border-left: 3px solid #409EFF; color: #666; font-size: 13px; line-height: 1.6;">
+            <div style="margin-bottom: 5px;">💡 <strong>提示：</strong></div>
+            <div>1. 请输入有效的WGS84坐标系经纬度</div>
+            <div>2. 标记点将自动定位到地图上</div>
+            <div>3. 刷新地图后标记点会自动清除</div>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="clearAllMarkers">清除所有标记</el-button>
+          <el-button @click="showMarkerDialog = false">取消</el-button>
+          <el-button type="primary" @click="addMarkerToMap">添加标记</el-button>
+        </span>
+      </template>
+    </el-dialog>
  
   </div>
   <div v-else>
     <div401 />
   </div>
- </template>
+</template>
  
  <script setup>
   import div401 from '@/views/error/401.vue'
   import { onMounted, ref, nextTick, computed } from "vue"
-  import { DArrowLeft, DArrowRight } from '@element-plus/icons-vue'
+  import { DArrowLeft, DArrowRight, Location } from '@element-plus/icons-vue'
+  import { ElMessage } from 'element-plus'
   import carline from '@/components/mars3D/carline.vue'
   import { getlistByUserId } from '@/api/mapcar.js'
   const emits = defineEmits(['rest']);
   const route = useRoute()
   //data return start
   const isListCollapsed = ref(false)
+  const showMarkerDialog = ref(false)
+  const markerForm = ref({
+    longitude: '',
+    latitude: ''
+  })
   const cargoline = ref(null)
   const starttime = ref( '00:00:00')
   const endtime = ref('00:00:00')
@@ -206,6 +267,58 @@
   })
 
   //methods start
+  // 添加标记到地图
+  function addMarkerToMap() {
+    const lng = parseFloat(markerForm.value.longitude)
+    const lat = parseFloat(markerForm.value.latitude)
+    
+    // 验证经纬度
+    if (!markerForm.value.longitude || !markerForm.value.latitude) {
+      ElMessage.warning('请输入经度和纬度')
+      return
+    }
+    
+    if (isNaN(lng) || isNaN(lat)) {
+      ElMessage.error('请输入有效的数字')
+      return
+    }
+    
+    if (lng < -180 || lng > 180) {
+      ElMessage.error('经度范围应在 -180 到 180 之间')
+      return
+    }
+    
+    if (lat < -90 || lat > 90) {
+      ElMessage.error('纬度范围应在 -90 到 90 之间')
+      return
+    }
+    
+    // 调用地图组件的方法添加标记
+    if (carlineRef.value && carlineRef.value.addTempMarker) {
+      const success = carlineRef.value.addTempMarker(lng, lat)
+      if (success) {
+        ElMessage.success('标记点添加成功')
+        showMarkerDialog.value = false
+        // 清空表单
+        markerForm.value.longitude = ''
+        markerForm.value.latitude = ''
+      } else {
+        ElMessage.error('添加标记点失败，请检查地图是否已初始化')
+      }
+    } else {
+      ElMessage.error('地图组件未准备好')
+    }
+  }
+  
+  // 清除所有临时标记
+  function clearAllMarkers() {
+    if (carlineRef.value && carlineRef.value.clearTempMarkers) {
+      carlineRef.value.clearTempMarkers()
+      ElMessage.success('已清除所有临时标记点')
+      showMarkerDialog.value = false
+    }
+  }
+  
   function formatDateRange(startTime, endTime) {
     if (!startTime && !endTime) return ''
     if (startTime && endTime) {
@@ -637,6 +750,11 @@
         display: flex;
         align-items: center;
         flex-shrink: 0;
+        gap: 8px;
+        
+        .marker-btn {
+          margin: 0 5px;
+        }
       }
       
       .ptxt{
