@@ -63,6 +63,7 @@
   const initype = ref(false)
   const arrayList = ref([])
   const graphicYellow = ref(null)
+  const tempMarkerLayer = ref(null)  // 临时标记点图层
   // 点位选择相关
   const selectedPointIndex = ref(-1)  // 当前选中的点位索引
   const currentTrackPoints = ref([])  // 当前选中轨迹的所有点位图形对象
@@ -923,6 +924,91 @@ function setMsaaSamples(samples) {
     }
     return relist
   }
+  
+  // 添加临时标记点
+  function addTempMarker(longitude, latitude) {
+    if (!map.value) {
+      console.error('地图未初始化')
+      return false
+    }
+    
+    // 验证经纬度
+    if (!longitude || !latitude || isNaN(longitude) || isNaN(latitude)) {
+      console.error('无效的经纬度')
+      return false
+    }
+    
+    // 如果临时图层不存在，创建一个
+    if (!tempMarkerLayer.value) {
+      tempMarkerLayer.value = new mars3d.layer.GraphicLayer()
+      map.value.addLayer(tempMarkerLayer.value)
+    }
+    
+    // 创建临时标记点
+    const tempMarker = new mars3d.graphic.PointEntity({
+      position: [longitude, latitude, 0],
+      style: {
+        color: '#FF4500',
+        pixelSize: 12,
+        outlineColor: '#ffffff',
+        outlineWidth: 2,
+        scaleByDistance: new window.Cesium.NearFarScalar(1000, 1.0, 500000, 0.3),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      },
+      attr: {
+        type: 'tempMarker',
+        longitude: longitude,
+        latitude: latitude
+      },
+      popup: `
+        <div style="padding: 15px; min-width: 220px; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+          <h4 style="margin: 0 0 12px 0; color: #FF4500; font-size: 16px; font-weight: 600; border-bottom: 2px solid #FF4500; padding-bottom: 8px;">
+            📍 临时标记点
+          </h4>
+          <div style="margin: 8px 0;">
+            <span style="color: #666; font-size: 13px;">经度：</span>
+            <span style="color: #333; font-weight: 500; font-size: 14px;">${longitude.toFixed(6)}</span>
+          </div>
+          <div style="margin: 8px 0;">
+            <span style="color: #666; font-size: 13px;">纬度：</span>
+            <span style="color: #333; font-weight: 500; font-size: 14px;">${latitude.toFixed(6)}</span>
+          </div>
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+            提示：刷新地图后此标记将被清除
+          </div>
+        </div>
+      `,
+      popupOptions: {
+        closeOnClick: false,
+        autoClose: false,
+        anchor: [0, -10]
+      }
+    })
+    
+    // 添加到图层
+    tempMarkerLayer.value.addGraphic(tempMarker)
+    
+    // 飞行到该点位
+    map.value.flyToPoint(tempMarker.position, {
+      radius: 1000,
+      duration: 1
+    })
+    
+    // 自动打开弹窗
+    setTimeout(() => {
+      tempMarker.openPopup()
+    }, 1000)
+    
+    return true
+  }
+  
+  // 清除所有临时标记点
+  function clearTempMarkers() {
+    if (tempMarkerLayer.value) {
+      tempMarkerLayer.value.clear()
+    }
+  }
+  
   //methods end
-  defineExpose ({initMap, delmars, addmars, drawyellowsload, drawyellowsloadDel})
+  defineExpose ({initMap, delmars, addmars, drawyellowsload, drawyellowsloadDel, addTempMarker, clearTempMarkers})
 </script>
