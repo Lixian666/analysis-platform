@@ -97,6 +97,11 @@ public class TakBehaviorRecords extends BaseEntity {
     private List<TakBehaviorRecordDetail> takBehaviorRecordDetailList;
 
     /**
+     * 查询条件：时间类型 0：开始时间 1：结束时间 null 表示查询所有
+     */
+    private Integer queryTimeType;
+
+    /**
      * 查询条件：开始时间（用于范围查询）
      */
     private String queryStartTime;
