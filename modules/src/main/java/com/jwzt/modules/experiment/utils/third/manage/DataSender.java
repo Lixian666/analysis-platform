@@ -48,6 +48,16 @@ public class DataSender {
             request.setRegionType(4);
             request.setCarType("car");
         }
+        if (vehicleType == RealTimeDriverTracker.VehicleType.CAR) {
+            request.setType(0);
+            request.setVehicleThirdId(sess.sessionId);
+            request.setVehicleTime(DateTimeUtils.timestampToDateTimeSSSStr(sess.startTime));
+            request.setCameraId(sess.cardId);
+            request.setThrough(String.valueOf(sess.startLongitude));
+            request.setWeft(String.valueOf(sess.startLatitude));
+            request.setRegionType(2);
+            request.setCarType("car");
+        }
         JSONObject result = centerWorkHttpUtils.vehicleEntryAndExit(request);
         System.out.println("推送车辆进场信息：" + result);
         return result;

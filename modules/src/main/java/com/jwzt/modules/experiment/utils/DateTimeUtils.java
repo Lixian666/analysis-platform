@@ -184,4 +184,19 @@ public class DateTimeUtils {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         return sdf.format(new Date(timestamp));
     }
+
+    /**
+     * 格式化时间显示
+     * @param seconds
+     * @return
+     */
+    public static String formatTime(long seconds) {
+        if (seconds < 60) {
+            return seconds + " 秒";
+        } else if (seconds < 3600) {
+            return (seconds / 60) + " 分 " + (seconds % 60) + " 秒";
+        } else {
+            return (seconds / 3600) + " 小时 " + ((seconds % 3600) / 60) + " 分 " + (seconds % 60) + " 秒";
+        }
+    }
 }
