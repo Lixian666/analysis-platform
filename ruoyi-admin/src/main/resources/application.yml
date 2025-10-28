@@ -6,8 +6,8 @@ ruoyi:
   version: 3.9.0
   # 版权年份
   copyrightYear: 2025
-  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: D:/Platform/uploadPath
+  # 文件路径 示例（Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
+  profile: /Users/lixian/Cache/Platform/uploadPath
   # 获取ip地址开关
   addressEnabled: true
   # 验证码类型 math 数字计算 char 字符验证
@@ -70,7 +70,7 @@ spring:
   devtools:
     restart:
       # 热部署开关
-      enabled: true
+      enabled: false
   # redis 配置
   redis:
     # 地址
@@ -143,7 +143,8 @@ experiment:
     push-data: false
     output-shp: false
     output-shp-path: /Users/lixian/Cache/Platform/PlatformData/output
-    delete-datetime: 2025-10-20 09:00:00
+#    delete-datetime: 2025-10-20 09:00:00
+    delete-datetime:
 #    yard-name: yuzui
     yard-name: dongjiazhen
     location-card-type: other
@@ -181,7 +182,7 @@ experiment:
       #中心服务地址
       status: 1
 #      center-ip: http://10.4.230.56:8000/sw-centralOpen-api
-      center-ip: http://192.168.6.15/sw-centralOpen-api
+      center-ip: http://172.30.17.116:8001/sw-centralOpen-api
       #RFID识别记录列表
       get-list: /api/station/getCompleteRfidList
     card-analysis:
