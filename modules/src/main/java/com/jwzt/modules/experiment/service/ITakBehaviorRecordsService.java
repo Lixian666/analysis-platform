@@ -70,4 +70,12 @@ public interface ITakBehaviorRecordsService
     public void deleteByCreationTime(String s);
 
     List<TakBehaviorRecords> selectTakBehaviorRecordsUserList(TakBehaviorRecords takBehaviorRecords);
+
+    /**
+     * 批量更新行为记录的匹配状态
+     * 
+     * @param records 行为记录列表
+     * @return 结果
+     */
+    public int batchUpdateMatchStatus(List<TakBehaviorRecords> records);
 }
