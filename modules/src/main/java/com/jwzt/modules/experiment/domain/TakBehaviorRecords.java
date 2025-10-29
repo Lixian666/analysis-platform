@@ -231,6 +231,14 @@ public class TakBehaviorRecords extends BaseEntity {
         this.queryEndTime = queryEndTime;
     }
 
+    public Integer getQueryTimeType() {
+        return queryTimeType;
+    }
+
+    public void setQueryTimeType(Integer queryTimeType) {
+        this.queryTimeType = queryTimeType;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE).append("id", getId()).append("cardId", getCardId()).append("yardId", getYardId()).append("trackId", getTrackId()).append("startTime", getStartTime()).append("endTime", getEndTime()).append("pointCount", getPointCount()).append("createTime", getCreateTime()).append("updateTime", getUpdateTime()).append("type", getType()).append("duration", getDuration()).append("state", getState()).append("takBehaviorRecordDetailList", getTakBehaviorRecordDetailList()).toString();
