@@ -100,11 +100,24 @@ public class BALastProcessTask {
             tr.setQueryTimeType(0);
             tr.setQueryStartTime(startTimeStr);
             tr.setQueryEndTime(endTimeStr);
-            // 如果开启忽略已匹配数据，则只查询未匹配的数据
+            // 如果开启忽略已匹配数据，则只查询未匹配和作业数据多余的数据（不忽略未与RFID匹配的数据）
+            // matchStatus = 0: 未匹配
+            // matchStatus = 2: 作业数据多余（没有RFID匹配）
+            // matchStatus = null: 未设置状态（视为未匹配）
+            // 注意：matchStatus = 1: 匹配成功的数据会被忽略
+            // 由于Mapper XML中matchStatus是精确匹配，我们需要特殊处理
+            // 方案：不设置matchStatus，然后在结果中过滤掉已匹配的（matchStatus = 1）
+            List<TakBehaviorRecords> allTakBehaviorRecords = takBehaviorRecordsService.selectTakBehaviorRecordsList(tr);
+            List<TakBehaviorRecords> takBehaviorRecords;
             if (ignoreMatched) {
-                tr.setMatchStatus(0); // 0-未匹配
+                // 过滤掉已匹配成功的作业数据（matchStatus = 1），保留未匹配和作业数据多余的数据
+                takBehaviorRecords = allTakBehaviorRecords.stream()
+                    .filter(job -> job.getMatchStatus() == null || job.getMatchStatus() == 0 || job.getMatchStatus() == 2)
+                    .collect(Collectors.toList());
+                log.info("过滤已匹配的作业数据后，剩余 {} 条（包含未匹配和作业数据多余的）", takBehaviorRecords.size());
+            } else {
+                takBehaviorRecords = allTakBehaviorRecords;
             }
-            List<TakBehaviorRecords> takBehaviorRecords = takBehaviorRecordsService.selectTakBehaviorRecordsList(tr);
             log.info("获取到作业数据 {} 条", takBehaviorRecords != null ? takBehaviorRecords.size() : 0);
             
             // 获取rfid数据
