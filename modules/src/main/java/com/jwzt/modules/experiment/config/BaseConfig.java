@@ -27,6 +27,16 @@ public class BaseConfig {
 
     private Joysuch joysuch = new Joysuch();
     private swCenter swCenter = new swCenter();
+    private DataMatch dataMatch = new DataMatch();
+
+    @Data
+    public static class DataMatch {
+        private String timeIntervalSeconds;
+        private boolean ignoreMatched;
+        private boolean updateMatchStatus;
+        private boolean saveRfidData;
+
+    }
 
     @Data
     public class Joysuch {
