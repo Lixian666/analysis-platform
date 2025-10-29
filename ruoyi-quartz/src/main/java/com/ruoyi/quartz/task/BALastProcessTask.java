@@ -142,10 +142,10 @@ public class BALastProcessTask {
                 log.info("========== 处理卡ID：{} ==========", cardId);
                 
                 // 1. 处理板车卸车作业数据（type=4L, queryTimeType=0）
-                processJobDataMatch(cardId, 4L, 0, "板车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+                processJobDataMatch(cardId, 3L, 0, "板车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
                 
                 // 2. 处理板车装车作业数据（type=3L, queryTimeType=1）
-                processJobDataMatch(cardId, 3L, 1, "板车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+                processJobDataMatch(cardId, 2L, 1, "板车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
             }
             
             log.info("所有卡ID的数据匹配处理完成");
