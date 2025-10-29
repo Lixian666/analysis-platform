@@ -88,42 +88,21 @@ public class BALastProcessTask {
      * 作业数据与rfid数据匹配
      */
     public void theJobDataMatchesTheRFIDData() {
-        String cardId = "1918B3000561";
+        // 卡ID列表
+        List<String> cardIdList = new ArrayList<>();
+        cardIdList.add("1918B3000561");
+        // 可以添加更多卡ID
+        // cardIdList.add("其他卡ID");
+        
         String startTimeStr = "2025-10-16 18:25:00";
         String endTimeStr = "2025-10-16 19:50:00";
+        
         try {
-            // 获取作业数据
-            log.info("开始获取作业数据，时间范围：{} - {}", startTimeStr, endTimeStr);
+            log.info("开始数据匹配处理，时间范围：{} - {}", startTimeStr, endTimeStr);
             log.info("配置信息 - 忽略已匹配：{}, 更新状态：{}, 保存RFID：{}", ignoreMatched, updateMatchStatus, saveRfidData);
-            TakBehaviorRecords tr = new TakBehaviorRecords();
-            tr.setYardId(yardName);
-            tr.setType(0L);
-            tr.setState("完成");
-            tr.setCardId(cardId);
-            tr.setQueryTimeType(0);
-            tr.setQueryStartTime(startTimeStr);
-            tr.setQueryEndTime(endTimeStr);
-            // 如果开启忽略已匹配数据，则只查询未匹配和作业数据多余的数据（不忽略未与RFID匹配的数据）
-            // matchStatus = 0: 未匹配
-            // matchStatus = 2: 作业数据多余（没有RFID匹配）
-            // matchStatus = null: 未设置状态（视为未匹配）
-            // 注意：matchStatus = 1: 匹配成功的数据会被忽略
-            // 由于Mapper XML中matchStatus是精确匹配，我们需要特殊处理
-            // 方案：不设置matchStatus，然后在结果中过滤掉已匹配的（matchStatus = 1）
-            List<TakBehaviorRecords> allTakBehaviorRecords = takBehaviorRecordsService.selectTakBehaviorRecordsList(tr);
-            List<TakBehaviorRecords> takBehaviorRecords;
-            if (ignoreMatched) {
-                // 过滤掉已匹配成功的作业数据（matchStatus = 1），保留未匹配和作业数据多余的数据
-                takBehaviorRecords = allTakBehaviorRecords.stream()
-                    .filter(job -> job.getMatchStatus() == null || job.getMatchStatus() == 0 || job.getMatchStatus() == 2)
-                    .collect(Collectors.toList());
-                log.info("过滤已匹配的作业数据后，剩余 {} 条（包含未匹配和作业数据多余的）", takBehaviorRecords.size());
-            } else {
-                takBehaviorRecords = allTakBehaviorRecords;
-            }
-            log.info("获取到作业数据 {} 条", takBehaviorRecords != null ? takBehaviorRecords.size() : 0);
+            log.info("卡ID列表：{}", cardIdList);
             
-            // 获取rfid数据
+            // 获取rfid数据（所有卡ID共享同一批RFID数据）
             log.info("开始获取RFID数据");
             String rfidStartTime = startTimeStr + " 000";
             String rfidEndTime = endTimeStr + " 000";
@@ -153,29 +132,94 @@ public class BALastProcessTask {
                 }
             }
             
+            // 保存RFID数据到数据库（如果需要，只保存一次）
+            if (saveRfidData && reqVehicleCodes != null && !reqVehicleCodes.isEmpty()) {
+                saveRfidDataToDatabase(reqVehicleCodes, rfidStartTime, rfidEndTime);
+            }
+            
+            // 循环处理每个卡ID
+            for (String cardId : cardIdList) {
+                log.info("========== 处理卡ID：{} ==========", cardId);
+                
+                // 1. 处理板车卸车作业数据（type=4L, queryTimeType=0）
+                processJobDataMatch(cardId, 4L, 0, "板车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+                
+                // 2. 处理板车装车作业数据（type=3L, queryTimeType=1）
+                processJobDataMatch(cardId, 3L, 1, "板车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+            }
+            
+            log.info("所有卡ID的数据匹配处理完成");
+        } catch (Exception e) {
+            log.error("数据匹配处理失败", e);
+        }
+    }
+    
+    /**
+     * 处理指定类型和卡ID的作业数据匹配
+     * 
+     * @param cardId 卡ID
+     * @param type 作业类型（3L-板车装车, 4L-板车卸车）
+     * @param queryTimeType 查询时间类型（0-开始时间, 1-结束时间）
+     * @param typeName 类型名称（用于日志）
+     * @param startTimeStr 开始时间字符串
+     * @param endTimeStr 结束时间字符串
+     * @param rfidDataToMatch 待匹配的RFID数据
+     * @param rfidStartTime RFID开始时间
+     * @param rfidEndTime RFID结束时间
+     */
+    private void processJobDataMatch(String cardId, Long type, Integer queryTimeType, String typeName,
+                                     String startTimeStr, String endTimeStr,
+                                     List<ReqVehicleCode> rfidDataToMatch,
+                                     String rfidStartTime, String rfidEndTime) {
+        try {
+            log.info("开始获取{}作业数据，卡ID：{}，时间范围：{} - {}", typeName, cardId, startTimeStr, endTimeStr);
+            
+            TakBehaviorRecords tr = new TakBehaviorRecords();
+            tr.setYardId(yardName);
+            tr.setType(type);
+            tr.setState("完成");
+            tr.setCardId(cardId);
+            tr.setQueryTimeType(queryTimeType);
+            tr.setQueryStartTime(startTimeStr);
+            tr.setQueryEndTime(endTimeStr);
+            
+            // 查询作业数据
+            List<TakBehaviorRecords> allTakBehaviorRecords = takBehaviorRecordsService.selectTakBehaviorRecordsList(tr);
+            List<TakBehaviorRecords> takBehaviorRecords;
+            if (ignoreMatched) {
+                // 过滤掉已匹配成功的作业数据（matchStatus = 1），保留未匹配和作业数据多余的数据
+                takBehaviorRecords = allTakBehaviorRecords.stream()
+                    .filter(job -> job.getMatchStatus() == null || job.getMatchStatus() == 0 || job.getMatchStatus() == 2)
+                    .collect(Collectors.toList());
+                log.info("过滤已匹配的{}作业数据后，剩余 {} 条（包含未匹配和作业数据多余的）", typeName, takBehaviorRecords.size());
+            } else {
+                takBehaviorRecords = allTakBehaviorRecords;
+            }
+            log.info("获取到{}作业数据 {} 条", typeName, takBehaviorRecords != null ? takBehaviorRecords.size() : 0);
+            
+            if (takBehaviorRecords == null || takBehaviorRecords.isEmpty()) {
+                log.info("没有{}作业数据，跳过匹配", typeName);
+                return;
+            }
+            
             // 匹配数据
             Integer timeInterval = getTimeIntervalSeconds();
-            log.info("开始匹配数据，时间间隔配置：{}秒（null表示自动分析）", timeInterval);
+            log.info("开始匹配{}数据，时间间隔配置：{}秒（null表示自动分析）", typeName, timeInterval);
             DataMatchResult matchResult = DataMatchUtils.matchData(takBehaviorRecords, rfidDataToMatch, timeInterval);
             
             // 输出匹配结果统计
-            log.info("匹配完成，统计结果：");
+            log.info("{}匹配完成，统计结果：", typeName);
             log.info("  - 匹配成功：{} 对", matchResult.getMatchedPairs().size());
             log.info("  - 作业数据多余：{} 条", matchResult.getExcessJobData().size());
             log.info("  - RFID数据多余：{} 条", matchResult.getExcessRfidData().size());
             log.info("  - RFID数据重复（被替换）：{} 条", matchResult.getDuplicateRfidData().size());
             
-            // 保存RFID数据到数据库（如果需要）
-            if (saveRfidData && reqVehicleCodes != null && !reqVehicleCodes.isEmpty()) {
-                saveRfidDataToDatabase(reqVehicleCodes, rfidStartTime, rfidEndTime);
-            }
-            
             // 处理匹配结果并更新状态（如果需要）
             processMatchResult(matchResult);
             
-            log.info("数据匹配处理完成");
+            log.info("{}数据匹配处理完成", typeName);
         } catch (Exception e) {
-            log.error("数据匹配处理失败", e);
+            log.error("{}数据匹配处理失败，卡ID：{}", typeName, cardId, e);
         }
     }
     
