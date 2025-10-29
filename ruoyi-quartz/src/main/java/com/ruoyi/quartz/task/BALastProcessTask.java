@@ -1,5 +1,6 @@
 package com.ruoyi.quartz.task;
 
+import com.alibaba.fastjson.JSONObject;
 import com.jwzt.modules.experiment.domain.TakBehaviorRecords;
 import com.jwzt.modules.experiment.domain.TakRfidRecord;
 import com.jwzt.modules.experiment.domain.vo.DataMatchResult;
@@ -32,6 +33,8 @@ public class BALastProcessTask {
     private String yardName;
     @Value("${experiment.base.sw-center.tenant-id}")
     private Long tenantId;
+    @Value("${experiment.base.push-data}")
+    private boolean pushData;
     
     /**
      * 时间间隔配置（秒），如果为null则自动分析
@@ -216,6 +219,20 @@ public class BALastProcessTask {
                 jobData.setMatchStatus(2); // 2-作业数据多余
                 jobData.setMatchTime(now);
                 jobRecordsToUpdate.add(jobData);
+            }
+            if (pushData){
+                // 对于未匹配到RFID的作业数据，执行车辆删除操作
+                if (jobData.getTrackId() != null && !jobData.getTrackId().isEmpty()) {
+                    try {
+                        log.info("未匹配到RFID的作业数据，执行车辆删除操作 - trackId：{}", jobData.getTrackId());
+                        JSONObject result = centerWorkHttpUtils.removeVehicle(jobData.getTrackId());
+                        log.info("推送车辆删除信息：{}", result);
+                    } catch (Exception e) {
+                        log.warn("执行车辆删除操作失败，trackId：{}", jobData.getTrackId(), e);
+                    }
+                } else {
+                    log.warn("作业数据缺少trackId，无法执行车辆删除操作 - ID：{}", jobData.getId());
+                }
             }
         }
         
