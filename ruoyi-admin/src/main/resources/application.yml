@@ -150,6 +150,12 @@ experiment:
     location-card-type: other
     card-type: car
 
+    data-match:
+      time-interval-seconds: null
+      ignore-matched: true
+      update-match-status: true
+      save-rfid-data: true
+
     joysuch:
 #      building-name: 鱼嘴
 #      building-id: 209885

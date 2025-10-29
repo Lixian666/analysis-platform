@@ -88,7 +88,6 @@ public class BALastProcessTask {
         String cardId = "1918B3000561";
         String startTimeStr = "2025-10-16 18:25:00";
         String endTimeStr = "2025-10-16 19:50:00";
-        
         try {
             // 获取作业数据
             log.info("开始获取作业数据，时间范围：{} - {}", startTimeStr, endTimeStr);
@@ -121,19 +120,19 @@ public class BALastProcessTask {
                 List<TakRfidRecord> existingRfidRecords = takRfidRecordService.selectTakRfidRecordByTimeRange(
                     rfidStartTime, rfidEndTime, null); // 查询所有状态的RFID记录
                 if (existingRfidRecords != null && !existingRfidRecords.isEmpty()) {
-                    // 提取已匹配的RFID的thirdId集合
-                    java.util.Set<String> matchedThirdIds = existingRfidRecords.stream()
-                        .filter(r -> r.getMatchStatus() != null && r.getMatchStatus() == 1) // 1-匹配成功
+                    // 提取已匹配的RFID（匹配成功=1）和重复的RFID（重复数据=3）的thirdId集合
+                    java.util.Set<String> excludedThirdIds = existingRfidRecords.stream()
+                        .filter(r -> r.getMatchStatus() != null && (r.getMatchStatus() == 1 || r.getMatchStatus() == 3)) // 1-匹配成功，3-重复数据
                         .map(TakRfidRecord::getThirdId)
                         .filter(thirdId -> thirdId != null && !thirdId.isEmpty())
                         .collect(java.util.stream.Collectors.toSet());
                     
-                    // 过滤掉已匹配的RFID数据
-                    if (!matchedThirdIds.isEmpty()) {
+                    // 过滤掉已匹配和重复的RFID数据
+                    if (!excludedThirdIds.isEmpty()) {
                         rfidDataToMatch = reqVehicleCodes.stream()
-                            .filter(rfid -> !matchedThirdIds.contains(rfid.getThirdId()))
+                            .filter(rfid -> !excludedThirdIds.contains(rfid.getThirdId()))
                             .collect(Collectors.toList());
-                        log.info("过滤已匹配的RFID数据后，剩余 {} 条", rfidDataToMatch.size());
+                        log.info("过滤已匹配和重复的RFID数据后，剩余 {} 条", rfidDataToMatch.size());
                     }
                 }
             }

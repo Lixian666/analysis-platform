@@ -84,6 +84,7 @@ public class DataMatchUtils {
     /**
      * 自动分析时间间隔
      * 通过分析匹配成功的数据对的时间差来确定合适的时间间隔
+     * 优化：利用RECORD_CODE相同特性，同一车辆的多条识别记录只选择时间最接近的
      */
     private static int analyzeTimeInterval(
             List<TakBehaviorRecords> jobDataList,
@@ -94,6 +95,11 @@ public class DataMatchUtils {
             return 300;
         }
         
+        // 按RECORD_CODE分组RFID数据，每组选择最接近作业数据时间的作为代表
+        Map<String, List<ReqVehicleCode>> rfidByRecordCode = rfidDataList.stream()
+            .filter(rfid -> rfid.getRecordCode() != null && !rfid.getRecordCode().isEmpty())
+            .collect(Collectors.groupingBy(ReqVehicleCode::getRecordCode));
+        
         List<Long> timeDiffs = new ArrayList<>();
         
         for (TakBehaviorRecords jobData : jobDataList) {
@@ -102,7 +108,46 @@ public class DataMatchUtils {
             }
             
             long jobTimestamp = jobData.getStartTime().getTime();
-            ReqVehicleCode closestRfid = findClosestRfid(rfidDataList, jobTimestamp);
+            ReqVehicleCode closestRfid = null;
+            long minDiff = Long.MAX_VALUE;
+            
+            // 先遍历按RECORD_CODE分组的数据，每组选择时间最接近的
+            for (List<ReqVehicleCode> sameCodeList : rfidByRecordCode.values()) {
+                for (ReqVehicleCode rfid : sameCodeList) {
+                    if (rfid.getVehicleTime() == null || rfid.getVehicleTime().isEmpty()) {
+                        continue;
+                    }
+                    try {
+                        long rfidTimestamp = parseVehicleTime(rfid.getVehicleTime());
+                        long diff = Math.abs(rfidTimestamp - jobTimestamp);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestRfid = rfid;
+                        }
+                    } catch (Exception e) {
+                        // 忽略解析错误
+                    }
+                }
+            }
+            
+            // 再遍历没有RECORD_CODE的RFID数据
+            for (ReqVehicleCode rfid : rfidDataList) {
+                if (rfid.getRecordCode() == null || rfid.getRecordCode().isEmpty()) {
+                    if (rfid.getVehicleTime() == null || rfid.getVehicleTime().isEmpty()) {
+                        continue;
+                    }
+                    try {
+                        long rfidTimestamp = parseVehicleTime(rfid.getVehicleTime());
+                        long diff = Math.abs(rfidTimestamp - jobTimestamp);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestRfid = rfid;
+                        }
+                    } catch (Exception e) {
+                        // 忽略解析错误
+                    }
+                }
+            }
             
             if (closestRfid != null && closestRfid.getVehicleTime() != null) {
                 try {
@@ -131,34 +176,8 @@ public class DataMatchUtils {
     }
     
     /**
-     * 找到最接近指定时间戳的RFID数据
-     */
-    private static ReqVehicleCode findClosestRfid(List<ReqVehicleCode> rfidDataList, long targetTimestamp) {
-        ReqVehicleCode closest = null;
-        long minDiff = Long.MAX_VALUE;
-        
-        for (ReqVehicleCode rfid : rfidDataList) {
-            if (rfid.getVehicleTime() == null || rfid.getVehicleTime().isEmpty()) {
-                continue;
-            }
-            
-            try {
-                long rfidTimestamp = parseVehicleTime(rfid.getVehicleTime());
-                long diff = Math.abs(rfidTimestamp - targetTimestamp);
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    closest = rfid;
-                }
-            } catch (Exception e) {
-                // 忽略解析错误
-            }
-        }
-        
-        return closest;
-    }
-    
-    /**
      * 使用时间戳进行匹配
+     * 优化：利用RECORD_CODE相同特性，同一车辆的多条识别记录只选择时间最接近的作为代表
      */
     private static void matchDataWithTimestamps(
             List<JobDataWithTimestamp> jobDataList,
@@ -170,6 +189,17 @@ public class DataMatchUtils {
         boolean[] rfidMatched = new boolean[rfidDataList.size()];
         // 用于记录RFID是否在匹配过程中被替换（在同一个时间范围内，有多个RFID候选，但只有最优的被匹配，其他被替换的计入重复队列）
         boolean[] rfidReplaced = new boolean[rfidDataList.size()];
+        // 用于记录相同RECORD_CODE的RFID索引映射（RECORD_CODE -> List<索引>）
+        Map<String, List<Integer>> recordCodeMap = new HashMap<>();
+        
+        // 构建RECORD_CODE索引映射
+        for (int j = 0; j < rfidDataList.size(); j++) {
+            ReqVehicleCode rfidData = rfidDataList.get(j).getRfidData();
+            String recordCode = rfidData.getRecordCode();
+            if (recordCode != null && !recordCode.isEmpty()) {
+                recordCodeMap.computeIfAbsent(recordCode, k -> new ArrayList<>()).add(j);
+            }
+        }
         
         long intervalMillis = timeIntervalSeconds * 1000L;
         
@@ -182,7 +212,7 @@ public class DataMatchUtils {
             JobDataWithTimestamp jobData = jobDataList.get(i);
             long jobTimestamp = jobData.getTimestamp();
             
-            // 找到时间范围内所有可能的RFID数据（按时间差排序）
+            // 找到时间范围内所有可能的RFID数据
             List<RfidCandidate> candidates = new ArrayList<>();
             
             for (int j = 0; j < rfidDataList.size(); j++) {
@@ -199,10 +229,34 @@ public class DataMatchUtils {
                 }
             }
             
-            // 按时间差排序，选择最接近的
             if (!candidates.isEmpty()) {
-                candidates.sort(Comparator.comparingLong(c -> c.diff));
-                RfidCandidate bestCandidate = candidates.get(0);
+                // 按RECORD_CODE分组候选RFID，对于相同RECORD_CODE的，只保留时间最接近的
+                Map<String, RfidCandidate> bestByRecordCode = new HashMap<>();
+                List<RfidCandidate> otherCandidates = new ArrayList<>();
+                
+                for (RfidCandidate candidate : candidates) {
+                    String recordCode = candidate.rfidData.getRfidData().getRecordCode();
+                    if (recordCode != null && !recordCode.isEmpty()) {
+                        // 如果有RECORD_CODE，按RECORD_CODE分组，每组只保留最接近的
+                        RfidCandidate existing = bestByRecordCode.get(recordCode);
+                        if (existing == null || candidate.diff < existing.diff) {
+                            if (existing != null) {
+                                otherCandidates.add(existing);
+                            }
+                            bestByRecordCode.put(recordCode, candidate);
+                        } else {
+                            otherCandidates.add(candidate);
+                        }
+                    } else {
+                        // 没有RECORD_CODE的，直接加入候选
+                        bestByRecordCode.put("NO_RECORD_CODE_" + candidate.index, candidate);
+                    }
+                }
+                
+                // 从优化后的候选中选择时间最接近的
+                List<RfidCandidate> optimizedCandidates = new ArrayList<>(bestByRecordCode.values());
+                optimizedCandidates.sort(Comparator.comparingLong(c -> c.diff));
+                RfidCandidate bestCandidate = optimizedCandidates.get(0);
                 
                 // 标记已匹配
                 result.getMatchedPairs().add(
@@ -210,12 +264,32 @@ public class DataMatchUtils {
                 jobMatched[i] = true;
                 rfidMatched[bestCandidate.index] = true;
                 
-                // 如果存在其他候选RFID（即时间范围内有多个RFID），这些被替换的RFID应计入重复队列
-                if (candidates.size() > 1) {
-                    for (int k = 1; k < candidates.size(); k++) {
-                        int replacedIndex = candidates.get(k).index;
-                        rfidReplaced[replacedIndex] = true;
+                // 处理其他候选：
+                // 1. 相同RECORD_CODE的其他RFID数据（计入重复队列）
+                // 2. 不同RECORD_CODE但在时间范围内的RFID数据（计入重复队列）
+                String matchedRecordCode = bestCandidate.rfidData.getRfidData().getRecordCode();
+                
+                // 标记相同RECORD_CODE的其他RFID为重复
+                if (matchedRecordCode != null && !matchedRecordCode.isEmpty()) {
+                    List<Integer> sameRecordCodeIndices = recordCodeMap.get(matchedRecordCode);
+                    if (sameRecordCodeIndices != null) {
+                        for (Integer idx : sameRecordCodeIndices) {
+                            if (idx != bestCandidate.index && !rfidMatched[idx]) {
+                                rfidReplaced[idx] = true;
+                            }
+                        }
                     }
+                }
+                
+                // 标记其他时间范围内的候选为重复
+                for (int k = 1; k < optimizedCandidates.size(); k++) {
+                    int replacedIndex = optimizedCandidates.get(k).index;
+                    rfidReplaced[replacedIndex] = true;
+                }
+                
+                // 标记没有选中的其他候选为重复
+                for (RfidCandidate other : otherCandidates) {
+                    rfidReplaced[other.index] = true;
                 }
             }
         }
