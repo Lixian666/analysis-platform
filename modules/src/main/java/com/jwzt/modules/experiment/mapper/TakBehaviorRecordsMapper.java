@@ -96,4 +96,12 @@ public interface TakBehaviorRecordsMapper
      * @return 行为记录集合
      */
     List<TakBehaviorRecords> selectTakBehaviorRecordsByCondition(TakBehaviorRecords takBehaviorRecords);
+
+    /**
+     * 批量更新行为记录的匹配状态
+     * 
+     * @param records 行为记录列表
+     * @return 结果
+     */
+    int batchUpdateMatchStatus(List<TakBehaviorRecords> records);
 }

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwzt.modules.experiment.mapper.TakRfidRecordMapper">
+    
+    <resultMap type="com.jwzt.modules.experiment.domain.TakRfidRecord" id="TakRfidRecordResult">
+        <id property="id" column="id" />
+        <result property="recordCode" column="record_code" />
+        <result property="vehicleTime" column="vehicle_time" />
+        <result property="regionId" column="region_id" />
+        <result property="driver" column="driver" />
+        <result property="operateStationId" column="operate_station_id" />
+        <result property="operateStation" column="operate_station" />
+        <result property="rfid" column="rfid" />
+        <result property="thirdId" column="third_id" />
+        <result property="matchStatus" column="match_status" />
+        <result property="matchedJobId" column="matched_job_id" />
+        <result property="matchTime" column="match_time" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectTakRfidRecordVo">
+        select id, record_code, vehicle_time, region_id, driver, operate_station_id, operate_station, 
+               rfid, third_id, match_status, matched_job_id, match_time, create_time, update_time 
+        from tak_rfid_record
+    </sql>
+
+    <select id="selectTakRfidRecordList" parameterType="com.jwzt.modules.experiment.domain.TakRfidRecord" resultMap="TakRfidRecordResult">
+        <include refid="selectTakRfidRecordVo"/>
+        <where>  
+            <if test="recordCode != null and recordCode != ''"> and record_code = #{recordCode}</if>
+            <if test="vehicleTime != null"> and vehicle_time = #{vehicleTime}</if>
+            <if test="regionId != null and regionId != ''"> and region_id = #{regionId}</if>
+            <if test="driver != null and driver != ''"> and driver = #{driver}</if>
+            <if test="rfid != null and rfid != ''"> and rfid = #{rfid}</if>
+            <if test="thirdId != null and thirdId != ''"> and third_id = #{thirdId}</if>
+            <if test="matchStatus != null"> and match_status = #{matchStatus}</if>
+            <if test="matchedJobId != null"> and matched_job_id = #{matchedJobId}</if>
+        </where>
+        order by vehicle_time desc
+    </select>
+    
+    <select id="selectTakRfidRecordById" parameterType="Long" resultMap="TakRfidRecordResult">
+        <include refid="selectTakRfidRecordVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectTakRfidRecordByTimeRange" resultMap="TakRfidRecordResult">
+        <include refid="selectTakRfidRecordVo"/>
+        <where>
+            <if test="startTime != null and startTime != ''">
+                and vehicle_time &gt;= TO_DATE(#{startTime}, 'YYYY-MM-DD HH24:MI:SS')
+            </if>
+            <if test="endTime != null and endTime != ''">
+                and vehicle_time &lt;= TO_DATE(#{endTime}, 'YYYY-MM-DD HH24:MI:SS')
+            </if>
+            <if test="matchStatus != null">
+                and match_status = #{matchStatus}
+            </if>
+        </where>
+        order by vehicle_time asc
+    </select>
+
+    <insert id="insertTakRfidRecord" parameterType="com.jwzt.modules.experiment.domain.TakRfidRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into tak_rfid_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="recordCode != null and recordCode != ''">record_code,</if>
+            <if test="vehicleTime != null">vehicle_time,</if>
+            <if test="regionId != null and regionId != ''">region_id,</if>
+            <if test="driver != null and driver != ''">driver,</if>
+            <if test="operateStationId != null and operateStationId != ''">operate_station_id,</if>
+            <if test="operateStation != null and operateStation != ''">operate_station,</if>
+            <if test="rfid != null and rfid != ''">rfid,</if>
+            <if test="thirdId != null and thirdId != ''">third_id,</if>
+            <if test="matchStatus != null">match_status,</if>
+            <if test="matchedJobId != null">matched_job_id,</if>
+            <if test="matchTime != null">match_time,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="recordCode != null and recordCode != ''">#{recordCode},</if>
+            <if test="vehicleTime != null">#{vehicleTime},</if>
+            <if test="regionId != null and regionId != ''">#{regionId},</if>
+            <if test="driver != null and driver != ''">#{driver},</if>
+            <if test="operateStationId != null and operateStationId != ''">#{operateStationId},</if>
+            <if test="operateStation != null and operateStation != ''">#{operateStation},</if>
+            <if test="rfid != null and rfid != ''">#{rfid},</if>
+            <if test="thirdId != null and thirdId != ''">#{thirdId},</if>
+            <if test="matchStatus != null">#{matchStatus},</if>
+            <if test="matchedJobId != null">#{matchedJobId},</if>
+            <if test="matchTime != null">#{matchTime},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <insert id="batchInsertTakRfidRecord">
+        insert into tak_rfid_record(id, record_code, vehicle_time, region_id, driver, operate_station_id, 
+                                    operate_station, rfid, third_id, match_status, matched_job_id, match_time, 
+                                    create_time, update_time)
+        values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.id}, #{item.recordCode}, #{item.vehicleTime}, #{item.regionId}, #{item.driver}, 
+             #{item.operateStationId}, #{item.operateStation}, #{item.rfid}, #{item.thirdId}, 
+             #{item.matchStatus}, #{item.matchedJobId}, #{item.matchTime}, #{item.createTime}, #{item.updateTime})
+        </foreach>
+    </insert>
+
+    <update id="updateTakRfidRecord" parameterType="com.jwzt.modules.experiment.domain.TakRfidRecord">
+        update tak_rfid_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="recordCode != null and recordCode != ''">record_code = #{recordCode},</if>
+            <if test="vehicleTime != null">vehicle_time = #{vehicleTime},</if>
+            <if test="regionId != null and regionId != ''">region_id = #{regionId},</if>
+            <if test="driver != null and driver != ''">driver = #{driver},</if>
+            <if test="operateStationId != null and operateStationId != ''">operate_station_id = #{operateStationId},</if>
+            <if test="operateStation != null and operateStation != ''">operate_station = #{operateStation},</if>
+            <if test="rfid != null and rfid != ''">rfid = #{rfid},</if>
+            <if test="thirdId != null and thirdId != ''">third_id = #{thirdId},</if>
+            <if test="matchStatus != null">match_status = #{matchStatus},</if>
+            <if test="matchedJobId != null">matched_job_id = #{matchedJobId},</if>
+            <if test="matchTime != null">match_time = #{matchTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <update id="batchUpdateMatchStatus">
+        <foreach collection="list" item="item" separator=";">
+            update tak_rfid_record
+            <trim prefix="SET" suffixOverrides=",">
+                <if test="item.matchStatus != null">match_status = #{item.matchStatus},</if>
+                <if test="item.matchedJobId != null">matched_job_id = #{item.matchedJobId},</if>
+                <if test="item.matchTime != null">match_time = #{item.matchTime},</if>
+                <if test="item.updateTime != null">update_time = #{item.updateTime},</if>
+            </trim>
+            where id = #{item.id}
+        </foreach>
+    </update>
+
+    <delete id="deleteTakRfidRecordById" parameterType="Long">
+        delete from tak_rfid_record where id = #{id}
+    </delete>
+
+    <delete id="deleteTakRfidRecordByIds" parameterType="String">
+        delete from tak_rfid_record where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
+

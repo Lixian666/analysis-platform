@@ -187,6 +187,24 @@ public class TakBehaviorRecordsServiceImpl implements ITakBehaviorRecordsService
     }
 
     /**
+     * 批量更新行为记录的匹配状态
+     * 
+     * @param records 行为记录列表
+     * @return 结果
+     */
+    @Transactional
+    @Override
+    public int batchUpdateMatchStatus(List<TakBehaviorRecords> records) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        for (TakBehaviorRecords record : records) {
+            record.setUpdateTime(DateUtils.getNowDate());
+        }
+        return takBehaviorRecordsMapper.batchUpdateMatchStatus(records);
+    }
+
+    /**
      * 新增行为记录详情信息
      * 
      * @param takBehaviorRecords 行为记录对象

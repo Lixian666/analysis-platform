@@ -92,6 +92,23 @@ public class TakBehaviorRecords extends BaseEntity {
     private String state;
 
     /**
+     * 匹配状态：0-未匹配，1-匹配成功，2-作业数据多余（没有RFID匹配）
+     */
+    @Excel(name = "匹配状态", readConverterExp = "0=未匹配,1=匹配成功,2=作业数据多余")
+    private Integer matchStatus;
+
+    /**
+     * 匹配的RFID记录ID
+     */
+    private Long matchedRfidId;
+
+    /**
+     * 匹配时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date matchTime;
+
+    /**
      * 行为记录详情信息
      */
     private List<TakBehaviorRecordDetail> takBehaviorRecordDetailList;
@@ -205,6 +222,30 @@ public class TakBehaviorRecords extends BaseEntity {
 
     public String getState() {
         return state;
+    }
+
+    public Integer getMatchStatus() {
+        return matchStatus;
+    }
+
+    public void setMatchStatus(Integer matchStatus) {
+        this.matchStatus = matchStatus;
+    }
+
+    public Long getMatchedRfidId() {
+        return matchedRfidId;
+    }
+
+    public void setMatchedRfidId(Long matchedRfidId) {
+        this.matchedRfidId = matchedRfidId;
+    }
+
+    public Date getMatchTime() {
+        return matchTime;
+    }
+
+    public void setMatchTime(Date matchTime) {
+        this.matchTime = matchTime;
     }
 
     public List<TakBehaviorRecordDetail> getTakBehaviorRecordDetailList() {
