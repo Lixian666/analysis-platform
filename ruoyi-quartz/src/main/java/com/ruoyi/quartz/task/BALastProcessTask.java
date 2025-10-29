@@ -85,7 +85,7 @@ public class BALastProcessTask {
     private CenterWorkHttpUtils centerWorkHttpUtils;
 
     /**
-     * 作业数据与rfid数据匹配
+     * 作业数据与rfid数据匹配（板车）
      */
     public void theJobDataMatchesTheRFIDData() {
         // 卡ID列表
@@ -148,6 +148,76 @@ public class BALastProcessTask {
                 processJobDataMatch(cardId, 2L, 1, "板车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
             }
             
+            log.info("所有卡ID的数据匹配处理完成");
+        } catch (Exception e) {
+            log.error("数据匹配处理失败", e);
+        }
+    }
+
+    /**
+     * 作业数据与rfid数据匹配（火车）
+     */
+    public void theJobDataMatchesTheRFIDDataTrain() {
+        // 卡ID列表
+        List<String> cardIdList = new ArrayList<>();
+        cardIdList.add("1918B3000561");
+        // 可以添加更多卡ID
+        // cardIdList.add("其他卡ID");
+
+        String startTimeStr = "2025-10-16 18:25:00";
+        String endTimeStr = "2025-10-16 19:50:00";
+
+        try {
+            log.info("开始数据匹配处理，时间范围：{} - {}", startTimeStr, endTimeStr);
+            log.info("配置信息 - 忽略已匹配：{}, 更新状态：{}, 保存RFID：{}", ignoreMatched, updateMatchStatus, saveRfidData);
+            log.info("卡ID列表：{}", cardIdList);
+
+            // 获取rfid数据（所有卡ID共享同一批RFID数据）
+            log.info("开始获取RFID数据");
+            String rfidStartTime = startTimeStr + " 000";
+            String rfidEndTime = endTimeStr + " 000";
+            List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(tenantId, rfidStartTime, rfidEndTime);
+            log.info("获取到RFID数据 {} 条", reqVehicleCodes != null ? reqVehicleCodes.size() : 0);
+
+            // 如果开启忽略已匹配，从数据库查询已保存的RFID数据并过滤
+            List<ReqVehicleCode> rfidDataToMatch = reqVehicleCodes;
+            if (ignoreMatched && saveRfidData) {
+                List<TakRfidRecord> existingRfidRecords = takRfidRecordService.selectTakRfidRecordByTimeRange(
+                        rfidStartTime, rfidEndTime, null); // 查询所有状态的RFID记录
+                if (existingRfidRecords != null && !existingRfidRecords.isEmpty()) {
+                    // 提取已匹配的RFID（匹配成功=1）和重复的RFID（重复数据=3）的thirdId集合
+                    java.util.Set<String> excludedThirdIds = existingRfidRecords.stream()
+                            .filter(r -> r.getMatchStatus() != null && (r.getMatchStatus() == 1 || r.getMatchStatus() == 3)) // 1-匹配成功，3-重复数据
+                            .map(TakRfidRecord::getThirdId)
+                            .filter(thirdId -> thirdId != null && !thirdId.isEmpty())
+                            .collect(java.util.stream.Collectors.toSet());
+
+                    // 过滤掉已匹配和重复的RFID数据
+                    if (!excludedThirdIds.isEmpty()) {
+                        rfidDataToMatch = reqVehicleCodes.stream()
+                                .filter(rfid -> !excludedThirdIds.contains(rfid.getThirdId()))
+                                .collect(Collectors.toList());
+                        log.info("过滤已匹配和重复的RFID数据后，剩余 {} 条", rfidDataToMatch.size());
+                    }
+                }
+            }
+
+            // 保存RFID数据到数据库（如果需要，只保存一次）
+            if (saveRfidData && reqVehicleCodes != null && !reqVehicleCodes.isEmpty()) {
+                saveRfidDataToDatabase(reqVehicleCodes, rfidStartTime, rfidEndTime);
+            }
+
+            // 循环处理每个卡ID
+            for (String cardId : cardIdList) {
+                log.info("========== 处理卡ID：{} ==========", cardId);
+
+                // 1. 处理板车卸车作业数据（type=4L, queryTimeType=0）
+                processJobDataMatch(cardId, 1L, 0, "火车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+
+                // 2. 处理板车装车作业数据（type=3L, queryTimeType=1）
+                processJobDataMatch(cardId, 0L, 1, "火车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+            }
+
             log.info("所有卡ID的数据匹配处理完成");
         } catch (Exception e) {
             log.error("数据匹配处理失败", e);
