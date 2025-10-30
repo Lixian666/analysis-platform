@@ -124,7 +124,7 @@ public class RealTimeDriverTracker {
     }
 
     /** 事件类型归并：到达业务 与 发运业务 */
-    private enum EventKind { ARRIVED, SEND }
+    private enum EventKind { TRUCK_ARRIVED, TRUCK_SEND, ARRIVED, SEND }
 
     @PostConstruct
     public void init() {
@@ -213,10 +213,15 @@ public class RealTimeDriverTracker {
             }
 
             switch (es.getEvent()) {
+                case TRUCK_ARRIVED_BOARDING:
+                    onStart(cardKey, st, EventKind.TRUCK_ARRIVED, es, win);
+                    break;
+                case TRUCK_ARRIVED_DROPPING:
+                    onEnd(cardKey, st, EventKind.TRUCK_ARRIVED, es, win);
+                    break;
                 case ARRIVED_BOARDING:
                     onStart(cardKey, st, EventKind.ARRIVED, es, win);
                     break;
-
                 case ARRIVED_DROPPING:
                     onEnd(cardKey, st, EventKind.ARRIVED, es, win);
                     break;
@@ -625,7 +630,7 @@ public class RealTimeDriverTracker {
             rec.setStartTime(new Date(sess.startTime));
             rec.setEndTime(new Date(endTime));
             rec.setPointCount((long) detailList.size());
-            rec.setType(sess.kind == EventKind.ARRIVED ? 0L : 1L); // 复用你原有 type 语义
+            rec.setType(mapEventKindToType(sess.kind));
             rec.setDuration(DateTimeUtils.calculateTimeDifference(sess.startTime, endTime));
             rec.setState("完成");
             rec.setTakBehaviorRecordDetailList(detailList);
@@ -641,6 +646,16 @@ public class RealTimeDriverTracker {
             System.err.println("异常日志 ❌ persistSession 异常: " + e.getMessage());
             e.printStackTrace();
             throw e; // 重新抛出异常，让上层 catch 捕获
+        }
+    }
+
+    private long mapEventKindToType(EventKind kind) {
+        switch (kind) {
+            case ARRIVED:   return 0L;
+            case SEND:      return 1L;
+            case TRUCK_ARRIVED:   return 2L;
+            case TRUCK_SEND: return 3L;
+            default:        return 9L; // 默认值
         }
     }
 

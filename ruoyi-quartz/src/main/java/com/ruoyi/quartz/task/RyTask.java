@@ -1097,7 +1097,62 @@ public class RyTask
             System.out.println("✅ 批处理任务完成");
         }
     }
+    /**
+     * 实时任务测试有参（历史数据模拟）板车 单线程
+     */
+    public void realDriverTrackerZQTruckTestParams(String cardId, String startTimeStr, String endTimeStr){
+        // 获取独立的 tracker 实例
+        RealTimeDriverTracker tracker = applicationContext.getBean(RealTimeDriverTracker.class);
 
+        try {
+            String data = baseConfig.LOCATION_CARD_TYPE;
+            String date = "未获取到日期";
+            String buildId = baseConfig.getJoysuch().getBuildingId();
+//            String cardId = "1918B3000561";
+//            String startTimeStr = "2025-10-29 18:39:00";
+//            String endTimeStr = "2025-10-29 19:50:00";
+//            String startTimeStr = "2025-10-16 18:25:00";
+//            String endTimeStr = "2025-10-16 19:50:00";
+            LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
+            LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+//            List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
+            JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
+            JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
+            JSONArray points = jsonObject.getJSONArray("data");
+            JSONArray tagData = tagJsonObject.getJSONArray("data");
+            List<LocationPoint> LocationPoints = new ArrayList<>();
+            for (int i = 0; i < points.size(); i++){
+                JSONObject js = (JSONObject) points.get(i);
+                JSONArray plist = js.getJSONArray("points");
+                for (int j = 0; j < plist.size(); j++){
+                    LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                    if (date.equals("未获取到日期")){
+                        date = DateTimeUtils.timestampToDateStr(Long.parseLong(point.getTime()));
+                    }
+                    LocationPoint point1 = new LocationPoint(
+                            cardId,
+                            point.getLongitude(),
+                            point.getLatitude(),
+                            DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                            Long.parseLong(point.getTime()));
+                    LocationPoints.add(point1);
+                }
+            }
+            LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints,tagData);
+            if (LocationPoints.size() > 0){
+//            int batchSize = 10;
+//            for (int i = 0; i < LocationPoints.size(); i += batchSize) {
+//                int end = Math.min(i + batchSize, LocationPoints.size());
+//                List<LocationPoint> batch = LocationPoints.subList(i, end);
+//                tracker.ingest(batch);
+//            }
+                tracker.replayHistorical(LocationPoints, RealTimeDriverTracker.VehicleType.TRUCK);
+            }
+        } finally {
+            // 不需要手动清理，tracker 实例会被 GC 回收
+            System.out.println("✅ 批处理任务完成");
+        }
+    }
     /**
      * 实时任务测试（历史数据模拟）板车 单线程
      */
