@@ -54,10 +54,10 @@ spring:
     basename: i18n/messages
   profiles:
     # 默认开发环境
-#    active: druid
+    #    active: druid
     active: dameng
     # 数据库类型
-#    dbType: mysql
+    #    dbType: mysql
     dbType: dameng
   # 文件上传
   servlet:
@@ -137,13 +137,14 @@ xss:
 
 # 行为分析配置
 experiment:
+  platform-dir: /Users/lixian/Cache/Platform
   base:
     stay-verify: false
     ranging-verify: true
     push-data: false
     output-shp: false
-    output-shp-path: /Users/lixian/Cache/Platform/PlatformData/output
-#    delete-datetime: 2025-10-20 09:00:00
+    output-shp-path: ${experiment.platform-dir}/PlatformData/output
+    #    delete-datetime: 2025-10-20 09:00:00
     delete-datetime:
 #    yard-name: yuzui
     yard-name: dongjiazhen
@@ -205,7 +206,7 @@ experiment:
       remove-vehicle: /api/cardAnalysis/removeAssignmentRecord
   file-path:
     yard-name: ${experiment.base.yard-name}
-    base-path: /Users/lixian/Cache/Platform/PlatformData/shp
+    base-path: ${experiment.platform-dir}/PlatformData/shp
     yards:
       dongjiazhen:
         driving:
