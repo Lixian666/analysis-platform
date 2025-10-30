@@ -45,6 +45,7 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
     private LocationPoint curPoint = null;
     private EventState lastEventState = new EventState();
     private EventState sendInLastEventState = null;
+    private int parkingTags = 0;
     
     @Data
     private static class TheUWBRecordsTruck {
@@ -103,13 +104,18 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 // 检测板车上车事件（离开RFID范围就算上车）
                 if (lastEvent == BoardingDetector.Event.NONE) {
                     System.out.println("⚠️ 检测到车辆已进入板车卸车上车区域");
-                    lastEvent = BoardingDetector.Event.ARRIVED_BOARDING;
-                    currentEvent = BoardingDetector.Event.ARRIVED_BOARDING;
+                    lastEvent = BoardingDetector.Event.TRUCK_ARRIVED_BOARDING;
+                    currentEvent = BoardingDetector.Event.TRUCK_ARRIVED_BOARDING;
                     sendInLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                     lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                     return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
                 }
             }
+        }
+        if (currentPoint.getState() == MovementAnalyzer.MovementState.STOPPED){
+            parkingTags++;
+        } else {
+            parkingTags = 0;
         }
         
         // 检测板车卸车下车事件
@@ -150,7 +156,8 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
             }
             
             // 判断状态标签数量是否满足板车区域下车条件
-            if (arrivedFirstTag >= FilterConfig.ARRIVED_BEFORE_UP_STATE_SIZE
+            if (parkingTags >= FilterConfig.CONTINUED_STOPPED_STATE_SIZE
+                    && arrivedFirstTag >= FilterConfig.ARRIVED_BEFORE_UP_STATE_SIZE
                     && arrivedLastTag >= FilterConfig.ARRIVED_AFTER_UP_STATE_SIZE
                     && arrivedStoppedTag >= FilterConfig.STOPPED_STATE_SIZE
                     && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE) {
@@ -158,7 +165,7 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 resetInternalState();
                 curPoint = currentPoint;
                 lastEvent = BoardingDetector.Event.NONE;
-                currentEvent = BoardingDetector.Event.ARRIVED_DROPPING;
+                currentEvent = BoardingDetector.Event.TRUCK_ARRIVED_DROPPING;
                 lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                 sendInLastEventState = null;
                 return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());

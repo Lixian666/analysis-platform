@@ -60,10 +60,14 @@ public class BoardingDetector {
 
     public enum Event {
         NONE,
-        ARRIVED_BOARDING,           // 到达上车
-        ARRIVED_DROPPING,           // 到达下车
-        SEND_BOARDING,           // 发运上车
-        SEND_DROPPING,           // 发运下车
+        TRUCK_ARRIVED_BOARDING,     // 板车到达上车
+        TRUCK_ARRIVED_DROPPING,     // 板车到达下车
+        TRUCK_SEND_BOARDING,        // 板车出发上车
+        TRUCK_SEND_DROPPING,       // 板车出发下车
+        ARRIVED_BOARDING,           // 火车到达上车
+        ARRIVED_DROPPING,           // 火车到达下车
+        SEND_BOARDING,           // 火车发运上车
+        SEND_DROPPING,           // 火车发运下车
     }
 
     private List<MovementAnalyzer.MovementState> lastStates = new ArrayList<>();
