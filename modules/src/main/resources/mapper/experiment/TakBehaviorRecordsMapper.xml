@@ -20,6 +20,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="matchStatus"    column="match_status"    />
         <result property="matchedRfidId"    column="matched_rfid_id"    />
         <result property="matchTime"    column="match_time"    />
+        <result property="beaconName" column="beacon_name" />
+        <result property="rfidName" column="rfid_name" />
+        <result property="area" column="area" />
     </resultMap>
 
     <resultMap type="com.jwzt.modules.experiment.domain.TakBehaviorRecords" id="TakBehaviorRecordsUserResult">
@@ -150,6 +153,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="matchStatus != null">match_status,</if>
             <if test="matchedRfidId != null">matched_rfid_id,</if>
             <if test="matchTime != null">match_time,</if>
+            <if test="beaconName != null">beacon_name,</if>
+            <if test="rfidName != null">rfid_name,</if>
+            <if test="area != null">area,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null and cardId != ''">#{id},</if>
@@ -167,6 +173,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="matchStatus != null">#{matchStatus},</if>
             <if test="matchedRfidId != null">#{matchedRfidId},</if>
             <if test="matchTime != null">#{matchTime},</if>
+            <if test="beaconName != null">#{beaconName},</if>
+            <if test="rfidName != null">#{rfidName},</if>
+            <if test="area != null">#{area},</if>
          </trim>
     </insert>
 
@@ -187,6 +196,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="matchStatus != null">match_status = #{matchStatus},</if>
             <if test="matchedRfidId != null">matched_rfid_id = #{matchedRfidId},</if>
             <if test="matchTime != null">match_time = #{matchTime},</if>
+            <if test="beaconName != null">beacon_name = #{beaconName},</if>
+            <if test="rfidName != null">beacon_rfid_name = #{rfidName},</if>
+            <if test="area != null">beacon_area = #{area},</if>
         </trim>
         where id = #{id}
     </update>
