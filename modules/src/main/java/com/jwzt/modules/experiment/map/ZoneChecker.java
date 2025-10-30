@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
+import org.geotools.data.simple.SimpleFeatureIterator;
 
 /**
  * 区域检查器
@@ -21,7 +22,7 @@ public class ZoneChecker {
     @Autowired
     private FilePathConfig filePathConfig;
     private String yard; // 当前货场，比如 minhang、yuzui
-    private final Map<String, List<Geometry>> zoneGeometries = new HashMap<>();
+    private final Map<String, List<ZoneFeature>> zoneGeometries = new HashMap<>();
 
     public ZoneChecker() {
     }
@@ -61,12 +62,36 @@ public class ZoneChecker {
      * 加载区域
      */
     private void loadZoneGeometries() {
-        List<String> types = Arrays.asList("driving", "parking2road", "huoyunxin",
-                "parking", "road", "huoyunxinzyt", "huoyunxinjc", "banche");
-
+        List<String> types = Arrays.asList("driving", "parking2road", "kuqu", "huoyunxin",
+                "parking", "road", "huoyunxinzyt", "huoyunxinjc", "banche", "zikuqu");
         for (String type : types) {
             List<String> paths = filePathConfig.getZonePaths(yard, type);
-            zoneGeometries.put(type, GeoUtils.loadGeometries(paths));
+            List<ZoneFeature> featureList = new ArrayList<>();
+            for (String path : paths) {
+                try {
+                    org.geotools.data.shapefile.ShapefileDataStore store = (org.geotools.data.shapefile.ShapefileDataStore) org.geotools.data.FileDataStoreFinder.getDataStore(new java.io.File(path));
+                    if (store == null) continue;
+                    org.geotools.data.simple.SimpleFeatureSource featureSource = store.getFeatureSource();
+                    try (SimpleFeatureIterator features = featureSource.getFeatures().features()) {
+                        while (features.hasNext()) {
+                            org.opengis.feature.simple.SimpleFeature feature = features.next();
+                            Object geomObj = feature.getDefaultGeometry();
+                            if (geomObj instanceof Geometry) {
+                                Map<String, Object> attrs = new HashMap<>();
+                                for (org.opengis.feature.Property p : feature.getProperties()) {
+                                    if (p.getName() != null) attrs.put(p.getName().toString(), p.getValue());
+                                }
+                                featureList.add(new ZoneFeature((Geometry) geomObj, attrs));
+                            }
+                        }
+                    }
+                    store.dispose();
+                } catch(Exception e) {
+                    System.err.println("读取shp属性失败：" + path);
+                    e.printStackTrace();
+                }
+            }
+            zoneGeometries.put(type, featureList);
         }
     }
 //    private void loadZoneGeometries() {
@@ -80,9 +105,16 @@ public class ZoneChecker {
 //    }
 
     public boolean isInZone(LocationPoint p, String type) {
-        return GeoUtils.isInsideGeometry(new Coordinate(p.getLongitude(), p.getLatitude()),
-                zoneGeometries.getOrDefault(type, Collections.emptyList()));
+        List<ZoneFeature> features = zoneGeometries.getOrDefault(type, Collections.emptyList());
+        org.locationtech.jts.geom.Point point = new org.locationtech.jts.geom.GeometryFactory().createPoint(new org.locationtech.jts.geom.Coordinate(p.getLongitude(), p.getLatitude()));
+        for (ZoneFeature feature : features) {
+            if (feature.getGeometry().covers(point)) {
+                return true;
+            }
+        }
+        return false;
     }
+    
     /**
      * 是否在货场驾驶区域
      */
@@ -147,52 +179,42 @@ public class ZoneChecker {
 //        return GeoUtils.isInsideGeometry(new Coordinate(p.getLongitude(), p.getLatitude()), zoneGeometries.get("huoyunxinjc"));
     }
 
-//    public ZoneChecker(String yard) {
-//        this.yard = yard;
-//    }
-//
-//    /**
-//     * 是否在货场驾驶区域
-//     */
-//    public boolean isInDrivingZone(LocationPoint p) {
-//        Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
-//        List<String> shpPaths = FilePathConfig.getDrivingZonePaths(yard);
-//        return GeoUtils.isInsideShp(newCoordinate, shpPaths);
-//    }
-//
-//    /**
-//     * 是否在货场停车区域
-//     */
-//    public boolean isInParking2RoadZone(LocationPoint p) {
-//        Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
-//        List<String> shpPaths = FilePathConfig.getParking2RoadZonePaths(yard);
-//        return GeoUtils.isInsideShp(newCoordinate, shpPaths);
-//    }
-//
-//    /**
-//     * 是否在货场货运线区域
-//     */
-//    public boolean isInHuoyunxinZone(LocationPoint p) {
-//        Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
-//        List<String> shpPaths = FilePathConfig.getHuoyunxinZonePaths(yard);
-//        return GeoUtils.isInsideShp(newCoordinate, shpPaths, 0.0);
-//    }
-//
-//    /**
-//     * 是否在货场停车区域
-//     */
-//    public boolean isInParkingZone(LocationPoint p) {
-//        Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
-//        List<String> shpPaths = FilePathConfig.getParkingZonePaths(yard);
-//        return GeoUtils.isInsideShp(newCoordinate, shpPaths);
-//    }
-//
-//    /**
-//     * 是否在货场道路区域
-//     */
-//    public boolean isInRoadZone(LocationPoint p) {
-//        Coordinate newCoordinate = new Coordinate(p.getLongitude(), p.getLatitude());
-//        List<String> shpPaths = FilePathConfig.getRoadZonePaths(yard);
-//        return GeoUtils.isInsideShp(newCoordinate, shpPaths);
-//    }
+    /**
+     * 根据点坐标和区域类型，返回命中区域的属性字段值
+     * @param p 点
+     * @param type 区域类型（如kuqu、zikuqu等）
+     * @param fieldName 区块属性字段名（如name/zname等）
+     * @return 字段值，未命中返回null
+     */
+    public String getZoneFieldByPoint(LocationPoint p, String type, String fieldName) {
+        List<ZoneFeature> list = zoneGeometries.get(type);
+        if (list == null) return null;
+        org.locationtech.jts.geom.Point point = new org.locationtech.jts.geom.GeometryFactory().createPoint(new org.locationtech.jts.geom.Coordinate(p.getLongitude(), p.getLatitude()));
+        for (ZoneFeature feature : list) {
+            if (feature.getGeometry().covers(point)) {
+                Object val = feature.getAttributes().get(fieldName);
+                return val == null ? null : val.toString();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 区域面及属性
+     */
+    public static class ZoneFeature {
+        private final Geometry geometry;
+        private final Map<String, Object> attributes;
+
+        public ZoneFeature(Geometry geometry, Map<String, Object> attributes) {
+            this.geometry = geometry;
+            this.attributes = attributes;
+        }
+        public Geometry getGeometry() {
+            return geometry;
+        }
+        public Map<String, Object> getAttributes() {
+            return attributes;
+        }
+    }
 }
