@@ -128,6 +128,13 @@ public class TakBehaviorRecords extends BaseEntity {
      */
     private String queryEndTime;
 
+    /** 会话最常命中的信标名称 */
+    private String beaconName;
+    /** 会话最常命中的信标RFID名称 */
+    private String rfidName;
+    /** 会话最常命中的信标区域 */
+    private String area;
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -279,6 +286,13 @@ public class TakBehaviorRecords extends BaseEntity {
     public void setQueryTimeType(Integer queryTimeType) {
         this.queryTimeType = queryTimeType;
     }
+
+    public String getBeaconName() { return beaconName; }
+    public void setBeaconName(String beaconName) { this.beaconName = beaconName; }
+    public String getBeaconRfidName() { return rfidName; }
+    public void setBeaconRfidName(String beaconRfidName) { this.rfidName = beaconRfidName; }
+    public String getBeaconArea() { return area; }
+    public void setBeaconArea(String beaconArea) { this.area = beaconArea; }
 
     @Override
     public String toString() {

@@ -120,6 +120,9 @@ public class RealTimeDriverTracker {
         public double endLongitude;
         public double endLatitude;
         EventKind kind; // ARRIVED 或 SEND
+        public String beaconName; // 最常命中的信标名称
+        public String rfidName; // 最常命中的信标RFID名称
+        public String area; // 最常命中的信标区域
         public final List<LocationPoint> points = new ArrayList<>();
     }
 
@@ -292,6 +295,11 @@ public class RealTimeDriverTracker {
         try {
             st.activeSession.endLongitude = sessionPoints.get(sessionPoints.size() - 1).getLongitude();
             st.activeSession.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
+            // -------信标统计结果写入会话对象---------
+            st.activeSession.beaconName = es.getZoneName();
+            st.activeSession.rfidName = es.getZoneNameRfid();
+            st.activeSession.area = es.getZone();
+            // --------------------------------------
             persistSession(st.activeSession, es.getTimestamp(), sessionPoints);
             dataSender.inParkPush(st.activeSession, vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR));
         } catch (Exception e) {
@@ -633,6 +641,9 @@ public class RealTimeDriverTracker {
             rec.setType(mapEventKindToType(sess.kind));
             rec.setDuration(DateTimeUtils.calculateTimeDifference(sess.startTime, endTime));
             rec.setState("完成");
+            rec.setBeaconName(sess.beaconName);
+            rec.setBeaconRfidName(sess.rfidName);
+            rec.setBeaconArea(sess.area);
             rec.setTakBehaviorRecordDetailList(detailList);
 
             // 3) 入库（注意：实时服务不主动清表）
