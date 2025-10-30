@@ -262,4 +262,42 @@ public class TagAndBeaconDistanceDeterminer {
 
         return true;
     }
+
+    /**
+     * 获取所有距离判定成功的基站详细信息列表（可含重复，用于后续统计）
+     * @param points 打点列表
+     * @param buildId 建筑ID
+     * @param type 类型
+     * @param location 位置
+     * @param area 区域
+     * @return 被判定距离合格的beacon列表（可含重复，便于统计出现频率）
+     */
+    public List<TakBeaconInfo> getBeaconsInRangeForPoints(List<LocationPoint> points, String buildId, String type, String location, String area) {
+        List<TakBeaconInfo> result = new ArrayList<>();
+        List<TakBeaconInfo> allBeacons = getBeaconsByBuildId(buildId);
+        if (allBeacons == null || allBeacons.isEmpty()) {
+            return result;
+        }
+        List<TakBeaconInfo> matchedBeacons = allBeacons.stream()
+                .filter(b -> (type == null || type.equals(b.getType())) &&
+                        (location == null || location.equals(b.getLocation())) &&
+                        (area == null || area.equals(b.getArea())))
+                .collect(Collectors.toList());
+        if (matchedBeacons.isEmpty()) {
+            return result;
+        }
+        for (LocationPoint p : points) {
+            if (p.getTagScanUwbData() == null || p.getTagScanUwbData().getUwbBeaconList().isEmpty()) {
+                continue;
+            }
+            for (com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData.BltScanUwbBeacon beacon : p.getTagScanUwbData().getUwbBeaconList()) {
+                for (TakBeaconInfo b : matchedBeacons) {
+                    if (beacon.getUwbBeaconMac().equals(b.getBeaconId()) && beacon.getDistance() < SENSING_DISTANCE_THRESHOLD) {
+                        result.add(b);
+                    }
+                }
+            }
+        }
+        return result;
+    }
 }

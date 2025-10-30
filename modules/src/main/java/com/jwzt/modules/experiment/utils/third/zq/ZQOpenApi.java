@@ -166,7 +166,8 @@ public class ZQOpenApi {
             put("mac", cardId);
             put("startTime", DateTimeUtils.convertToTimestamp(startTime));
             put("endTime", DateTimeUtils.convertToTimestamp(endTime));
-            put("locationType", "real");
+//            put("locationType", "real");
+            put("locationType", "gps");
         }});
         return sendPost(baseConfig.getJoysuch().getApi().getPoints(), headers, jsonBody);
     }

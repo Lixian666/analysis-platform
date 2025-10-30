@@ -15,8 +15,10 @@ import com.jwzt.modules.experiment.strategy.LoadingUnloadingStrategy;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
 import com.jwzt.modules.experiment.utils.third.manage.DataSender;
+import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer;
 import com.jwzt.modules.experiment.vo.EventState;
 import com.ruoyi.common.utils.uuid.IdUtils;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
@@ -56,6 +58,9 @@ public class RealTimeDriverTracker {
     
     @Autowired
     private LoadingStrategyFactory loadingStrategyFactory;
+    
+    @Autowired
+    private TagAndBeaconDistanceDeterminer tagBeacon;
     
     private final LocationSmoother smoother = new LocationSmoother();
 
@@ -295,10 +300,13 @@ public class RealTimeDriverTracker {
         try {
             st.activeSession.endLongitude = sessionPoints.get(sessionPoints.size() - 1).getLongitude();
             st.activeSession.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
-            // -------信标统计结果写入会话对象---------
-            st.activeSession.beaconName = es.getZoneName();
-            st.activeSession.rfidName = es.getZoneNameRfid();
-            st.activeSession.area = es.getZone();
+            
+            // -------统计整个会话期间出现最多的信标信息---------
+            VehicleType vehicleType = vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR);
+            BeaconStatistics beaconStats = getMostFrequentBeaconInSession(st.activeSession.points, vehicleType);
+            st.activeSession.beaconName = beaconStats.zoneName;
+            st.activeSession.rfidName = beaconStats.zoneNameRfid;
+            st.activeSession.area = beaconStats.zone;
             // --------------------------------------
             persistSession(st.activeSession, es.getTimestamp(), sessionPoints);
             dataSender.inParkPush(st.activeSession, vehicleTypeByCard.getOrDefault(cardKey, VehicleType.CAR));
@@ -538,7 +546,6 @@ public class RealTimeDriverTracker {
             sess.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
             sess.kind = EventKind.SEND;
             sess.points.addAll(sessionPoints);
-
             persistSession(sess, dropTs, sessionPoints);
             dataSender.outParkPush(sess, vehicleType);
             for (LocationPoint p : sessionPoints){
@@ -823,5 +830,113 @@ public class RealTimeDriverTracker {
             }
             return loadingStrategyFactory.getStrategy(strategyType);
         });
+    }
+    
+    /**
+     * 内部类：用于存储信标统计结果
+     */
+    @Data
+    private static class BeaconStatistics {
+        String zoneName;
+        String zoneNameRfid;
+        String zone;
+    }
+    
+    /**
+     * 内部类：用于统计信标出现次数
+     */
+    private static class BeaconCountInfo {
+        TakBeaconInfo beacon;
+        int count;
+    }
+    
+    /**
+     * 获取会话期间出现次数最多的信标信息
+     * @param sessionPoints 会话期间的所有轨迹点
+     * @param vehicleType 车辆类型
+     * @return 信标统计结果
+     */
+    private BeaconStatistics getMostFrequentBeaconInSession(List<LocationPoint> sessionPoints, VehicleType vehicleType) {
+        BeaconStatistics stats = new BeaconStatistics();
+        
+        if (sessionPoints == null || sessionPoints.isEmpty()) {
+            System.out.println("⚠️ 会话点为空，无法统计信标信息");
+            return stats;
+        }
+        
+        // 根据车辆类型确定信标类型和查询参数
+        String beaconType;
+        String location;
+        String area;
+        
+        if (vehicleType == VehicleType.TRUCK) {
+            // 板车作业区
+            beaconType = "板车作业区";
+            location = null;
+            area = null;
+        } else {
+            // 火车作业区（货运线作业台）
+            beaconType = "货运线作业台";
+            location = "2号线";
+            area = null; // 不限制区域，A和B都统计
+        }
+        
+        // 获取所有距离判定成功的信标列表（可包含重复）
+        List<TakBeaconInfo> beaconsInRange = tagBeacon.getBeaconsInRangeForPoints(
+            sessionPoints,
+            baseConfig.getJoysuch().getBuildingId(),
+            beaconType,
+            location,
+            area
+        );
+        
+        if (beaconsInRange == null || beaconsInRange.isEmpty()) {
+            System.out.println("⚠️ 会话期间未找到距离判定成功的信标信息（车辆类型：" + vehicleType + "）");
+            return stats;
+        }
+        
+        // 统计每个信标出现的次数（使用beaconId作为唯一标识）
+        Map<String, BeaconCountInfo> beaconCountMap = new HashMap<>();
+        
+        for (TakBeaconInfo beacon : beaconsInRange) {
+            String beaconId = beacon.getBeaconId();
+            if (beaconId != null) {
+                BeaconCountInfo countInfo = beaconCountMap.get(beaconId);
+                if (countInfo == null) {
+                    countInfo = new BeaconCountInfo();
+                    countInfo.beacon = beacon;
+                    countInfo.count = 0;
+                    beaconCountMap.put(beaconId, countInfo);
+                }
+                countInfo.count++;
+            }
+        }
+        
+        // 找出出现次数最多的信标
+        BeaconCountInfo maxCountInfo = null;
+        for (BeaconCountInfo countInfo : beaconCountMap.values()) {
+            if (maxCountInfo == null || countInfo.count > maxCountInfo.count) {
+                maxCountInfo = countInfo;
+            }
+        }
+        
+        if (maxCountInfo != null && maxCountInfo.beacon != null) {
+            TakBeaconInfo mostFrequentBeacon = maxCountInfo.beacon;
+            stats.zoneName = mostFrequentBeacon.getName();
+            stats.zoneNameRfid = mostFrequentBeacon.getRfidName();
+            stats.zone = mostFrequentBeacon.getArea();
+            
+            System.out.println("✅ 会话期间找到出现次数最多的信标：" + 
+                "name=" + stats.zoneName + 
+                ", rfidName=" + stats.zoneNameRfid + 
+                ", area=" + stats.zone + 
+                ", 出现次数=" + maxCountInfo.count +
+                ", 总点数=" + sessionPoints.size() +
+                ", 车辆类型=" + vehicleType);
+        } else {
+            System.out.println("⚠️ 会话期间未能确定出现次数最多的信标");
+        }
+        
+        return stats;
     }
 }
