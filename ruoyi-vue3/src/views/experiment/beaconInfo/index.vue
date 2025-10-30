@@ -9,6 +9,14 @@
             @keyup.enter="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="RFID名称" prop="rfidName">
+        <el-input
+            v-model="queryParams.rfidName"
+            placeholder="请输入RFID名称"
+            clearable
+            @keyup.enter="handleQuery"
+        />
+      </el-form-item>
       <el-form-item label="类型" prop="type">
         <!-- 修改此处：给 el-select 添加宽度样式 -->
         <el-select v-model="queryParams.type" placeholder="请选择类型" clearable :style="{width: '200px'}">
@@ -121,6 +129,7 @@
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column type="index" label="序号" align="center" width="50" />
       <el-table-column label="名称" align="center" prop="name" />
+      <el-table-column label="RFID名称" align="center" prop="rfidName" />
       <el-table-column label="类型" align="center" prop="type">
         <template #default="scope">
           <dict-tag :options="tracker_beacon_type" :value="scope.row.type"/>
@@ -163,6 +172,9 @@
       <el-form ref="beaconInfoRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入名称" />
+        </el-form-item>
+        <el-form-item label="RFID名称" prop="rfidName">
+          <el-input v-model="form.rfidName" placeholder="请输入RFID名称" />
         </el-form-item>
         <el-form-item label="类型" prop="type">
           <el-select v-model="form.type" placeholder="请选择类型">
@@ -295,6 +307,7 @@ const areaOptions = ref(["A","B","C","D","E","F"]);
 const data = reactive({
   form: {
     name: null,
+    rfidName: null,
     type: null,
     area: null,
     buildName: null,
@@ -307,6 +320,7 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     name: null,
+    rfidName: null,
     type: null,
     area: null,
     buildName: null,
@@ -320,6 +334,9 @@ const data = reactive({
   rules: {
     name: [
       { required: true, message: "名称不能为空", trigger: "blur" }
+    ],
+    rfidName: [
+      { required: false, message: "", trigger: "blur" }
     ],
     type: [
       { required: true, message: "类型不能为空", trigger: "change" }
@@ -393,6 +410,7 @@ function reset() {
   form.value = {
     id: null,
     name: null,
+    rfidName: null,
     type: null,
     area: null,
     buildName: null,
