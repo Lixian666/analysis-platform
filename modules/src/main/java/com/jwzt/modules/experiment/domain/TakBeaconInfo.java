@@ -50,6 +50,10 @@ public class TakBeaconInfo extends BaseEntity
     @Excel(name = "状态，0-正常，1-异常")
     private Integer status;
 
+    /** RFID名称 */
+    @Excel(name = "RFID名称")
+    private String rfidName;
+
     public TakBeaconInfo(String buildId, String type, String location, String area) {
         super();
     }
@@ -134,6 +138,9 @@ public class TakBeaconInfo extends BaseEntity
         return status;
     }
 
+    public void setRfidName(String rfidName) { this.rfidName = rfidName; }
+    public String getRfidName() { return rfidName; }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -146,6 +153,7 @@ public class TakBeaconInfo extends BaseEntity
             .append("beaconId", getBeaconId())
             .append("location", getLocation())
             .append("status", getStatus())
+            .append("rfidName", getRfidName())
             .append("createTime", getCreateTime())
             .append("updateTime", getUpdateTime())
             .toString();
