@@ -8,7 +8,7 @@ public class FilterConfig {
 
     // 行为识别配置
         // 感应距离配置
-        public static final double SENSING_DISTANCE_THRESHOLD = 1.5 * 10000;  // 靠近感应距离阈值（毫米）
+        public static final double SENSING_DISTANCE_THRESHOLD = 1.0 * 10000;  // 靠近感应距离阈值（毫米）
         public static final int SEND_AFTER_DOWN_UWB_SIZE = 2;
 
         // 速度配置
@@ -34,7 +34,7 @@ public class FilterConfig {
 
     public static final int CONTINUED_STOPPED_STATE_SIZE = 3;
 
-    public static final int NUMBER = 4;
+    public static final int NUMBER = 3;
     public static final int NUMBER1 = 1;
 
     public static final int ARRIVED_BEFORE_UP_STATE_SIZE = NUMBER;        // 到达上车识别判定标签数
@@ -47,7 +47,7 @@ public class FilterConfig {
     public static final int SEND_BEFORE_DOWN_STATE_SIZE = NUMBER;        // 发运上车识别判定标签数
     public static final int SEND_AFTER_DOWN_STATE_SIZE = NUMBER;     // 发运下车识别判定标签数
 
-    public static final int STOPPED_STATE_SIZE = 3;       // 停车识别判定标签数
+    public static final int STOPPED_STATE_SIZE = 1;       // 停车识别判定标签数
     public static final int DRIVING_STATE_SIZE = 2;       // 行驶识别判定标签数
 
     // 停留检测配置

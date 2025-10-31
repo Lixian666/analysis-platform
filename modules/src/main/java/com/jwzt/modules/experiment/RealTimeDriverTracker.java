@@ -920,7 +920,7 @@ public class RealTimeDriverTracker {
             }
         }
         
-        if (maxCountInfo != null && maxCountInfo.beacon != null) {
+        if (maxCountInfo != null && maxCountInfo.count >= 1 && maxCountInfo.beacon != null) {
             TakBeaconInfo mostFrequentBeacon = maxCountInfo.beacon;
             stats.zoneName = mostFrequentBeacon.getName();
             stats.zoneNameRfid = mostFrequentBeacon.getRfidName();

@@ -97,10 +97,9 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
             return new EventState(currentEvent, currentPoint.getTimestamp(), 1);
         }
         
-        // 监测板车上车事件
+        // 监测板车卸车上车事件
         if (sendInLastEventState == null && theUWBRecordsTruck.theUWBSendDropsRFID >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE) {
-            // 检测板车卸车事件
-            if (theLastTenPointsNotInRFIDCount <= 0) {
+            if (theLastTenPointsNotInRFIDCount <= 3) {
                 // 检测板车上车事件（离开RFID范围就算上车）
                 if (lastEvent == BoardingDetector.Event.NONE) {
                     System.out.println("⚠️ 检测到车辆已进入板车卸车上车区域");
