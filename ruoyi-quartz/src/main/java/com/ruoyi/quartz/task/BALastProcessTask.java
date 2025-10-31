@@ -94,8 +94,15 @@ public class BALastProcessTask {
         // 可以添加更多卡ID
         // cardIdList.add("其他卡ID");
         
-        String startTimeStr = "2025-10-16 18:25:00";
-        String endTimeStr = "2025-10-16 19:50:00";
+//        String startTimeStr = "2025-10-16 18:25:00";
+//        String endTimeStr = "2025-10-16 19:50:00";
+
+        // 查询当前时间前30分钟的数据
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date now = new Date();
+        Date startTime = new Date(now.getTime() - 30 * 60 * 1000); // 当前时间前30分钟
+        String startTimeStr = sdf.format(startTime);
+        String endTimeStr = sdf.format(now);
         
         try {
             log.info("开始数据匹配处理，时间范围：{} - {}", startTimeStr, endTimeStr);
@@ -108,7 +115,10 @@ public class BALastProcessTask {
             String rfidEndTime = endTimeStr + " 000";
             List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(tenantId, rfidStartTime, rfidEndTime);
             log.info("获取到RFID数据 {} 条", reqVehicleCodes != null ? reqVehicleCodes.size() : 0);
-            
+            if (reqVehicleCodes != null && reqVehicleCodes.size() == 0){
+                log.info("RFID数据为空，结束程序执行");
+                return;
+            }
             // 如果开启忽略已匹配，从数据库查询已保存的RFID数据并过滤
             List<ReqVehicleCode> rfidDataToMatch = reqVehicleCodes;
             if (ignoreMatched && saveRfidData) {
@@ -163,9 +173,14 @@ public class BALastProcessTask {
         cardIdList.add("1918B3000561");
         // 可以添加更多卡ID
         // cardIdList.add("其他卡ID");
-
-        String startTimeStr = "2025-10-16 18:25:00";
-        String endTimeStr = "2025-10-16 19:50:00";
+        // String startTimeStr = "2025-10-16 18:25:00";
+        // String endTimeStr = "2025-10-16 19:50:00";
+        // 查询当前时间前30分钟的数据
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date now = new Date();
+        Date startTime = new Date(now.getTime() - 30 * 60 * 1000); // 当前时间前30分钟
+        String startTimeStr = sdf.format(startTime);
+        String endTimeStr = sdf.format(now);
 
         try {
             log.info("开始数据匹配处理，时间范围：{} - {}", startTimeStr, endTimeStr);
@@ -178,7 +193,10 @@ public class BALastProcessTask {
             String rfidEndTime = endTimeStr + " 000";
             List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(tenantId, rfidStartTime, rfidEndTime);
             log.info("获取到RFID数据 {} 条", reqVehicleCodes != null ? reqVehicleCodes.size() : 0);
-
+            if (reqVehicleCodes != null && reqVehicleCodes.size() == 0){
+                log.info("RFID数据为空，结束程序执行");
+                return;
+            }
             // 如果开启忽略已匹配，从数据库查询已保存的RFID数据并过滤
             List<ReqVehicleCode> rfidDataToMatch = reqVehicleCodes;
             if (ignoreMatched && saveRfidData) {
