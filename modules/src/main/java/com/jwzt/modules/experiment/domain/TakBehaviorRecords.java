@@ -10,7 +10,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.common.core.domain.BaseEntity;
-import org.springframework.data.annotation.Transient;
 
 /**
  * 行为记录对象 tak_behavior_records
@@ -289,10 +288,10 @@ public class TakBehaviorRecords extends BaseEntity {
 
     public String getBeaconName() { return beaconName; }
     public void setBeaconName(String beaconName) { this.beaconName = beaconName; }
-    public String getBeaconRfidName() { return rfidName; }
-    public void setBeaconRfidName(String beaconRfidName) { this.rfidName = beaconRfidName; }
-    public String getBeaconArea() { return area; }
-    public void setBeaconArea(String beaconArea) { this.area = beaconArea; }
+    public String getRfidName() { return rfidName; }
+    public void setRfidName(String rfidName) { this.rfidName = rfidName; }
+    public String getArea() { return area; }
+    public void setArea(String area) { this.area = area; }
 
     @Override
     public String toString() {

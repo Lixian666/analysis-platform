@@ -199,9 +199,9 @@ public class RyTask
         List<String> cards = new ArrayList<>(
                 Arrays.asList(
                         "1918B3000A79",
-                        "1918B3000BA3"
-//                        "1918B30005D6",
-//                        "1918B3000561"
+                        "1918B3000BA3",
+                        "1918B30005D6",
+                        "1918B3000561"
                 )
         );
 
@@ -1165,11 +1165,13 @@ public class RyTask
             String date = "未获取到日期";
             String buildId = baseConfig.getJoysuch().getBuildingId();
             String cardId = "1918B3000561";
+//            String startTimeStr = "2025-10-29 18:39:00";
+//            String endTimeStr = "2025-10-29 19:50:00";
             String startTimeStr = "2025-10-16 18:25:00";
-            String endTimeStr = "2025-10-16 19:40:00";
+            String endTimeStr = "2025-10-16 19:50:00";
             LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
             LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
-//        List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
+//            List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
             JSONObject jsonObject = JSONObject.parseObject(zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr));
             JSONObject tagJsonObject = JSONObject.parseObject(zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId, DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)), DateTimeUtils.localDateTime2String(endTime.plusSeconds(2))));
             JSONArray points = jsonObject.getJSONArray("data");

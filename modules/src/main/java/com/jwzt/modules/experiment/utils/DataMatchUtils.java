@@ -211,6 +211,7 @@ public class DataMatchUtils {
             
             JobDataWithTimestamp jobData = jobDataList.get(i);
             long jobTimestamp = jobData.getTimestamp();
+            String jobRfidName = jobData.getJobData().getRfidName();
             
             // 找到时间范围内所有可能的RFID数据
             List<RfidCandidate> candidates = new ArrayList<>();
@@ -221,6 +222,18 @@ public class DataMatchUtils {
                 }
                 
                 RfidDataWithTimestamp rfidData = rfidDataList.get(j);
+                
+                // 先检查rfidName与regionId是否相等
+                String rfidRegionId = rfidData.getRfidData().getRegionId();
+                // 如果两个值都不为空，则必须相等；如果两个值都为空，则允许匹配（保持向后兼容）
+                boolean rfidNameMatch = (jobRfidName == null && rfidRegionId == null) || 
+                                       (jobRfidName != null && rfidRegionId != null && jobRfidName.equals(rfidRegionId));
+                
+                if (!rfidNameMatch) {
+                    continue; // 不匹配则跳过，不检查时间差
+                }
+                
+                // 再检查时间差是否在范围内
                 long rfidTimestamp = rfidData.getTimestamp();
                 long diff = Math.abs(rfidTimestamp - jobTimestamp);
                 

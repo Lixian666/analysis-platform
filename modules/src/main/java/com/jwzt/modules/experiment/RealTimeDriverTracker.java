@@ -649,8 +649,8 @@ public class RealTimeDriverTracker {
             rec.setDuration(DateTimeUtils.calculateTimeDifference(sess.startTime, endTime));
             rec.setState("完成");
             rec.setBeaconName(sess.beaconName);
-            rec.setBeaconRfidName(sess.rfidName);
-            rec.setBeaconArea(sess.area);
+            rec.setRfidName(sess.rfidName);
+            rec.setArea(sess.area);
             rec.setTakBehaviorRecordDetailList(detailList);
 
             // 3) 入库（注意：实时服务不主动清表）
