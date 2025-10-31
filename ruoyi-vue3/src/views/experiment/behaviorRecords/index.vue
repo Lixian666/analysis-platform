@@ -116,6 +116,16 @@
       </el-table-column>
       <el-table-column label="持续时间" align="center" prop="duration" />
       <el-table-column label="状态" align="center" prop="state" />
+      <el-table-column label="后处理" align="center" prop="matchStatus" width="120">
+        <template #default="scope">
+          <span 
+            class="match-status-badge"
+            :class="getMatchStatusClass(scope.row.matchStatus)"
+          >
+            {{ getMatchStatusText(scope.row.matchStatus) }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['experiment:experiment:edit']">修改</el-button>
@@ -309,6 +319,32 @@ function formatType(type) {
   return typeMap[type] || type;
 }
 
+// 获取匹配状态文本
+function getMatchStatusText(matchStatus) {
+  if (matchStatus === null || matchStatus === undefined) {
+    return '未处理';
+  }
+  const statusMap = {
+    0: '未处理',
+    1: '匹配成功',
+    2: '匹配失败'
+  };
+  return statusMap[matchStatus] || '未处理';
+}
+
+// 获取匹配状态样式类
+function getMatchStatusClass(matchStatus) {
+  if (matchStatus === null || matchStatus === undefined) {
+    return 'match-status-gray';
+  }
+  const classMap = {
+    0: 'match-status-gray',
+    1: 'match-status-green',
+    2: 'match-status-red'
+  };
+  return classMap[matchStatus] || 'match-status-gray';
+}
+
 /** 查询行为记录列表 */
 function getList() {
   loading.value = true;
@@ -453,3 +489,26 @@ function submitFileForm() {
 
 getList();
 </script>
+
+<style scoped>
+.match-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.match-status-gray {
+  background-color: #909399;
+}
+
+.match-status-green {
+  background-color: #67c23a;
+}
+
+.match-status-red {
+  background-color: #f56c6c;
+}
+</style>

@@ -81,6 +81,16 @@
             <span v-text="getcartype(scope.row.type)"></span>
           </template>
         </el-table-column>
+        <el-table-column v-if="!isListCollapsed" align="center" label="后处理" width="120">
+          <template v-slot="scope">
+            <span 
+              class="match-status-badge"
+              :class="getMatchStatusClass(scope.row.matchStatus)"
+            >
+              {{ getMatchStatusText(scope.row.matchStatus) }}
+            </span>
+          </template>
+        </el-table-column>
       </el-table>
     </div>
 
@@ -376,6 +386,33 @@
     }
     return data
   }
+  
+  // 获取匹配状态文本
+  function getMatchStatusText(matchStatus) {
+    if (matchStatus === null || matchStatus === undefined) {
+      return '未处理';
+    }
+    const statusMap = {
+      0: '未处理',
+      1: '匹配成功',
+      2: '匹配失败'
+    };
+    return statusMap[matchStatus] || '未处理';
+  }
+
+  // 获取匹配状态样式类
+  function getMatchStatusClass(matchStatus) {
+    if (matchStatus === null || matchStatus === undefined) {
+      return 'match-status-gray';
+    }
+    const classMap = {
+      0: 'match-status-gray',
+      1: 'match-status-green',
+      2: 'match-status-red'
+    };
+    return classMap[matchStatus] || 'match-status-gray';
+  }
+  
   async function init(){
     let vid ={
       cardId: route.query.vehicleThirdId,
@@ -1421,6 +1458,27 @@
     border-right: 10px solid transparent;
     border-bottom: 45px solid transparent; //#00bfff;
     transform: rotate(180deg);
+  }
+  
+  .match-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .match-status-gray {
+    background-color: #909399;
+  }
+
+  .match-status-green {
+    background-color: #67c23a;
+  }
+
+  .match-status-red {
+    background-color: #f56c6c;
   }
  </style>
  
