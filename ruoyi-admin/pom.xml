@@ -90,6 +90,8 @@
                 <version>2.5.15</version>
                 <configuration>
                     <fork>true</fork> <!-- 如果没有该配置，devtools不会生效 -->
+                    <!-- 此项为解决 systemPath 依赖无法被打包到最终 fatjar 的问题，将三方 jar（如 open-v2-api-sdk）一同打包进来 -->
+                    <includeSystemScope>true</includeSystemScope>
                 </configuration>
                 <executions>
                     <execution>
