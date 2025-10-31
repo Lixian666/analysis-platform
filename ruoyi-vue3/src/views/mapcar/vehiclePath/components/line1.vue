@@ -44,45 +44,45 @@
         border
         :row-class-name="tableRowClassName"
       >
-        <el-table-column type="selection" :width="isListCollapsed ? 40 : 35" />
-        <el-table-column align="center" label="名称" :width="isListCollapsed ? 70 : ''">
+        <el-table-column type="selection" :width="isListCollapsed ? 35 : 35" />
+        <el-table-column align="center" label="名称" :width="isListCollapsed ? 60 : undefined">
           <template v-slot="scope">
             <span>路线{{ scope.$index + 1 }}</span>
           </template>
         </el-table-column>
-        <el-table-column v-if="!isListCollapsed" align="center" label="开始时间">
+        <el-table-column v-if="!isListCollapsed" align="center" label="开始时间" width="80">
           <template v-slot="scope">
             <span v-if="scope.row.startTime">{{ scope.row.startTime.split(' ')[1] }}</span>
             <span v-else class="ml10">-</span>
           </template>
         </el-table-column>
-        <el-table-column v-if="!isListCollapsed" align="center" label="结束时间">
+        <el-table-column v-if="!isListCollapsed" align="center" label="结束时间" width="80">
           <template v-slot="scope">
             <span v-if="scope.row.endTime">{{ scope.row.endTime.split(' ')[1] }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column v-if="!isListCollapsed" align="center" label="停留时间" width="100px">
+        <el-table-column v-if="!isListCollapsed" align="center" label="停留时间" width="85">
           <template v-slot="scope">
             <span v-text="gettimetxt(scope.row.duration)"></span>
           </template>
         </el-table-column>
-        <el-table-column v-if="!isListCollapsed" align="center" label="点数量" width="80px">
+        <el-table-column v-if="!isListCollapsed" align="center" label="点数量" width="65">
           <template v-slot="scope">
             <span v-text="getlistlength(scope.row.takBehaviorRecordDetailList)"></span>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="颜色" :width="isListCollapsed ? 55 : 62">
+        <el-table-column align="center" label="颜色" :width="isListCollapsed ? 50 : 50">
           <template v-slot="scope">
             <div class="block" :style="'background-color:' + scope.row.color + ';'"></div>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="类型" :width="isListCollapsed ? '' : 100">
+        <el-table-column align="center" label="类型" :width="isListCollapsed ? 95 : 110">
           <template v-slot="scope">
             <span v-text="getcartype(scope.row.type)"></span>
           </template>
         </el-table-column>
-        <el-table-column v-if="!isListCollapsed" align="center" label="后处理" width="120">
+        <el-table-column align="center" label="后处理" :width="isListCollapsed ? 85 : 90">
           <template v-slot="scope">
             <span 
               class="match-status-badge"
@@ -760,14 +760,33 @@
  #body-box {
   height:  calc(100vh - 84px);
   overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  
   .activelist{
-    width: 645px;
+    width: fit-content;
+    min-width: 280px;
+    max-width: 50%;
     height: calc(100% - 90px);
-    float: left;
+    flex-shrink: 0;
     transition: width 0.3s ease;
+    box-sizing: border-box;
+    overflow: visible;
     
     &.collapsed {
-      width: 320px;
+      overflow: visible;
+    }
+    
+    .el-table {
+      width: auto;
+      min-width: 100%;
+    }
+    
+    &.collapsed {
+      .el-table {
+        min-width: auto;
+      }
     }
     
     .title{
@@ -775,28 +794,35 @@
       justify-content: space-between;
       align-items: center;
       height: 40px;
+      padding: 0 10px;
+      box-sizing: border-box;
       
       .title-left {
         display: flex;
         align-items: center;
         flex: 1;
         overflow: hidden;
+        min-width: 0;
       }
       
       .title-right {
         display: flex;
         align-items: center;
         flex-shrink: 0;
-        gap: 8px;
+        gap: 5px;
         
         .marker-btn {
-          margin: 0 5px;
+          margin: 0 2px;
         }
       }
       
       .ptxt{
-        margin: 0 0 0 20px;
+        margin: 0 0 0 10px;
         padding: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
         height: 40px;
         line-height: 40px;
         font-weight: 500;
@@ -808,14 +834,18 @@
         align-items: center;
         height: 40px;
         line-height: 40px;
-        font-size: 13px;
+        font-size: 12px;
         color: #666;
-        margin-left: 15px;
+        margin-left: 10px;
         transition: opacity 0.3s ease;
+        overflow: hidden;
+        flex: 1;
+        min-width: 0;
         
         span {
-          margin-right: 15px;
+          margin-right: 10px;
           white-space: nowrap;
+          flex-shrink: 0;
         }
         
         .date-info {
@@ -826,18 +856,22 @@
       .ptxt1{
         height: 40px;
         line-height: 40px;
-        margin-right: 10px;
-        margin-left: 10px;
+        margin-right: 5px;
+        margin-left: 5px;
         cursor: pointer;
         white-space: nowrap;
+        flex-shrink: 0;
+        font-size: 13px;
       }
       
       .ptxt2{
         height: 40px;
         line-height: 40px;
-        margin-right: 10px;
+        margin-right: 5px;
         cursor: pointer;
         white-space: nowrap;
+        flex-shrink: 0;
+        font-size: 13px;
       }
       
       .is-active{
@@ -848,14 +882,15 @@
       .collapse-btn {
         height: 40px;
         line-height: 40px;
-        margin-right: 10px;
+        margin-right: 5px;
         margin-left: 5px;
         cursor: pointer;
-        font-size: 18px;
+        font-size: 16px;
         color: #409EFF;
         transition: transform 0.3s ease;
         display: flex;
         align-items: center;
+        flex-shrink: 0;
         
         &:hover {
           transform: scale(1.15);
@@ -865,27 +900,101 @@
     :deep(.el-table--border){
       position: relative;
       height: calc(100% - 40px);
-      // overflow: hidden;
-      // overflow-y: scroll;
+      width: auto;
+      overflow-x: auto;
+    }
+    
+    :deep(.el-table__body-wrapper) {
+      overflow-x: auto;
+    }
+    
+    :deep(.el-table__header-wrapper) {
+      overflow-x: auto;
     }
     
     // 收起状态下的表格样式优化
     &.collapsed {
+      min-width: 280px;
+      max-width: 400px;
+      width: fit-content;
+      overflow: visible;
+      
       :deep(.el-table) {
         font-size: 13px;
+        width: auto !important;
+        min-width: auto !important;
+        table-layout: auto !important;
         
         th {
-          padding: 8px 0;
+          padding: 8px 6px;
           font-size: 13px;
+          font-weight: 500;
+          background-color: #f5f7fa;
         }
         
         td {
-          padding: 6px 0;
+          padding: 8px 6px;
         }
         
         .el-checkbox {
           transform: scale(0.9);
         }
+        
+        .cell {
+          padding: 0 6px;
+          white-space: nowrap;
+          text-align: center;
+        }
+        
+        // 收起状态下允许表格根据内容自适应
+        .el-table__body-wrapper,
+        .el-table__header-wrapper {
+          overflow-x: visible !important;
+        }
+        
+        // 优化表格边框和间距
+        .el-table__header th {
+          border-bottom: 2px solid #ebeef5;
+        }
+        
+        .el-table__body tr:hover {
+          background-color: #f5f7fa;
+        }
+      }
+      
+      .match-status-badge {
+        padding: 3px 8px;
+        font-size: 11px;
+        border-radius: 3px;
+      }
+      
+      .block {
+        width: 24px;
+        height: 18px;
+        border-radius: 2px;
+      }
+    }
+    
+    // 展开状态下的表格样式优化
+    :deep(.el-table) {
+      width: auto !important;
+      table-layout: auto !important;
+      
+      .cell {
+        white-space: nowrap;
+        overflow: visible;
+        padding: 0 5px;
+        text-align: center;
+      }
+      
+      th {
+        padding: 8px 5px;
+        text-align: center;
+      }
+      
+      td {
+        padding: 8px 5px;
+        text-align: center;
       }
     }
   }
@@ -897,14 +1006,14 @@
 
 
  .activeName{
-    width: calc(100% - 650px);
+    flex: 1;
     height: calc(100% - 90px);
-   // background-color: red;
-    float: right;
-    transition: width 0.3s ease;
+    min-width: 0;
+    transition: margin-left 0.3s ease;
+    box-sizing: border-box;
     
     &.expanded {
-      width: calc(100% - 325px);
+      margin-left: 0;
     }
   }
 
@@ -1460,6 +1569,8 @@
     font-size: 12px;
     font-weight: 500;
     color: #fff;
+    white-space: nowrap;
+    box-sizing: border-box;
   }
 
   .match-status-gray {
