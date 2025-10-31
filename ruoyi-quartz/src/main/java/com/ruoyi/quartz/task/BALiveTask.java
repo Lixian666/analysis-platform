@@ -62,7 +62,7 @@ public class BALiveTask {
         );
 
         // 开始时间：当前时间
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now().minusMinutes(1);
         // 结束时间：下一个凌晨3点
         // 如果当前时间还没到今天的凌晨3点，则结束时间是今天的凌晨3点
         // 如果当前时间已经过了今天的凌晨3点，则结束时间是明天的凌晨3点
