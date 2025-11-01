@@ -6,9 +6,12 @@ spring:
         druid:
             # 主库数据源
             master:
-                url: jdbc:dm://127.0.0.1:5236
+#                url: jdbc:dm://127.0.0.1:5236
+#                username: ANALYSIS_PLATFORM
+#                password: admin123456
+                url: jdbc:dm://192.168.6.8:5236
                 username: ANALYSIS_PLATFORM
-                password: admin123456
+                password: DJZ@2025.dxy0217
             # 从库数据源
             slave:
                 # 从数据源开关/默认关闭
