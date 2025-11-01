@@ -1,17 +1,8 @@
+# 董家镇环境配置
 # 项目相关配置
 ruoyi:
-  # 名称
-  name: Platform
-  # 版本
-  version: 3.9.0
-  # 版权年份
-  copyrightYear: 2025
-  # 文件路径 示例（Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
+  # 文件路径
   profile: /Users/lixian/Cache/Platform/uploadPath
-  # 获取ip地址开关
-  addressEnabled: true
-  # 验证码类型 math 数字计算 char 字符验证
-  captchaType: char
 
 # 开发环境配置
 server:
@@ -21,67 +12,19 @@ server:
     # 应用的访问路径
     context-path: /
     domain-name: http://192.168.6.8
-  tomcat:
-    # tomcat的URI编码
-    uri-encoding: UTF-8
-    # 连接数满后的排队数，默认为100
-    accept-count: 1000
-    threads:
-      # tomcat最大线程数，默认为200
-      max: 800
-      # Tomcat启动初始化的线程数，默认值10
-      min-spare: 100
-
-# 日志配置
-logging:
-  level:
-    com.ruoyi: debug
-    org.springframework: warn
-
-# 用户配置
-user:
-  password:
-    # 密码最大错误次数
-    maxRetryCount: 5
-    # 密码锁定时间（默认10分钟）
-    lockTime: 10
 
 # Spring配置
 spring:
-  # 资源信息
-  messages:
-    # 国际化资源文件路径
-    basename: i18n/messages
-  profiles:
-    # 默认开发环境
-    #    active: druid
-    # 激活环境配置：djz-董家镇，可以创建 yuzui、minhang 等其他环境配置
-    active: dameng,djz
-    # 数据库类型
-    #    dbType: mysql
-    dbType: dameng
-  # 文件上传
-  servlet:
-    multipart:
-      # 单个文件大小
-      max-file-size: 10MB
-      # 设置总上传的文件大小
-      max-request-size: 20MB
-  # 服务模块
-  devtools:
-    restart:
-      # 热部署开关
-      enabled: false
   # redis 配置
   redis:
     # 地址
-    host: localhost
+    host: 192.168.6.8
     # 端口，默认为6379
     port: 6379
     # 数据库索引
     database: 0
     # 密码
-    password:
+    password: jwzt@2020
     # 连接超时时间
     timeout: 10s
     lettuce:
@@ -95,64 +38,16 @@ spring:
         # #连接池最大阻塞等待时间（使用负值表示没有限制）
         max-wait: -1ms
 
-# token配置
-token:
-  # 令牌自定义标识
-  header: Authorization
-  # 令牌密钥
-  secret: abcdefghijklmnopqrstuvwxyz
-  # 令牌有效期（默认30分钟）
-  expireTime: 30
-
-# MyBatis配置
-mybatis:
-  # 搜索指定包别名
-  typeAliasesPackage: com.ruoyi.**.domain
-  # 配置mapper的扫描，找到所有的mapper.xml映射文件
-  mapperLocations: classpath*:mapper/**/*Mapper.xml
-  # 加载全局的配置文件
-  configLocation: classpath:mybatis/mybatis-config.xml
-
-# PageHelper分页插件
-pagehelper:
-#  helperDialect: mysql
-  helperDialect: oracle
-  supportMethodsArguments: true
-  params: count=countSql
-
-# Swagger配置
-swagger:
-  # 是否开启swagger
-  enabled: true
-  # 请求前缀
-  pathMapping: /dev-api
-
-# 防止XSS攻击
-xss:
-  # 过滤开关
-  enabled: true
-  # 排除链接（多个用逗号分隔）
-  excludes: /system/notice
-  # 匹配链接
-  urlPatterns: /system/*,/monitor/*,/tool/*
-
-# 行为分析配置
-# experiment 配置已迁移至各环境配置文件中（如 application-djz.yml、application-yuzui.yml 等）
-# 每个环境有独立的 experiment 配置，包括：
-# - platform-dir: 平台目录
-# - base: 基础配置（场站名称、joysuch配置、sw-center配置、card-analysis配置等）
-# - file-path: 文件路径配置（各场站的shp文件路径等）
 # 行为分析配置 - 董家镇
 experiment:
   platform-dir: /Users/lixian/Cache/Platform
   base:
     stay-verify: false
     ranging-verify: true
-    push-data: false
+    push-data: true
     output-shp: false
     output-shp-path: ${experiment.platform-dir}/PlatformData/output
     delete-datetime:
-#    yard-name: yuzui
     yard-name: dongjiazhen
     location-card-type: other
     card-type: car
@@ -164,17 +59,11 @@ experiment:
       save-rfid-data: true
 
     joysuch:
-#      building-name: 鱼嘴
-#      building-id: 209885
       building-name: 董家镇
       building-id: 209983
-#      username: 18911091136
-#      password: 3W.163.com
-#      base-url: https://api.joysuch.com:46000
       username: client
       password: JoySuch@client10
       base-url: http://61.50.136.180:46000
-#      base-url: http://172.30.17.116/zqapi
       api:
         # 获取建筑列表
         build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
@@ -194,7 +83,6 @@ experiment:
       tenant-id: 10003
       # 中心服务地址
       status: 1
-#      center-ip: http://10.4.230.56:8000/sw-centralOpen-api
       center-ip: http://172.30.17.116:8001/sw-centralOpen-api
       # RFID识别记录列表
       get-list: /api/station/getCompleteRfidList
@@ -242,34 +130,4 @@ experiment:
           - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/zikuqu.shp
         kuwei:
           - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuwei.shp
-      minhang:
-        driving:
-          - ${experiment.file-path.base-path}/minhang/行车道路/xingcdaolu.shp
-          - ${experiment.file-path.base-path}/minhang/20250624库区/kuqu.shp
-          - ${experiment.file-path.base-path}/minhang/货运线/huoyunxin.shp
-        parking:
-          - ${experiment.file-path.base-path}/minhang/20250624库区/kuqu.shp
-        road:
-          - ${experiment.file-path.base-path}/minhang/行车道路/xingcdaolu.shp
-        huoyunxin:
-          - ${experiment.file-path.base-path}/minhang/货运线/huoyunxin.shp
-      yuzui:
-        driving:
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴道路/daolu.shp
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴库区/kuqu.shp
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线/huoyunxian.shp
-        parking2road:
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴道路/daolu.shp
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴库区/kuqu.shp
-        parking:
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴库区/kuqu.shp
-        road:
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴道路/daolu.shp
-        huoyunxin:
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线/huoyunxian.shp
-        huoyunxinzyt:
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线作业台/huoyunxianzyt.shp
-        huoyunxinjc:
-          - ${experiment.file-path.base-path}/yuzui/20250630鱼嘴货运线J车/huoyunxianjc.shp
-        banche:
-          - ${experiment.file-path.base-path}/yuzui/20250901鱼嘴板车作业区/banchezuoyequ.shp
+
