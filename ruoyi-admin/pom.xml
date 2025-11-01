@@ -111,7 +111,7 @@
                 </configuration>   
            </plugin>   
         </plugins>
-        <finalName>${project.artifactId}</finalName>
+        <finalName>analysis-platform</finalName>
     </build>
 
 </project>
