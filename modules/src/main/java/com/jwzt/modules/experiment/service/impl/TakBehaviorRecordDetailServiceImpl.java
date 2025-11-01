@@ -145,4 +145,27 @@ public class TakBehaviorRecordDetailServiceImpl implements ITakBehaviorRecordDet
     public List<TakBehaviorRecordDetailVo> selectTakBehaviorRecordDetailListByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail){
         return takBehaviorRecordDetailMapper.selectTakBehaviorRecordDetailListByUserId(takBehaviorRecordDetail);
     }
+
+    @Override
+    public java.util.Map<String, Long> selectMaxTimestampByCardIds(java.util.List<String> cardIds) {
+        if (cardIds == null || cardIds.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
+        List<java.util.Map<String, Object>> resultList = takBehaviorRecordDetailMapper.selectMaxTimestampByCardIds(cardIds);
+        java.util.Map<String, Long> resultMap = new java.util.HashMap<>();
+        if (resultList != null) {
+            for (java.util.Map<String, Object> row : resultList) {
+                String cardId = (String) row.get("cardId");
+                Object maxTimestampObj = row.get("maxTimestamp");
+                if (cardId != null && maxTimestampObj != null) {
+                    Long maxTimestamp = maxTimestampObj instanceof Long ? (Long) maxTimestampObj 
+                        : maxTimestampObj instanceof Number ? ((Number) maxTimestampObj).longValue() : null;
+                    if (maxTimestamp != null) {
+                        resultMap.put(cardId, maxTimestamp);
+                    }
+                }
+            }
+        }
+        return resultMap;
+    }
 }

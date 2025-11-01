@@ -26,8 +26,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Component("BALiveTask")
-public class BALiveTask {
+@Component("BACarLiveTask")
+public class BACarLiveTask {
 
     private static final Logger log = LoggerFactory.getLogger(HttpUtils.class);
 
@@ -40,45 +40,24 @@ public class BALiveTask {
     @Autowired
     private ApplicationContext applicationContext;  // 用于获取 prototype bean
 
-    // 火车装卸的线程池
-    private ScheduledExecutorService carExecutorService;
+    // 实时流式处理的线程池（全局共享，避免重复创建）
+    private ScheduledExecutorService realtimeExecutorService;
 
-    // 板车装卸的线程池
-    private ScheduledExecutorService truckExecutorService;
+    // 控制实时任务的运行状态
+    private volatile boolean isRealtimeTaskRunning = false;
 
-    // 控制火车装卸任务的运行状态
-    private volatile boolean isCarTaskRunning = false;
+    // 记录每个卡最后处理的时间（线程安全）
+    private ConcurrentHashMap<String, LocalDateTime> lastProcessTimeMap = new ConcurrentHashMap<>();
 
-    // 控制板车装卸任务的运行状态
-    private volatile boolean isTruckTaskRunning = false;
+    // 统计信息（线程安全）
+    private ConcurrentHashMap<String, AtomicInteger> cardProcessCountMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, AtomicInteger> cardErrorCountMap = new ConcurrentHashMap<>();
 
-    // 火车装卸：记录每个卡最后处理的时间（线程安全）
-    private ConcurrentHashMap<String, LocalDateTime> carLastProcessTimeMap = new ConcurrentHashMap<>();
+    // 每个卡独立的 tracker 实例（用于测试方法，线程安全）
+    private ConcurrentHashMap<String, RealTimeDriverTracker> cardTrackerMap = new ConcurrentHashMap<>();
 
-    // 板车装卸：记录每个卡最后处理的时间（线程安全）
-    private ConcurrentHashMap<String, LocalDateTime> truckLastProcessTimeMap = new ConcurrentHashMap<>();
-
-    // 火车装卸：统计信息（线程安全）
-    private ConcurrentHashMap<String, AtomicInteger> carCardProcessCountMap = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, AtomicInteger> carCardErrorCountMap = new ConcurrentHashMap<>();
-
-    // 板车装卸：统计信息（线程安全）
-    private ConcurrentHashMap<String, AtomicInteger> truckCardProcessCountMap = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, AtomicInteger> truckCardErrorCountMap = new ConcurrentHashMap<>();
-
-    // 火车装卸：每个卡独立的 tracker 实例（用于测试方法，线程安全）
-    private ConcurrentHashMap<String, RealTimeDriverTracker> carCardTrackerMap = new ConcurrentHashMap<>();
-
-    // 板车装卸：每个卡独立的 tracker 实例（用于测试方法，线程安全）
-    private ConcurrentHashMap<String, RealTimeDriverTracker> truckCardTrackerMap = new ConcurrentHashMap<>();
-
-    // 火车装卸时间范围
-    private String carStartTime;
-    private String carEndTime;
-
-    // 板车装卸时间范围
-    private String truckStartTime;
-    private String truckEndTime;
+    private String startTime;
+    private String endTime;
 
     /**
      * 启动火车装卸的实时任务
@@ -87,9 +66,10 @@ public class BALiveTask {
         // 火车装卸的卡号列表
         List<String> carCards = new ArrayList<>(
                 Arrays.asList(
-                        "1918B30005D6",
-                        "1918B300061E",
-                        "1918B300094E")
+                "1918B3000978",
+                "1918B30005D6",
+                "1918B300061E",
+                "1918B300094E")
         );
 
         // 开始时间：当前时间
@@ -120,9 +100,9 @@ public class BALiveTask {
         // 板车装卸的卡号列表
         List<String> truckCards = new ArrayList<>(
                 Arrays.asList(
-                        "1918B3000561",
-                        "1918B3000BA3",
-                        "1918B3000978")
+                "1918B3000561",
+                "1918B3000BA3",
+                "1918B3000978")
         );
 
         // 开始时间：当前时间
@@ -150,223 +130,8 @@ public class BALiveTask {
 
     private void startRealtimeTaskForCards(List<String> cards, RealTimeDriverTracker.VehicleType vt,
                                            String startTimeStr, String endTimeStr, String businessType) {
-        // 根据车辆类型选择对应的状态变量
-        boolean isTaskRunning = (vt == RealTimeDriverTracker.VehicleType.CAR) ? isCarTaskRunning : isTruckTaskRunning;
-        
-        if (isTaskRunning) {
-            System.out.println(businessType + "实时任务已在运行中，无需重复启动");
-            return;
-        }
-
-        // 参数验证
-        if (cards == null || cards.isEmpty()) {
-            System.err.println("❌ 错误：卡号列表不能为空");
-            return;
-        }
-
-        try {
-            LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
-            LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
-
-            if (startTime.isAfter(endTime)) {
-                System.err.println("❌ 错误：开始时间不能晚于结束时间");
-                return;
-            }
-        } catch (Exception e) {
-            System.err.println("❌ 错误：时间格式不正确，请使用格式 yyyy-MM-dd HH:mm:ss");
-            return;
-        }
-
-        // 根据CPU核心数智能计算线程池大小
-        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        int threadPoolSize = Math.max(5, Math.min(availableProcessors * 2, 30));
-
-        // 根据车辆类型初始化对应的资源
-        ScheduledExecutorService executorService;
-        ConcurrentHashMap<String, LocalDateTime> lastProcessTimeMap;
-        ConcurrentHashMap<String, AtomicInteger> cardProcessCountMap;
-        ConcurrentHashMap<String, AtomicInteger> cardErrorCountMap;
-        ConcurrentHashMap<String, RealTimeDriverTracker> cardTrackerMap;
-        
-        if (vt == RealTimeDriverTracker.VehicleType.CAR) {
-            // 火车装卸
-            carExecutorService = Executors.newScheduledThreadPool(threadPoolSize);
-            executorService = carExecutorService;
-            isCarTaskRunning = true;
-            
-            carLastProcessTimeMap.clear();
-            carCardProcessCountMap.clear();
-            carCardErrorCountMap.clear();
-            carCardTrackerMap.clear();
-            
-            lastProcessTimeMap = carLastProcessTimeMap;
-            cardProcessCountMap = carCardProcessCountMap;
-            cardErrorCountMap = carCardErrorCountMap;
-            cardTrackerMap = carCardTrackerMap;
-            
-            // 设置时间范围
-            this.carStartTime = startTimeStr;
-            this.carEndTime = endTimeStr;
-        } else {
-            // 板车装卸
-            truckExecutorService = Executors.newScheduledThreadPool(threadPoolSize);
-            executorService = truckExecutorService;
-            isTruckTaskRunning = true;
-            
-            truckLastProcessTimeMap.clear();
-            truckCardProcessCountMap.clear();
-            truckCardErrorCountMap.clear();
-            truckCardTrackerMap.clear();
-            
-            lastProcessTimeMap = truckLastProcessTimeMap;
-            cardProcessCountMap = truckCardProcessCountMap;
-            cardErrorCountMap = truckCardErrorCountMap;
-            cardTrackerMap = truckCardTrackerMap;
-            
-            // 设置时间范围
-            this.truckStartTime = startTimeStr;
-            this.truckEndTime = endTimeStr;
-        }
-
-        System.out.println("========================================");
-        System.out.println("启动" + businessType + "实时流式数据处理任务");
-        System.out.println("总卡数: " + cards.size());
-        System.out.println("线程池大小: " + threadPoolSize);
-        System.out.println("数据获取间隔: 10秒");
-        System.out.println("开始时间: " + startTimeStr);
-        System.out.println("结束时间: " + endTimeStr);
-        System.out.println("========================================");
-
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
-        }
-
-        // 获取结束时间字符串（根据车辆类型）
-        final String endTimeForCheck = (vt == RealTimeDriverTracker.VehicleType.CAR) ? this.carEndTime : this.truckEndTime;
-        
-        // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动
-        int delayIndex = 0;
-        for (String cardId : cards) {
-            // 初始化统计
-            cardProcessCountMap.put(cardId, new AtomicInteger(0));
-            cardErrorCountMap.put(cardId, new AtomicInteger(0));
-            // 设置每个卡的初始处理时间为用户指定的开始时间
-            lastProcessTimeMap.put(cardId, DateTimeUtils.str2DateTime(startTimeStr));
-
-            // 为每个卡创建独立的 tracker 实例（在整个任务运行期间持续使用）
-            RealTimeDriverTracker cardTracker = applicationContext.getBean(RealTimeDriverTracker.class);
-            cardTrackerMap.put(cardId, cardTracker);
-            System.out.println("✓ 为卡 " + cardId + " 创建独立的 RealTimeDriverTracker 实例");
-
-            // 错峰启动：第1个卡立即开始，后续每个卡延迟200ms
-            final long initialDelay = delayIndex * 200;
-            delayIndex++;
-
-            // 延迟initialDelay毫秒开始，每10秒执行一次
-            executorService.scheduleAtFixedRate(() -> {
-                // 检查是否超过结束时间
-                LocalDateTime currentLastTime = lastProcessTimeMap.get(cardId);
-                if (currentLastTime.isAfter(DateTimeUtils.str2DateTime(endTimeForCheck))) {
-                    System.out.println("✓ 卡 " + cardId + " 已处理到结束时间，停止处理");
-
-                    // 检查是否所有卡都已完成
-                    boolean allCompleted = true;
-                    for (String id : cards) {
-                        if (!lastProcessTimeMap.get(id).isAfter(DateTimeUtils.str2DateTime(endTimeForCheck))) {
-                            allCompleted = false;
-                            break;
-                        }
-                    }
-
-                    if (allCompleted) {
-                        System.out.println("✓ 所有卡都已处理到结束时间，准备停止任务...");
-                        // 延迟停止，让其他线程完成当前操作
-                        new Thread(() -> {
-                            try {
-                                Thread.sleep(2000);
-                                // 根据车辆类型停止对应的任务
-                                if (vt == RealTimeDriverTracker.VehicleType.CAR) {
-                                    realDriverTrackerZQRealtimeStopCar();
-                                } else {
-                                    realDriverTrackerZQRealtimeStopTruck();
-                                }
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                            }
-                        }).start();
-                    }
-                    return;
-                }
-
-                // 检查任务是否已停止
-                boolean isRunning = (vt == RealTimeDriverTracker.VehicleType.CAR) ? isCarTaskRunning : isTruckTaskRunning;
-                if (!isRunning) {
-                    return; // 如果任务已停止，不再处理
-                }
-
-                try {
-                    processCardDataRealtimeTestWithRetry(cardId, vt, 2); // 最多重试2次
-                    cardProcessCountMap.get(cardId).incrementAndGet();
-                } catch (Exception e) {
-                    cardErrorCountMap.get(cardId).incrementAndGet();
-                    String errorMsg = e.getMessage() != null ? e.getMessage() : "未知错误";
-                    System.err.println("[" + DateTimeUtils.localDateTime2String(LocalDateTime.now()) +
-                            "] 处理卡 " + cardId + " 失败: " + errorMsg);
-                }
-            }, initialDelay, 10000, TimeUnit.MILLISECONDS);
-        }
-
-        // 启动监控线程，每分钟输出一次统计信息
-        executorService.scheduleAtFixedRate(() -> {
-            boolean isRunning = (vt == RealTimeDriverTracker.VehicleType.CAR) ? isCarTaskRunning : isTruckTaskRunning;
-            if (isRunning) {
-                printRealtimeStatus(vt, businessType);
-            }
-        }, 60, 60, TimeUnit.SECONDS);
-        System.out.println("✓ " + businessType + "任务已启动！使用 realDriverTrackerZQRealtimeStop() 停止所有任务");
-    }
-
-
-
-
-
-
-
-
-        /**
-         * 测试入口
-         * 自定义时间范围的实时流式数据处理测试方法（火车）（持续运行，每10秒获取一次数据）
-         * 支持自定义开始结束时间，用于测试场景
-         *
-         * 使用方法：
-         * 1. 启动：realDriverTrackerZQRealtimeWithNewTime(cards, "2025-10-17 16:59:00", "2025-10-17 19:27:30")
-         * 2. 停止：realDriverTrackerZQRealtimeStop()
-         * 3. 查看状态：realDriverTrackerZQRealtimeStatus()
-         */
-    public void realDriverTrackerZQRealtimeWithNowTime() {
-//        List<String> cards = new ArrayList<>(
-//                Arrays.asList(
-//                        "1918B3000561",
-//                        "1918B3000978")
-//        );
-        RealTimeDriverTracker.VehicleType vt = RealTimeDriverTracker.VehicleType.CAR;
-//        RealTimeDriverTracker.VehicleType vt = RealTimeDriverTracker.VehicleType.TRUCK;
-//        String startTimeStr = "2025-10-23 18:04:00";
-//        String endTimeStr = "2025-10-23 18:19:00";
-        String startTimeStr = "2025-10-31 20:00:00";
-        String endTimeStr = "2025-10-31 20:10:00";
-        List<String> cards = new ArrayList<>(
-                Arrays.asList(
-                        "1918B3000561")
-        );
-        if (isCarTaskRunning) {
-            System.out.println("火车装卸测试任务已在运行中，无需重复启动");
+        if (isRealtimeTaskRunning) {
+            System.out.println("实时任务已在运行中，无需重复启动");
             return;
         }
 
@@ -394,18 +159,186 @@ public class BALiveTask {
         int threadPoolSize = Math.max(5, Math.min(availableProcessors * 2, 30));
 
         // 创建定时任务线程池
-        carExecutorService = Executors.newScheduledThreadPool(threadPoolSize);
-        isCarTaskRunning = true;
+        realtimeExecutorService = Executors.newScheduledThreadPool(threadPoolSize);
+        isRealtimeTaskRunning = true;
 
         // 初始化统计信息
-        carLastProcessTimeMap.clear();
-        carCardProcessCountMap.clear();
-        carCardErrorCountMap.clear();
-        carCardTrackerMap.clear();
+        lastProcessTimeMap.clear();
+        cardProcessCountMap.clear();
+        cardErrorCountMap.clear();
+        cardTrackerMap.clear();
 
         // 设置全局时间范围（用于判断是否到达结束时间）
-        this.carStartTime = startTimeStr;
-        this.carEndTime = endTimeStr;
+        this.startTime = startTimeStr;
+        this.endTime = endTimeStr;
+
+        System.out.println("========================================");
+        System.out.println("启动" + businessType + "实时流式数据处理任务");
+        System.out.println("总卡数: " + cards.size());
+        System.out.println("线程池大小: " + threadPoolSize);
+        System.out.println("数据获取间隔: 10秒");
+        System.out.println("开始时间: " + startTimeStr);
+        System.out.println("结束时间: " + endTimeStr);
+        System.out.println("========================================");
+
+        // 预热：提前获取token
+        try {
+            System.out.println("正在预热，获取AccessToken...");
+            zqOpenApi.getHeaders();
+            System.out.println("✓ AccessToken预热成功");
+            Thread.sleep(200);
+        } catch (Exception e) {
+            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+        }
+
+        // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动
+        int delayIndex = 0;
+        for (String cardId : cards) {
+            // 初始化统计
+            cardProcessCountMap.put(cardId, new AtomicInteger(0));
+            cardErrorCountMap.put(cardId, new AtomicInteger(0));
+            // 设置每个卡的初始处理时间为用户指定的开始时间
+            lastProcessTimeMap.put(cardId, DateTimeUtils.str2DateTime(startTimeStr));
+
+            // 为每个卡创建独立的 tracker 实例（在整个任务运行期间持续使用）
+            RealTimeDriverTracker cardTracker = applicationContext.getBean(RealTimeDriverTracker.class);
+            cardTrackerMap.put(cardId, cardTracker);
+            System.out.println("✓ 为卡 " + cardId + " 创建独立的 RealTimeDriverTracker 实例");
+
+            // 错峰启动：第1个卡立即开始，后续每个卡延迟200ms
+            final long initialDelay = delayIndex * 200;
+            delayIndex++;
+
+            // 延迟initialDelay毫秒开始，每10秒执行一次
+            realtimeExecutorService.scheduleAtFixedRate(() -> {
+                // 检查是否超过结束时间
+                LocalDateTime currentLastTime = lastProcessTimeMap.get(cardId);
+                if (currentLastTime.isAfter(DateTimeUtils.str2DateTime(this.endTime))) {
+                    System.out.println("✓ 卡 " + cardId + " 已处理到结束时间，停止处理");
+
+                    // 检查是否所有卡都已完成
+                    boolean allCompleted = true;
+                    for (String id : cards) {
+                        if (!lastProcessTimeMap.get(id).isAfter(DateTimeUtils.str2DateTime(this.endTime))) {
+                            allCompleted = false;
+                            break;
+                        }
+                    }
+
+                    if (allCompleted) {
+                        System.out.println("✓ 所有卡都已处理到结束时间，准备停止任务...");
+                        // 延迟停止，让其他线程完成当前操作
+                        new Thread(() -> {
+                            try {
+                                Thread.sleep(2000);
+                                realDriverTrackerZQRealtimeStop();
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }).start();
+                    }
+                    return;
+                }
+
+                if (!isRealtimeTaskRunning) {
+                    return; // 如果任务已停止，不再处理
+                }
+
+                try {
+                    processCardDataRealtimeTestWithRetry(cardId, vt, 2); // 最多重试2次
+                    cardProcessCountMap.get(cardId).incrementAndGet();
+                } catch (Exception e) {
+                    cardErrorCountMap.get(cardId).incrementAndGet();
+                    String errorMsg = e.getMessage() != null ? e.getMessage() : "未知错误";
+                    System.err.println("[" + DateTimeUtils.localDateTime2String(LocalDateTime.now()) +
+                            "] 处理卡 " + cardId + " 失败: " + errorMsg);
+                }
+            }, initialDelay, 10000, TimeUnit.MILLISECONDS);
+        }
+
+        // 启动监控线程，每分钟输出一次统计信息
+        realtimeExecutorService.scheduleAtFixedRate(() -> {
+            if (isRealtimeTaskRunning) {
+                printRealtimeStatus();
+            }
+        }, 60, 60, TimeUnit.SECONDS);
+        System.out.println("✓ " + businessType + "任务已启动！使用 realDriverTrackerZQRealtimeStop() 停止任务");
+    }
+
+
+
+
+
+
+
+
+    /**
+     * 测试入口
+     * 自定义时间范围的实时流式数据处理测试方法（火车）（持续运行，每10秒获取一次数据）
+     * 支持自定义开始结束时间，用于测试场景
+     *
+     * 使用方法：
+     * 1. 启动：realDriverTrackerZQRealtimeWithNewTime(cards, "2025-10-17 16:59:00", "2025-10-17 19:27:30")
+     * 2. 停止：realDriverTrackerZQRealtimeStop()
+     * 3. 查看状态：realDriverTrackerZQRealtimeStatus()
+     */
+    public void realDriverTrackerZQRealtimeWithNowTime() {
+//        List<String> cards = new ArrayList<>(
+//                Arrays.asList(
+//                        "1918B3000561",
+//                        "1918B3000978")
+//        );
+        RealTimeDriverTracker.VehicleType vt = RealTimeDriverTracker.VehicleType.CAR;
+//        RealTimeDriverTracker.VehicleType vt = RealTimeDriverTracker.VehicleType.TRUCK;
+//        String startTimeStr = "2025-10-23 18:04:00";
+//        String endTimeStr = "2025-10-23 18:19:00";
+        String startTimeStr = "2025-10-31 20:00:00";
+        String endTimeStr = "2025-10-31 20:10:00";
+        List<String> cards = new ArrayList<>(
+                Arrays.asList(
+                        "1918B3000561")
+        );
+        if (isRealtimeTaskRunning) {
+            System.out.println("实时任务已在运行中，无需重复启动");
+            return;
+        }
+
+        // 参数验证
+        if (cards == null || cards.isEmpty()) {
+            System.err.println("❌ 错误：卡号列表不能为空");
+            return;
+        }
+
+        try {
+            LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
+            LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+
+            if (startTime.isAfter(endTime)) {
+                System.err.println("❌ 错误：开始时间不能晚于结束时间");
+                return;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ 错误：时间格式不正确，请使用格式 yyyy-MM-dd HH:mm:ss");
+            return;
+        }
+
+        // 根据CPU核心数智能计算线程池大小
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int threadPoolSize = Math.max(5, Math.min(availableProcessors * 2, 30));
+
+        // 创建定时任务线程池
+        realtimeExecutorService = Executors.newScheduledThreadPool(threadPoolSize);
+        isRealtimeTaskRunning = true;
+
+        // 初始化统计信息
+        lastProcessTimeMap.clear();
+        cardProcessCountMap.clear();
+        cardErrorCountMap.clear();
+        cardTrackerMap.clear();
+
+        // 设置全局时间范围（用于判断是否到达结束时间）
+        this.startTime = startTimeStr;
+        this.endTime = endTimeStr;
 
         System.out.println("========================================");
         System.out.println("启动自定义时间范围的实时流式数据处理测试");
@@ -430,14 +363,14 @@ public class BALiveTask {
         int delayIndex = 0;
         for (String cardId : cards) {
             // 初始化统计
-            carCardProcessCountMap.put(cardId, new AtomicInteger(0));
-            carCardErrorCountMap.put(cardId, new AtomicInteger(0));
+            cardProcessCountMap.put(cardId, new AtomicInteger(0));
+            cardErrorCountMap.put(cardId, new AtomicInteger(0));
             // 设置每个卡的初始处理时间为用户指定的开始时间
-            carLastProcessTimeMap.put(cardId, DateTimeUtils.str2DateTime(startTimeStr));
+            lastProcessTimeMap.put(cardId, DateTimeUtils.str2DateTime(startTimeStr));
 
             // 为每个卡创建独立的 tracker 实例（在整个任务运行期间持续使用）
             RealTimeDriverTracker cardTracker = applicationContext.getBean(RealTimeDriverTracker.class);
-            carCardTrackerMap.put(cardId, cardTracker);
+            cardTrackerMap.put(cardId, cardTracker);
             System.out.println("✓ 为卡 " + cardId + " 创建独立的 RealTimeDriverTracker 实例");
 
             // 错峰启动：第1个卡立即开始，后续每个卡延迟200ms
@@ -445,16 +378,16 @@ public class BALiveTask {
             delayIndex++;
 
             // 延迟initialDelay毫秒开始，每10秒执行一次
-            carExecutorService.scheduleAtFixedRate(() -> {
+            realtimeExecutorService.scheduleAtFixedRate(() -> {
                 // 检查是否超过结束时间
-                LocalDateTime currentLastTime = carLastProcessTimeMap.get(cardId);
-                if (currentLastTime.isAfter(DateTimeUtils.str2DateTime(this.carEndTime))) {
+                LocalDateTime currentLastTime = lastProcessTimeMap.get(cardId);
+                if (currentLastTime.isAfter(DateTimeUtils.str2DateTime(this.endTime))) {
                     System.out.println("✓ 卡 " + cardId + " 已处理到结束时间，停止处理");
 
                     // 检查是否所有卡都已完成
                     boolean allCompleted = true;
                     for (String id : cards) {
-                        if (!carLastProcessTimeMap.get(id).isAfter(DateTimeUtils.str2DateTime(this.carEndTime))) {
+                        if (!lastProcessTimeMap.get(id).isAfter(DateTimeUtils.str2DateTime(this.endTime))) {
                             allCompleted = false;
                             break;
                         }
@@ -466,7 +399,7 @@ public class BALiveTask {
                         new Thread(() -> {
                             try {
                                 Thread.sleep(2000);
-                                realDriverTrackerZQRealtimeStopCar();
+                                realDriverTrackerZQRealtimeStop();
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
                             }
@@ -475,15 +408,15 @@ public class BALiveTask {
                     return;
                 }
 
-                if (!isCarTaskRunning) {
+                if (!isRealtimeTaskRunning) {
                     return; // 如果任务已停止，不再处理
                 }
 
                 try {
                     processCardDataRealtimeTestWithRetry(cardId, vt, 2); // 最多重试2次
-                    carCardProcessCountMap.get(cardId).incrementAndGet();
+                    cardProcessCountMap.get(cardId).incrementAndGet();
                 } catch (Exception e) {
-                    carCardErrorCountMap.get(cardId).incrementAndGet();
+                    cardErrorCountMap.get(cardId).incrementAndGet();
                     String errorMsg = e.getMessage() != null ? e.getMessage() : "未知错误";
                     System.err.println("[" + DateTimeUtils.localDateTime2String(LocalDateTime.now()) +
                             "] 处理卡 " + cardId + " 失败: " + errorMsg);
@@ -492,13 +425,13 @@ public class BALiveTask {
         }
 
         // 启动监控线程，每分钟输出一次统计信息
-        carExecutorService.scheduleAtFixedRate(() -> {
-            if (isCarTaskRunning) {
-                printRealtimeStatus(RealTimeDriverTracker.VehicleType.CAR, "火车装卸");
+        realtimeExecutorService.scheduleAtFixedRate(() -> {
+            if (isRealtimeTaskRunning) {
+                printRealtimeStatus();
             }
         }, 60, 60, TimeUnit.SECONDS);
 
-        System.out.println("✓ 测试任务已启动！使用 realDriverTrackerZQRealtimeStopCar() 停止火车任务");
+        System.out.println("✓ 测试任务已启动！使用 realDriverTrackerZQRealtimeStop() 停止任务");
     }
 
     /**
@@ -526,8 +459,8 @@ public class BALiveTask {
                 Arrays.asList(
                         "1918B3000561")
         );
-        if (isTruckTaskRunning) {
-            System.out.println("板车装卸测试任务已在运行中，无需重复启动");
+        if (isRealtimeTaskRunning) {
+            System.out.println("实时任务已在运行中，无需重复启动");
             return;
         }
 
@@ -555,18 +488,18 @@ public class BALiveTask {
         int threadPoolSize = Math.max(5, Math.min(availableProcessors * 2, 30));
 
         // 创建定时任务线程池
-        truckExecutorService = Executors.newScheduledThreadPool(threadPoolSize);
-        isTruckTaskRunning = true;
+        realtimeExecutorService = Executors.newScheduledThreadPool(threadPoolSize);
+        isRealtimeTaskRunning = true;
 
         // 初始化统计信息
-        truckLastProcessTimeMap.clear();
-        truckCardProcessCountMap.clear();
-        truckCardErrorCountMap.clear();
-        truckCardTrackerMap.clear();
+        lastProcessTimeMap.clear();
+        cardProcessCountMap.clear();
+        cardErrorCountMap.clear();
+        cardTrackerMap.clear();
 
         // 设置全局时间范围（用于判断是否到达结束时间）
-        this.truckStartTime = startTimeStr;
-        this.truckEndTime = endTimeStr;
+        this.startTime = startTimeStr;
+        this.endTime = endTimeStr;
 
         System.out.println("========================================");
         System.out.println("启动自定义时间范围的实时流式数据处理测试");
@@ -591,14 +524,14 @@ public class BALiveTask {
         int delayIndex = 0;
         for (String cardId : cards) {
             // 初始化统计
-            truckCardProcessCountMap.put(cardId, new AtomicInteger(0));
-            truckCardErrorCountMap.put(cardId, new AtomicInteger(0));
+            cardProcessCountMap.put(cardId, new AtomicInteger(0));
+            cardErrorCountMap.put(cardId, new AtomicInteger(0));
             // 设置每个卡的初始处理时间为用户指定的开始时间
-            truckLastProcessTimeMap.put(cardId, DateTimeUtils.str2DateTime(startTimeStr));
+            lastProcessTimeMap.put(cardId, DateTimeUtils.str2DateTime(startTimeStr));
 
             // 为每个卡创建独立的 tracker 实例（在整个任务运行期间持续使用）
             RealTimeDriverTracker cardTracker = applicationContext.getBean(RealTimeDriverTracker.class);
-            truckCardTrackerMap.put(cardId, cardTracker);
+            cardTrackerMap.put(cardId, cardTracker);
             System.out.println("✓ 为卡 " + cardId + " 创建独立的 RealTimeDriverTracker 实例");
 
             // 错峰启动：第1个卡立即开始，后续每个卡延迟200ms
@@ -606,16 +539,16 @@ public class BALiveTask {
             delayIndex++;
 
             // 延迟initialDelay毫秒开始，每10秒执行一次
-            truckExecutorService.scheduleAtFixedRate(() -> {
+            realtimeExecutorService.scheduleAtFixedRate(() -> {
                 // 检查是否超过结束时间
-                LocalDateTime currentLastTime = truckLastProcessTimeMap.get(cardId);
-                if (currentLastTime.isAfter(DateTimeUtils.str2DateTime(this.truckEndTime))) {
+                LocalDateTime currentLastTime = lastProcessTimeMap.get(cardId);
+                if (currentLastTime.isAfter(DateTimeUtils.str2DateTime(this.endTime))) {
                     System.out.println("✓ 卡 " + cardId + " 已处理到结束时间，停止处理");
 
                     // 检查是否所有卡都已完成
                     boolean allCompleted = true;
                     for (String id : cards) {
-                        if (!truckLastProcessTimeMap.get(id).isAfter(DateTimeUtils.str2DateTime(this.truckEndTime))) {
+                        if (!lastProcessTimeMap.get(id).isAfter(DateTimeUtils.str2DateTime(this.endTime))) {
                             allCompleted = false;
                             break;
                         }
@@ -627,7 +560,7 @@ public class BALiveTask {
                         new Thread(() -> {
                             try {
                                 Thread.sleep(2000);
-                                realDriverTrackerZQRealtimeStopTruck();
+                                realDriverTrackerZQRealtimeStop();
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
                             }
@@ -636,15 +569,15 @@ public class BALiveTask {
                     return;
                 }
 
-                if (!isTruckTaskRunning) {
+                if (!isRealtimeTaskRunning) {
                     return; // 如果任务已停止，不再处理
                 }
 
                 try {
                     processCardDataRealtimeTestWithRetry(cardId, vt, 2); // 最多重试2次
-                    truckCardProcessCountMap.get(cardId).incrementAndGet();
+                    cardProcessCountMap.get(cardId).incrementAndGet();
                 } catch (Exception e) {
-                    truckCardErrorCountMap.get(cardId).incrementAndGet();
+                    cardErrorCountMap.get(cardId).incrementAndGet();
                     String errorMsg = e.getMessage() != null ? e.getMessage() : "未知错误";
                     System.err.println("[" + DateTimeUtils.localDateTime2String(LocalDateTime.now()) +
                             "] 处理卡 " + cardId + " 失败: " + errorMsg);
@@ -653,13 +586,13 @@ public class BALiveTask {
         }
 
         // 启动监控线程，每分钟输出一次统计信息
-        truckExecutorService.scheduleAtFixedRate(() -> {
-            if (isTruckTaskRunning) {
-                printRealtimeStatus(RealTimeDriverTracker.VehicleType.TRUCK, "板车装卸");
+        realtimeExecutorService.scheduleAtFixedRate(() -> {
+            if (isRealtimeTaskRunning) {
+                printRealtimeStatus();
             }
         }, 60, 60, TimeUnit.SECONDS);
 
-        System.out.println("✓ 测试任务已启动！使用 realDriverTrackerZQRealtimeStopTruck() 停止板车任务");
+        System.out.println("✓ 测试任务已启动！使用 realDriverTrackerZQRealtimeStop() 停止任务");
     }
 
     /**
@@ -698,18 +631,6 @@ public class BALiveTask {
      * 使用该卡独立的 tracker 实例来维护状态
      */
     private void processCardDataRealtimeTest(String cardId, RealTimeDriverTracker.VehicleType vt) {
-        // 根据车辆类型选择对应的 map
-        ConcurrentHashMap<String, LocalDateTime> lastProcessTimeMap;
-        ConcurrentHashMap<String, RealTimeDriverTracker> cardTrackerMap;
-        
-        if (vt == RealTimeDriverTracker.VehicleType.CAR) {
-            lastProcessTimeMap = carLastProcessTimeMap;
-            cardTrackerMap = carCardTrackerMap;
-        } else {
-            lastProcessTimeMap = truckLastProcessTimeMap;
-            cardTrackerMap = truckCardTrackerMap;
-        }
-        
         String buildId = baseConfig.getJoysuch().getBuildingId();
         LocalDateTime lastTime = lastProcessTimeMap.get(cardId);
         LocalDateTime currentTime = lastTime.plusSeconds(10);
@@ -789,158 +710,64 @@ public class BALiveTask {
     }
 
     /**
-     * 停止所有实时流式数据处理任务（火车和板车）
+     * 停止实时流式数据处理
      */
     public void realDriverTrackerZQRealtimeStop() {
-        boolean hasRunningTask = isCarTaskRunning || isTruckTaskRunning;
-        
-        if (!hasRunningTask) {
-            System.out.println("没有运行中的实时任务");
+        if (!isRealtimeTaskRunning) {
+            System.out.println("实时任务未运行");
             return;
         }
 
         System.out.println("========================================");
-        System.out.println("正在停止所有实时任务...");
-        
-        // 停止火车任务
-        if (isCarTaskRunning) {
-            System.out.println("正在停止火车装卸任务...");
-            stopTask(RealTimeDriverTracker.VehicleType.CAR);
-        }
-        
-        // 停止板车任务
-        if (isTruckTaskRunning) {
-            System.out.println("正在停止板车装卸任务...");
-            stopTask(RealTimeDriverTracker.VehicleType.TRUCK);
-        }
+        System.out.println("正在停止实时任务...");
+        isRealtimeTaskRunning = false;
 
-        System.out.println("停止时间: " + DateTimeUtils.localDateTime2String(LocalDateTime.now()));
-        System.out.println("✓ 所有实时任务已停止");
-        System.out.println("========================================");
-    }
-
-    /**
-     * 仅停止火车装卸实时任务
-     */
-    public void realDriverTrackerZQRealtimeStopCar() {
-        if (!isCarTaskRunning) {
-            System.out.println("火车装卸任务未运行");
-            return;
-        }
-
-        System.out.println("========================================");
-        System.out.println("正在停止火车装卸任务...");
-        stopTask(RealTimeDriverTracker.VehicleType.CAR);
-        System.out.println("停止时间: " + DateTimeUtils.localDateTime2String(LocalDateTime.now()));
-        System.out.println("✓ 火车装卸任务已停止");
-        System.out.println("========================================");
-    }
-
-    /**
-     * 仅停止板车装卸实时任务
-     */
-    public void realDriverTrackerZQRealtimeStopTruck() {
-        if (!isTruckTaskRunning) {
-            System.out.println("板车装卸任务未运行");
-            return;
-        }
-
-        System.out.println("========================================");
-        System.out.println("正在停止板车装卸任务...");
-        stopTask(RealTimeDriverTracker.VehicleType.TRUCK);
-        System.out.println("停止时间: " + DateTimeUtils.localDateTime2String(LocalDateTime.now()));
-        System.out.println("✓ 板车装卸任务已停止");
-        System.out.println("========================================");
-    }
-
-    /**
-     * 停止指定类型的任务（内部方法）
-     */
-    private void stopTask(RealTimeDriverTracker.VehicleType vt) {
-        ScheduledExecutorService executorService;
-        ConcurrentHashMap<String, RealTimeDriverTracker> cardTrackerMap;
-        String taskType;
-        
-        if (vt == RealTimeDriverTracker.VehicleType.CAR) {
-            executorService = carExecutorService;
-            cardTrackerMap = carCardTrackerMap;
-            taskType = "火车装卸";
-            isCarTaskRunning = false;
-        } else {
-            executorService = truckExecutorService;
-            cardTrackerMap = truckCardTrackerMap;
-            taskType = "板车装卸";
-            isTruckTaskRunning = false;
-        }
-
-        if (executorService != null) {
-            executorService.shutdown();
+        if (realtimeExecutorService != null) {
+            realtimeExecutorService.shutdown();
             try {
-                if (!executorService.awaitTermination(30, TimeUnit.SECONDS)) {
-                    executorService.shutdownNow();
+                if (!realtimeExecutorService.awaitTermination(30, TimeUnit.SECONDS)) {
+                    realtimeExecutorService.shutdownNow();
                 }
             } catch (InterruptedException e) {
-                executorService.shutdownNow();
+                realtimeExecutorService.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
 
         // 输出最终统计
-        printRealtimeStatus(vt, taskType);
+        printRealtimeStatus();
 
         // 清理 tracker 实例
         if (!cardTrackerMap.isEmpty()) {
-            System.out.println("清理 " + cardTrackerMap.size() + " 个 " + taskType + " tracker 实例...");
+            System.out.println("清理 " + cardTrackerMap.size() + " 个 tracker 实例...");
             cardTrackerMap.clear();
         }
+
+        System.out.println("停止时间: " + DateTimeUtils.localDateTime2String(LocalDateTime.now()));
+        System.out.println("✓ 实时任务已停止");
+        System.out.println("========================================");
     }
 
     /**
-     * 查看所有实时任务状态
+     * 查看实时任务状态
      */
     public void realDriverTrackerZQRealtimeStatus() {
         System.out.println("========================================");
-        System.out.println("实时任务状态总览");
+        System.out.println("实时任务状态");
+        System.out.println("运行状态: " + (isRealtimeTaskRunning ? "运行中" : "已停止"));
         System.out.println("当前时间: " + DateTimeUtils.localDateTime2String(LocalDateTime.now()));
-        System.out.println("----------------------------------------");
-        System.out.println("火车装卸任务: " + (isCarTaskRunning ? "运行中" : "已停止"));
-        System.out.println("板车装卸任务: " + (isTruckTaskRunning ? "运行中" : "已停止"));
         System.out.println("========================================");
 
-        if (isCarTaskRunning) {
-            System.out.println("\n【火车装卸任务详情】");
-            printRealtimeStatus(RealTimeDriverTracker.VehicleType.CAR, "火车装卸");
-        }
-        
-        if (isTruckTaskRunning) {
-            System.out.println("\n【板车装卸任务详情】");
-            printRealtimeStatus(RealTimeDriverTracker.VehicleType.TRUCK, "板车装卸");
-        }
-        
-        if (!isCarTaskRunning && !isTruckTaskRunning) {
-            System.out.println("当前没有运行中的任务");
+        if (isRealtimeTaskRunning) {
+            printRealtimeStatus();
         }
     }
 
     /**
-     * 打印实时统计信息（根据任务类型）
+     * 打印实时统计信息
      */
-    private void printRealtimeStatus(RealTimeDriverTracker.VehicleType vt, String taskType) {
-        ConcurrentHashMap<String, AtomicInteger> cardProcessCountMap;
-        ConcurrentHashMap<String, AtomicInteger> cardErrorCountMap;
-        ConcurrentHashMap<String, LocalDateTime> lastProcessTimeMap;
-        
-        if (vt == RealTimeDriverTracker.VehicleType.CAR) {
-            cardProcessCountMap = carCardProcessCountMap;
-            cardErrorCountMap = carCardErrorCountMap;
-            lastProcessTimeMap = carLastProcessTimeMap;
-        } else {
-            cardProcessCountMap = truckCardProcessCountMap;
-            cardErrorCountMap = truckCardErrorCountMap;
-            lastProcessTimeMap = truckLastProcessTimeMap;
-        }
-        
-        System.out.println("\n--- " + taskType + "实时处理统计 [" + DateTimeUtils.localDateTime2String(LocalDateTime.now()) + "] ---");
+    private void printRealtimeStatus() {
+        System.out.println("\n--- 实时处理统计 [" + DateTimeUtils.localDateTime2String(LocalDateTime.now()) + "] ---");
 
         int totalSuccess = 0;
         int totalError = 0;
@@ -964,3 +791,4 @@ public class BALiveTask {
         System.out.println("-----------------------------------------------\n");
     }
 }
+
