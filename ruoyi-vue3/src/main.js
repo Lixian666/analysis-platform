@@ -82,7 +82,7 @@ app.use(ElementPlus, {
 })
 
 
-axios.get('/config.json').then(response => {
+axios.get('./config.json').then(response => {
   const config = response.data
 
   // 设置全局属性
