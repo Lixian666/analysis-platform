@@ -65,4 +65,12 @@ public interface ITakBehaviorRecordDetailService
     public List<TakBehaviorRecordDetailVo> selectTakBehaviorRecordDetailListByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail);
 
     void insertTakBehaviorRecordDetailAll(List<TakBehaviorRecordDetail> takBehaviorRecordDetailList);
+
+    /**
+     * 查询指定卡号列表的最大时间戳（用于状态恢复）
+     * 
+     * @param cardIds 卡号列表
+     * @return Map<卡号, 最大时间戳(毫秒)>
+     */
+    java.util.Map<String, Long> selectMaxTimestampByCardIds(java.util.List<String> cardIds);
 }

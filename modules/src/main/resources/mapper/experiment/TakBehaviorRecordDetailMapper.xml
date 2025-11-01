@@ -117,4 +117,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <delete id="deleteByCreationTime">
         delete from tak_behavior_record_detail where create_time >= #{createTime}
     </delete>
+
+    <!-- 查询指定卡号列表的最大时间戳（用于状态恢复） -->
+    <select id="selectMaxTimestampByCardIds" resultType="java.util.HashMap">
+        SELECT card_id AS "cardId", MAX(timestamp_ms) AS "maxTimestamp"
+        FROM tak_behavior_record_detail
+        WHERE card_id IN
+        <foreach item="cardId" collection="list" open="(" separator="," close=")">
+            #{cardId}
+        </foreach>
+        GROUP BY card_id
+    </select>
 </mapper>

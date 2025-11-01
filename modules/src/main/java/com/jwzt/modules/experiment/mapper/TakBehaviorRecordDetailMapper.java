@@ -65,4 +65,12 @@ public interface TakBehaviorRecordDetailMapper
     public void deleteByCreationTime(String create_time);
 
     List<TakBehaviorRecordDetailVo> selectTakBehaviorRecordDetailListByUserId(TakBehaviorRecordDetail takBehaviorRecordDetail);
+
+    /**
+     * 查询指定卡号列表的最大时间戳（用于状态恢复）
+     * 
+     * @param cardIds 卡号列表
+     * @return Map列表，每个Map包含cardId和maxTimestamp
+     */
+    java.util.List<java.util.Map<String, Object>> selectMaxTimestampByCardIds(java.util.List<String> cardIds);
 }
