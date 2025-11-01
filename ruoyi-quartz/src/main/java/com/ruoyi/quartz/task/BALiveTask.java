@@ -11,9 +11,12 @@ import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.domain.LocationPoint2;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
+import com.jwzt.modules.experiment.utils.http.HttpUtils;
 import com.jwzt.modules.experiment.utils.third.manage.CenterWorkHttpUtils;
 import com.jwzt.modules.experiment.utils.third.zq.FusionData;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.context.ApplicationContext;
@@ -25,6 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Component("BALiveTask")
 public class BALiveTask {
+
+    private static final Logger log = LoggerFactory.getLogger(HttpUtils.class);
 
     @Autowired
     private BaseConfig baseConfig;
@@ -54,11 +59,16 @@ public class BALiveTask {
     private String startTime;
     private String endTime;
 
+    /**
+     * 启动火车装卸的实时任务
+     */
     public void realDriverTrackerZQRealtimeWithNowTimeV2() {
         // 火车装卸的卡号列表
         List<String> carCards = new ArrayList<>(
                 Arrays.asList(
-                        "1918B3000978")
+                        "1918B30005D6",
+                        "1918B300061E",
+                        "1918B300094E")
         );
 
         // 开始时间：当前时间
@@ -82,11 +92,16 @@ public class BALiveTask {
         }
     }
 
+    /**
+     * 启动板车装卸的实时任务
+     */
     public void realDriverTrackerZQRealtimeTruckWithNowTimeV2() {
         // 板车装卸的卡号列表
         List<String> truckCards = new ArrayList<>(
                 Arrays.asList(
-                        "1918B3000561")
+                        "1918B3000561",
+                        "1918B3000BA3",
+                        "1918B3000978")
         );
 
         // 开始时间：当前时间
@@ -257,6 +272,7 @@ public class BALiveTask {
 
 
         /**
+         * 测试入口
          * 自定义时间范围的实时流式数据处理测试方法（火车）（持续运行，每10秒获取一次数据）
          * 支持自定义开始结束时间，用于测试场景
          *
@@ -646,6 +662,11 @@ public class BALiveTask {
         JSONArray points = jsonObject.getJSONArray("data");
         JSONArray tagData = tagJsonObject.getJSONArray("data");
 
+        if (points.size() == 0 || tagData.size() == 0){
+            log.info("标签：[{}] , {} - {} 未获取到数据，跳过处理", cardId, startTimeStr, endTimeStr);
+            lastProcessTimeMap.put(cardId, currentTime);
+            return;
+        }
         List<LocationPoint> LocationPoints = new ArrayList<>();
         if (points != null && !points.isEmpty()) {
             for (int i = 0; i < points.size(); i++){
