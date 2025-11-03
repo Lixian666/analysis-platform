@@ -11,5 +11,6 @@
   "kuqu_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuqu&outputFormat=application/json",
   "kuwei_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuwei&outputFormat=application/json",
   "dongjiazhen_tif": "/Users/lixian/Cache/Platform/PlatformData/img/董家镇tif/TIFDOM/1/1_DOM.tif",
-  "dongjiazhen_tiles": "http://localhost:8089/董家镇tif/tiles/{z}/{x}/{y}.png"
+  "dongjiazhen_tiles_local": "http://192.168.7.10:8089/董家镇tif/tiles/{z}/{x}/{y}.png",
+  "dongjiazhen_tiles": "http://192.168.6.8:80/dongjiazhen/tiles/{z}/{x}/{y}.png"
 }
