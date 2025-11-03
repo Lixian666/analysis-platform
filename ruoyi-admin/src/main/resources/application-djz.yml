@@ -1,4 +1,3 @@
-# 董家镇环境配置
 # 项目相关配置
 ruoyi:
   # 文件路径
@@ -7,10 +6,8 @@ ruoyi:
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
-  port: 8080
+  port: 8020
   servlet:
-    # 应用的访问路径
-    context-path: /
     domain-name: http://192.168.6.8
 
 # Spring配置

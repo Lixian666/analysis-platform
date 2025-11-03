@@ -16,10 +16,10 @@ ruoyi:
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
-  port: 8080
+  port: 8020
   servlet:
     # 应用的访问路径
-    context-path: /
+    context-path: /analysis-platform-api
     domain-name: http://192.168.6.8
   tomcat:
     # tomcat的URI编码
