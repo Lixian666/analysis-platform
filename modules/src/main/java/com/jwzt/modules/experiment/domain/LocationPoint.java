@@ -18,6 +18,7 @@ public class LocationPoint {
     private String event;
 
     private TagScanUwbData tagScanUwbData;
+//    private visualIdentityData visualIdentityData;
 
     private Boolean isStay = false;
 

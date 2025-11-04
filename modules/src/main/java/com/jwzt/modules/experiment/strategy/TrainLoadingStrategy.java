@@ -141,13 +141,22 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
         // 判断是否在停车区域（发运上车区域）
         boolean isnParkingArea = zoneChecker.isInParkingZone(currentPoint);
         
-        // 获取交通车数
-        if (sendOutLastEventState != null || sendInLastEventState != null) {
-            if (currentPoint.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
-                    || currentPoint.getState() == MovementAnalyzer.MovementState.DRIVING) {
-                theTrafficCarCount++;
-            }
-        }
+//        // 获取交通车数
+//        if (sendOutLastEventState != null || sendInLastEventState != null) {
+//            if (currentPoint.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
+//                    || currentPoint.getState() == MovementAnalyzer.MovementState.DRIVING) {
+//                theTrafficCarCount++;
+//            }
+//        }
+
+        // 统计最后10个点是否在交通车附近
+        int theLastTenPointsNotInZYTCount = tagBeacon.countTagsCloseToBeacons(
+                theLastTenPoints,
+                baseConfig.getJoysuch().getBuildingId(),
+                "货运线作业台",
+                "2号线",
+                "A"
+        );
         
         // 判断是否在交通车上
         if (theTrafficCarCount >= FilterConfig.TRAFFICCAR_STATE_SIZE) {
@@ -155,7 +164,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
         }
         
         // 统计最后10个点是否接近作业台J车附近
-        int theLastTenPointsNotInZYTCount = tagBeacon.countTagsCloseToBeacons(
+        int theLastTenPointsNotInTrafficCarCount = tagBeacon.countTagsCloseToBeacons(
                 theLastTenPoints,
                 baseConfig.getJoysuch().getBuildingId(),
                 "货运线作业台",
