@@ -75,7 +75,7 @@ public class TakBehaviorRecords extends BaseEntity {
     /**
      * 行为类型 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库
      */
-    @Excel(name = "行为类型 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库")
+    @Excel(name = "行为类型 0 到达卸车 1 发运装车 2 轿运车卸车 3 轿运车装车 4地跑入库 5 地跑出库")
     private Long type;
 
     /**
