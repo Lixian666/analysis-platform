@@ -125,12 +125,12 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="beaconInfoList" @selection-change="handleSelectionChange">
+    <el-table ref="beaconInfoRef" v-loading="loading" :data="beaconInfoList" @selection-change="handleSelectionChange" :default-sort="defaultSort" @sort-change="handleSortChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column type="index" label="序号" align="center" width="50" />
-      <el-table-column label="名称" align="center" prop="name" />
+      <el-table-column label="名称" align="center" prop="name" sortable="custom" :sort-orders="['descending', 'ascending']" />
       <el-table-column label="RFID名称" align="center" prop="rfidName" />
-      <el-table-column label="类型" align="center" prop="type">
+      <el-table-column label="类型" align="center" prop="type" sortable="custom" :sort-orders="['descending', 'ascending']">
         <template #default="scope">
           <dict-tag :options="tracker_beacon_type" :value="scope.row.type"/>
         </template>
@@ -162,8 +162,8 @@
     <pagination
       v-show="total>0"
       :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
+      v-model:page="queryParams.pageNum"
+      v-model:limit="queryParams.pageSize"
       @pagination="getList"
     />
 
@@ -284,6 +284,7 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
+const defaultSort = ref({ prop: "name", order: "ascending" });
 
 const upload = reactive({
   open: false,
@@ -329,7 +330,9 @@ const data = reactive({
     location: null,
     status: null,
     createTime: null,
-    updateTime: null
+    updateTime: null,
+    orderByColumn: undefined,
+    isAsc: undefined
   },
   rules: {
     name: [
@@ -433,7 +436,10 @@ function handleQuery() {
 /** 重置按钮操作 */
 function resetQuery() {
   proxy.resetForm("queryRef");
-  handleQuery();
+  queryParams.value.pageNum = 1;
+  queryParams.value.orderByColumn = undefined;
+  queryParams.value.isAsc = undefined;
+  proxy.$refs["beaconInfoRef"].sort(defaultSort.value.prop, defaultSort.value.order);
 }
 
 // 多选框选中数据
@@ -441,6 +447,13 @@ function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.id);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
+}
+
+/** 排序触发事件 */
+function handleSortChange(column, prop, order) {
+  queryParams.value.orderByColumn = column.prop;
+  queryParams.value.isAsc = column.order;
+  getList();
 }
 
 /** 新增按钮操作 */

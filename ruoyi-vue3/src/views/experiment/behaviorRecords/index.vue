@@ -177,8 +177,8 @@
           <el-select v-model="form.type" placeholder="请选择行为类型" clearable :style="{width: '100%'}">
             <el-option label="到达卸车" value="0" />
             <el-option label="发运装车" value="1" />
-            <el-option label="轿运车装车" value="2" />
-            <el-option label="轿运车卸车" value="3" />
+            <el-option label="轿运车卸车" value="2" />
+            <el-option label="轿运车装车" value="3" />
             <el-option label="地跑入库" value="4" />
             <el-option label="地跑出库" value="5" />
           </el-select>
@@ -311,8 +311,8 @@ function formatType(type) {
   const typeMap = {
     '0': '到达卸车',
     '1': '发运装车',
-    '2': '轿运车装车',
-    '3': '轿运车卸车',
+    '2': '轿运车卸车',
+    '3': '轿运车装车',
     '4': '地跑入库',
     '5': '地跑出库'
   };

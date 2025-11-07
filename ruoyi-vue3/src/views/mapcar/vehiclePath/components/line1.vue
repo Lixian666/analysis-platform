@@ -371,9 +371,9 @@
     } else if (data === 1 ){
       data = '发运装车'
     } else if (data === 2) {
-      data = '轿运车装车'
-    } else if (data === 3) {
       data = '轿运车卸车'
+    } else if (data === 3) {
+      data = '轿运车装车'
     } else if (data === 4) {
       data = '地跑入库'
     } else if (data === 5) {
