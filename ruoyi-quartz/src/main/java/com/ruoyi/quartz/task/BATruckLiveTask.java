@@ -57,36 +57,36 @@ public class BATruckLiveTask {
     /**
      * 启动火车装卸的实时任务
      */
-    public void realDriverTrackerZQRealtimeWithNowTimeV2() {
-        // 火车装卸的卡号列表
-        List<String> carCards = new ArrayList<>(
-                Arrays.asList(
-                        "1918B3000978",
-                        "1918B30005D6",
-                        "1918B300061E",
-                        "1918B300094E")
-        );
-
-        // 开始时间：当前时间
-        LocalDateTime now = LocalDateTime.now().minusMinutes(1);
-        // 结束时间：下一个凌晨3点
-        // 如果当前时间还没到今天的凌晨3点，则结束时间是今天的凌晨3点
-        // 如果当前时间已经过了今天的凌晨3点，则结束时间是明天的凌晨3点
-        LocalDateTime today3am = now.withHour(3).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime tomorrow3am = now.plusDays(1).withHour(3).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime endTime = now.isBefore(today3am) ? today3am : tomorrow3am;
-
-        String startTimeStr = DateTimeUtils.localDateTime2String(now);
-        String endTimeStr = DateTimeUtils.localDateTime2String(endTime);
-
-        System.out.println("当前时间: " + startTimeStr);
-        System.out.println("结束时间: " + endTimeStr);
-
-        // 火车装卸
-        if (!carCards.isEmpty()) {
-            startRealtimeTaskForCards(carCards, RealTimeDriverTracker.VehicleType.CAR, startTimeStr, endTimeStr, "火车装卸");
-        }
-    }
+//    public void realDriverTrackerZQRealtimeWithNowTimeV2() {
+//        // 火车装卸的卡号列表
+//        List<String> carCards = new ArrayList<>(
+//                Arrays.asList(
+//                        "1918B3000978",
+//                        "1918B30005D6",
+//                        "1918B300061E",
+//                        "1918B300094E")
+//        );
+//
+//        // 开始时间：当前时间
+//        LocalDateTime now = LocalDateTime.now().minusMinutes(1);
+//        // 结束时间：下一个凌晨3点
+//        // 如果当前时间还没到今天的凌晨3点，则结束时间是今天的凌晨3点
+//        // 如果当前时间已经过了今天的凌晨3点，则结束时间是明天的凌晨3点
+//        LocalDateTime today3am = now.withHour(3).withMinute(0).withSecond(0).withNano(0);
+//        LocalDateTime tomorrow3am = now.plusDays(1).withHour(3).withMinute(0).withSecond(0).withNano(0);
+//        LocalDateTime endTime = now.isBefore(today3am) ? today3am : tomorrow3am;
+//
+//        String startTimeStr = DateTimeUtils.localDateTime2String(now);
+//        String endTimeStr = DateTimeUtils.localDateTime2String(endTime);
+//
+//        System.out.println("当前时间: " + startTimeStr);
+//        System.out.println("结束时间: " + endTimeStr);
+//
+//        // 火车装卸
+//        if (!carCards.isEmpty()) {
+//            startRealtimeTaskForCards(carCards, RealTimeDriverTracker.VehicleType.CAR, startTimeStr, endTimeStr, "火车装卸");
+//        }
+//    }
 
     /**
      * 启动板车装卸的实时任务
@@ -105,8 +105,8 @@ public class BATruckLiveTask {
         // 结束时间：下一个凌晨3点
         // 如果当前时间还没到今天的凌晨3点，则结束时间是今天的凌晨3点
         // 如果当前时间已经过了今天的凌晨3点，则结束时间是明天的凌晨3点
-        LocalDateTime today3am = now.withHour(3).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime tomorrow3am = now.plusDays(1).withHour(3).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime today3am = now.withHour(2).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime tomorrow3am = now.plusDays(1).withHour(2).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime endTime = now.isBefore(today3am) ? today3am : tomorrow3am;
 
         String startTimeStr = DateTimeUtils.localDateTime2String(now);
