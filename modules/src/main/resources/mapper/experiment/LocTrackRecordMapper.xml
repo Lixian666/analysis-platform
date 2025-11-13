@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwzt.modules.experiment.mapper.LocTrackRecordMapper">
+    
+    <resultMap type="com.jwzt.modules.experiment.domain.LocTrackRecord" id="LocTrackRecordResult">
+        <result property="id"    column="ID"    />
+        <result property="stationId"    column="STATION_ID"    />
+        <result property="cardId"    column="CARD_ID"    />
+        <result property="isAlarm"    column="IS_ALARM"    />
+        <result property="isLowPower"    column="IS_LOW_POWER"    />
+        <result property="isStill"    column="IS_STILL"    />
+        <result property="sourceCode"    column="SOURCE_CODE"    />
+        <result property="gpsIsValid"    column="GPS_IS_VALID"    />
+        <result property="latitude"    column="LATITUDE"    />
+        <result property="longitude"    column="LONGITUDE"    />
+        <result property="speed"    column="SPEED"    />
+        <result property="beaconsJson"    column="BEACONS_JSON"    />
+        <result property="uwbsJson"    column="UWBS_JSON"    />
+        <result property="rawPayload"    column="RAW_PAYLOAD"    />
+        <result property="createdAt"    column="CREATED_AT"    />
+    </resultMap>
+
+    <sql id="selectLocTrackRecordVo">
+        select ID, STATION_ID, CARD_ID, IS_ALARM, IS_LOW_POWER, IS_STILL, SOURCE_CODE, GPS_IS_VALID, LATITUDE, LONGITUDE, SPEED, BEACONS_JSON, UWBS_JSON, RAW_PAYLOAD, CREATED_AT from LOC_TRACK_RECORD
+    </sql>
+
+    <select id="selectLocTrackRecordList" parameterType="com.jwzt.modules.experiment.domain.LocTrackRecord" resultMap="LocTrackRecordResult">
+        <include refid="selectLocTrackRecordVo"/>
+        <where>  
+            <if test="stationId != null  and stationId != ''"> and STATION_ID = #{stationId}</if>
+            <if test="cardId != null  and cardId != ''"> and CARD_ID = #{cardId}</if>
+            <if test="isAlarm != null  and isAlarm != ''"> and IS_ALARM = #{isAlarm}</if>
+            <if test="isLowPower != null  and isLowPower != ''"> and IS_LOW_POWER = #{isLowPower}</if>
+            <if test="isStill != null  and isStill != ''"> and IS_STILL = #{isStill}</if>
+            <if test="sourceCode != null  and sourceCode != ''"> and SOURCE_CODE = #{sourceCode}</if>
+            <if test="gpsIsValid != null  and gpsIsValid != ''"> and GPS_IS_VALID = #{gpsIsValid}</if>
+            <if test="latitude != null  and latitude != ''"> and LATITUDE = #{latitude}</if>
+            <if test="longitude != null  and longitude != ''"> and LONGITUDE = #{longitude}</if>
+            <if test="speed != null  and speed != ''"> and SPEED = #{speed}</if>
+            <if test="beaconsJson != null  and beaconsJson != ''"> and BEACONS_JSON = #{beaconsJson}</if>
+            <if test="uwbsJson != null  and uwbsJson != ''"> and UWBS_JSON = #{uwbsJson}</if>
+            <if test="rawPayload != null  and rawPayload != ''"> and RAW_PAYLOAD = #{rawPayload}</if>
+            <if test="createdAt != null  and createdAt != ''"> and CREATED_AT = #{createdAt}</if>
+            <!-- 时间范围查询：查找与指定时间范围有交集的记录 -->
+            <if test="queryStartTime != null and queryStartTime != '' and queryEndTime != null and queryEndTime != ''">
+                and CREATED_AT &lt;= TO_DATE(#{queryEndTime}, 'YYYY-MM-DD HH24:MI:SS')
+                and CREATED_AT &gt;= TO_DATE(#{queryStartTime}, 'YYYY-MM-DD HH24:MI:SS')
+            </if>
+        </where>
+    </select>
+    
+    <select id="selectLocTrackRecordById" parameterType="String" resultMap="LocTrackRecordResult">
+        <include refid="selectLocTrackRecordVo"/>
+        where ID = #{id}
+    </select>
+
+    <insert id="insertLocTrackRecord" parameterType="com.jwzt.modules.experiment.domain.LocTrackRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into LOC_TRACK_RECORD
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="stationId != null">STATION_ID,</if>
+            <if test="cardId != null">CARD_ID,</if>
+            <if test="isAlarm != null">IS_ALARM,</if>
+            <if test="isLowPower != null">IS_LOW_POWER,</if>
+            <if test="isStill != null">IS_STILL,</if>
+            <if test="sourceCode != null">SOURCE_CODE,</if>
+            <if test="gpsIsValid != null">GPS_IS_VALID,</if>
+            <if test="latitude != null">LATITUDE,</if>
+            <if test="longitude != null">LONGITUDE,</if>
+            <if test="speed != null">SPEED,</if>
+            <if test="beaconsJson != null">BEACONS_JSON,</if>
+            <if test="uwbsJson != null">UWBS_JSON,</if>
+            <if test="rawPayload != null">RAW_PAYLOAD,</if>
+            <if test="createdAt != null">CREATED_AT,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="stationId != null">#{stationId},</if>
+            <if test="cardId != null">#{cardId},</if>
+            <if test="isAlarm != null">#{isAlarm},</if>
+            <if test="isLowPower != null">#{isLowPower},</if>
+            <if test="isStill != null">#{isStill},</if>
+            <if test="sourceCode != null">#{sourceCode},</if>
+            <if test="gpsIsValid != null">#{gpsIsValid},</if>
+            <if test="latitude != null">#{latitude},</if>
+            <if test="longitude != null">#{longitude},</if>
+            <if test="speed != null">#{speed},</if>
+            <if test="beaconsJson != null">#{beaconsJson},</if>
+            <if test="uwbsJson != null">#{uwbsJson},</if>
+            <if test="rawPayload != null">#{rawPayload},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateLocTrackRecord" parameterType="com.jwzt.modules.experiment.domain.LocTrackRecord">
+        update LOC_TRACK_RECORD
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="stationId != null">STATION_ID = #{stationId},</if>
+            <if test="cardId != null">CARD_ID = #{cardId},</if>
+            <if test="isAlarm != null">IS_ALARM = #{isAlarm},</if>
+            <if test="isLowPower != null">IS_LOW_POWER = #{isLowPower},</if>
+            <if test="isStill != null">IS_STILL = #{isStill},</if>
+            <if test="sourceCode != null">SOURCE_CODE = #{sourceCode},</if>
+            <if test="gpsIsValid != null">GPS_IS_VALID = #{gpsIsValid},</if>
+            <if test="latitude != null">LATITUDE = #{latitude},</if>
+            <if test="longitude != null">LONGITUDE = #{longitude},</if>
+            <if test="speed != null">SPEED = #{speed},</if>
+            <if test="beaconsJson != null">BEACONS_JSON = #{beaconsJson},</if>
+            <if test="uwbsJson != null">UWBS_JSON = #{uwbsJson},</if>
+            <if test="rawPayload != null">RAW_PAYLOAD = #{rawPayload},</if>
+            <if test="createdAt != null">CREATED_AT = #{createdAt},</if>
+        </trim>
+        where ID = #{id}
+    </update>
+
+    <delete id="deleteLocTrackRecordById" parameterType="String">
+        delete from LOC_TRACK_RECORD where ID = #{id}
+    </delete>
+
+    <delete id="deleteLocTrackRecordByIds" parameterType="String">
+        delete from LOC_TRACK_RECORD where ID in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
