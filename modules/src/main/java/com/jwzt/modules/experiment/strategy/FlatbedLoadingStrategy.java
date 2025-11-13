@@ -46,6 +46,9 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
     private EventState lastEventState = new EventState();
     private EventState sendInLastEventState = null;
     private int parkingTags = 0;
+
+    private int driverTags = 0;
+    private boolean isDriving = false;
     
     @Data
     private static class TheUWBRecordsTruck {
@@ -83,8 +86,26 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 null,
                 null
         );
+
+        if (currentPoint.getAcceptTime().equals("2025-11-05 17:58:16")){
+            System.out.println("rfid数（板车）" + theUWBRecordsTruck.theUWBSendDropsRFID);
+        }
+
+        // 监测驾驶状态
+        if (currentEvent == BoardingDetector.Event.TRUCK_ARRIVED_BOARDING && currentPoint.getSpeed() > FilterConfig.MAX_RUNING_SPEED){
+            driverTags++;
+        }else {
+            driverTags = 0;
+        }
+        if (!isDriving && driverTags >= 3){
+            isDriving = true;
+        }
+
+        // 信标识别数
         if (isRFIDWithin) {
             theUWBRecordsTruck.theUWBSendDropsRFID++;
+        }else {
+            theUWBRecordsTruck.theUWBSendDropsRFID = 0;
         }
         System.out.println("rfid数（板车）" + theUWBRecordsTruck.theUWBSendDropsRFID);
         
@@ -96,9 +117,12 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
             curPoint = null;
             return new EventState(currentEvent, currentPoint.getTimestamp(), 1);
         }
-        
+
+        if (currentPoint.getAcceptTime().equals("2025-11-05 17:57:53")){
+            System.out.println("rfid数（板车）" + theUWBRecordsTruck.theUWBSendDropsRFID);
+        }
         // 监测板车卸车上车事件
-        if (sendInLastEventState == null && theUWBRecordsTruck.theUWBSendDropsRFID >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE) {
+        if ((sendInLastEventState == null || currentEvent == BoardingDetector.Event.TRUCK_ARRIVED_BOARDING) && theUWBRecordsTruck.theUWBSendDropsRFID >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE) {
             if (theLastTenPointsNotInRFIDCount <= 3) {
                 // 检测板车上车事件（离开RFID范围就算上车）
                 if (lastEvent == BoardingDetector.Event.NONE) {
@@ -120,7 +144,8 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
         // 检测板车卸车下车事件
         if (sendInLastEventState != null 
                 && currentPoint.getState() == MovementAnalyzer.MovementState.STOPPED 
-                && isnParkingArea) {
+                && isnParkingArea
+                && isDriving) {
             
             System.out.println("⚠️ 检测到车辆已进入板车卸车下车区域");
             int arrivedStoppedTag = 0;
@@ -163,6 +188,7 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 System.out.println("⚠️ 检测到板车卸车下车");
                 resetInternalState();
                 curPoint = currentPoint;
+                isDriving = false;
                 lastEvent = BoardingDetector.Event.NONE;
                 currentEvent = BoardingDetector.Event.TRUCK_ARRIVED_DROPPING;
                 lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());

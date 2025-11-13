@@ -617,7 +617,7 @@ public class BATruckLiveTask {
         }
 
         // 所有重试都失败，抛出异常
-        throw new Exception("测试处理卡 " + cardId + " 失败", lastException);
+        throw new Exception("重试处理卡 " + cardId + " 失败", lastException);
     }
 
     /**
@@ -642,6 +642,7 @@ public class BATruckLiveTask {
 
         // 获取位置点数据 - 添加空值检查
         String pointsResponse = zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr);
+        System.out.println("获取位置点数据：" + pointsResponse);
         if (pointsResponse == null) {
             throw new RuntimeException("获取位置点数据返回null");
         }

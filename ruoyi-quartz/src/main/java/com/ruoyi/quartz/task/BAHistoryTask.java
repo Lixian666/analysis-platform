@@ -155,23 +155,30 @@ public class BAHistoryTask
     }
 
     /**
-     * 实时任务测试（历史数据模拟）多线程
+     * 实时任务测试（历史数据模拟）多线程 - 支持设置车辆类型
      * 支持处理大量卡数据（几百甚至上千），自动根据可用资源调整并发数
      * 模拟实时处理：每次处理10秒的数据
      */
-    public void realDriverTrackerZQTestMultitasking(){
+    public void realDriverTrackerZQTestMultitaskingWithVehicleType(){
 
         List<String> cards = new ArrayList<>(
                 Arrays.asList(
-                        "1918B3000A79",
                         "1918B3000BA3",
-                        "1918B30005D6",
-                        "1918B3000561"
+                        "1918B3000978"
                 )
         );
 
-        String startTimeStr = "2025-10-17 16:50:00";
-        String endTimeStr = "2025-10-17 19:00:00";
+        String startTimeStr = "2025-11-05 17:50:00";
+        String endTimeStr = "2025-11-05 19:00:00";
+        Map<String, RealTimeDriverTracker.VehicleType> vehicleTypeMap = null;
+        // 如果没有提供vehicleTypeMap，创建空Map
+        if (vehicleTypeMap == null) {
+            vehicleTypeMap = new HashMap<>();
+        }
+        
+        // 默认车辆类型：CAR（火车装卸）
+//        final RealTimeDriverTracker.VehicleType defaultVehicleType = RealTimeDriverTracker.VehicleType.CAR;
+        final RealTimeDriverTracker.VehicleType defaultVehicleType = RealTimeDriverTracker.VehicleType.TRUCK;
 
         // 根据CPU核心数和卡数量智能计算线程池大小
         // 可用CPU核心数 * 2（考虑IO密集型任务），最少5个，最多30个（考虑数据库连接池限制）
@@ -192,12 +199,18 @@ public class BAHistoryTask
         AtomicInteger totalProcessed = new AtomicInteger(0);
 
         System.out.println("========================================");
-        System.out.println("开始多线程处理卡数据");
+        System.out.println("开始多线程处理卡数据（支持车辆类型设置）");
         System.out.println("总卡数: " + cards.size());
         System.out.println("CPU核心数: " + availableProcessors);
         System.out.println("线程池大小: " + threadPoolSize);
         System.out.println("预计批次: " + (int)Math.ceil((double)cards.size() / threadPoolSize));
         System.out.println("提示: 使用错峰启动避免并发token冲突");
+        // 输出车辆类型配置信息
+        System.out.println("车辆类型配置:");
+        for (String cardId : cards) {
+            RealTimeDriverTracker.VehicleType vt = vehicleTypeMap.getOrDefault(cardId, defaultVehicleType);
+            System.out.println("  - 卡 " + cardId + ": " + (vt == RealTimeDriverTracker.VehicleType.TRUCK ? "板车(TRUCK)" : "火车/地跑(CAR)"));
+        }
         System.out.println("========================================");
 
         long startTime = System.currentTimeMillis();
@@ -217,6 +230,9 @@ public class BAHistoryTask
         int delayIndex = 0;
         for (String cardId : cards) {
             final int startDelay = delayIndex * 100; // 每个任务延迟100ms启动
+            final String finalCardId = cardId; // 用于lambda表达式的final变量
+            // 获取该卡的车辆类型，如果未指定则使用默认类型
+            final RealTimeDriverTracker.VehicleType vehicleType = vehicleTypeMap.getOrDefault(cardId, defaultVehicleType);
             delayIndex++;
 
             executorService.submit(() -> {
@@ -228,13 +244,15 @@ public class BAHistoryTask
                     }
                     // 每个线程获取独立的 tracker 实例（prototype 模式）
                     tracker = applicationContext.getBean(RealTimeDriverTracker.class);
-                    processCardDataWithRetry(cardId, startTimeStr, endTimeStr, 3, tracker);
+                    // 为当前卡设置车辆类型
+                    tracker.upsertVehicleType(finalCardId, vehicleType);
+                    processCardDataWithRetry(finalCardId, startTimeStr, endTimeStr, 3, tracker, vehicleType);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                    System.err.println("处理卡 " + cardId + " 时发生异常: " + errorMsg);
+                    System.err.println("处理卡 " + finalCardId + " 时发生异常: " + errorMsg);
                     e.printStackTrace();
-                    errorMap.put(cardId, e);
+                    errorMap.put(finalCardId, e);
                 } finally {
                     int processed = totalProcessed.incrementAndGet();
                     // 每处理10%输出一次进度
@@ -307,6 +325,20 @@ public class BAHistoryTask
      * 带重试机制的卡数据处理（解决并发token冲突问题）
      */
     private void processCardDataWithRetry(String cardId, String startTimeStr, String endTimeStr, int maxRetries, RealTimeDriverTracker tracker) throws Exception {
+        processCardDataWithRetry(cardId, startTimeStr, endTimeStr, maxRetries, tracker, RealTimeDriverTracker.VehicleType.CAR);
+    }
+
+    /**
+     * 带重试机制的卡数据处理（解决并发token冲突问题）- 支持车辆类型
+     * 
+     * @param cardId 卡号
+     * @param startTimeStr 开始时间字符串
+     * @param endTimeStr 结束时间字符串
+     * @param maxRetries 最大重试次数
+     * @param tracker RealTimeDriverTracker实例
+     * @param vehicleType 车辆类型
+     */
+    private void processCardDataWithRetry(String cardId, String startTimeStr, String endTimeStr, int maxRetries, RealTimeDriverTracker tracker, RealTimeDriverTracker.VehicleType vehicleType) throws Exception {
         Exception lastException = null;
 
         for (int retry = 0; retry < maxRetries; retry++) {
@@ -318,7 +350,7 @@ public class BAHistoryTask
                     Thread.sleep(waitTime);
                 }
 
-                processCardData(cardId, startTimeStr, endTimeStr, tracker);
+                processCardData(cardId, startTimeStr, endTimeStr, tracker, vehicleType);
                 return; // 成功则返回
 
             } catch (Exception e) {
@@ -344,12 +376,30 @@ public class BAHistoryTask
      * @param tracker 该线程独立的 RealTimeDriverTracker 实例
      */
     private void processCardData(String cardId, String startTimeStr, String endTimeStr, RealTimeDriverTracker tracker) {
-        System.out.println("线程 " + Thread.currentThread().getName() + " 开始处理卡: " + cardId + " (一次查询，分批处理)");
+        processCardData(cardId, startTimeStr, endTimeStr, tracker, RealTimeDriverTracker.VehicleType.CAR);
+    }
+
+    /**
+     * 处理单个卡的数据（线程安全）- 用于历史数据批量处理，支持车辆类型
+     * 模拟实时处理：每次处理10秒的数据，而不是一次性处理全部
+     *
+     * @param cardId 卡号
+     * @param startTimeStr 开始时间字符串
+     * @param endTimeStr 结束时间字符串
+     * @param tracker 该线程独立的 RealTimeDriverTracker 实例
+     * @param vehicleType 车辆类型
+     */
+    private void processCardData(String cardId, String startTimeStr, String endTimeStr, RealTimeDriverTracker tracker, RealTimeDriverTracker.VehicleType vehicleType) {
+        System.out.println("线程 " + Thread.currentThread().getName() + " 开始处理卡: " + cardId + " (一次查询，分批处理, 车辆类型: " + 
+                (vehicleType == RealTimeDriverTracker.VehicleType.TRUCK ? "板车(TRUCK)" : "火车/地跑(CAR)") + ")");
 
         String buildId = baseConfig.getJoysuch().getBuildingId();
         String date = "未获取到日期";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
         LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
+        
+        // 确保车辆类型已设置
+        tracker.upsertVehicleType(cardId, vehicleType);
 
         try {
             // 【优化】一次性获取整个时间段的所有数据
