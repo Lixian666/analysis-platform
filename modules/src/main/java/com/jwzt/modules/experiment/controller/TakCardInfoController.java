@@ -12,6 +12,7 @@ import com.ruoyi.common.utils.poi.ExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;
@@ -110,6 +111,30 @@ public class TakCardInfoController extends BaseController {
     @DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids) {
         return toAjax(takCardInfoService.deleteTakCardInfoByIds(ids));
+    }
+
+    /**
+     * 导入定位卡信息数据
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:cardInfo:import')")
+    @Log(title = "定位卡信息", businessType = BusinessType.IMPORT)
+    @PostMapping("/importData")
+    public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception {
+        ExcelUtil<TakCardInfo> util = new ExcelUtil<>(TakCardInfo.class);
+        List<TakCardInfo> cardInfoList = util.importExcel(file.getInputStream());
+        String operName = getUsername();
+        String message = takCardInfoService.importTakCardInfo(cardInfoList, updateSupport, operName);
+        return success(message);
+    }
+
+    /**
+     * 下载导入模板
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:cardInfo:import')")
+    @GetMapping("/importTemplate")
+    public void importTemplate(HttpServletResponse response) {
+        ExcelUtil<TakCardInfo> util = new ExcelUtil<>(TakCardInfo.class);
+        util.importTemplateExcel(response, "定位卡信息数据");
     }
 
     private void validCardInfo(TakCardInfo takCardInfo) {

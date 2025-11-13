@@ -41,6 +41,15 @@
       <el-col :span="1.5">
         <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['experiment:cardInfo:export']">导出</el-button>
       </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="info"
+          plain
+          icon="Upload"
+          @click="handleImport"
+          v-hasPermi="['experiment:cardInfo:import']"
+        >导入</el-button>
+      </el-col>
     </el-row>
 
     <el-table v-loading="loading" :data="cardList" @selection-change="handleSelectionChange">
@@ -125,11 +134,46 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog :title="upload.title" v-model="upload.open" width="400px" append-to-body>
+      <el-upload
+        ref="uploadRef"
+        :limit="1"
+        accept=".xlsx, .xls"
+        :headers="upload.headers"
+        :action="upload.url + '?updateSupport=' + upload.updateSupport"
+        :disabled="upload.isUploading"
+        :on-progress="handleFileUploadProgress"
+        :on-success="handleFileSuccess"
+        :auto-upload="false"
+        drag
+      >
+        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+        <template #tip>
+          <div class="el-upload__tip text-center">
+            <div class="el-upload__tip">
+              <el-checkbox v-model="upload.updateSupport" />覆盖已有数据
+            </div>
+            <span>仅允许导入xls、xlsx格式文件。</span>
+            <el-link type="primary" :underline="false" style="font-size:12px;vertical-align: baseline;" @click="downloadImportTemplate">下载模板</el-link>
+          </div>
+        </template>
+      </el-upload>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="submitFileForm">确 定</el-button>
+          <el-button @click="upload.open = false">取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, toRefs, getCurrentInstance, computed } from "vue";
+import { getToken } from "@/utils/auth";
+import { UploadFilled } from '@element-plus/icons-vue';
 import {
   listCardInfo,
   getCardInfo,
@@ -163,6 +207,14 @@ const enabledOptions = [
   { label: "启用", value: 1 },
   { label: "禁用", value: 0 }
 ];
+const upload = reactive({
+  open: false,
+  title: "定位卡导入",
+  isUploading: false,
+  updateSupport: 0,
+  headers: { Authorization: "Bearer " + getToken() },
+  url: import.meta.env.VITE_APP_BASE_API + "/experiment/cardInfo/importData"
+});
 
 const data = reactive({
   form: {
@@ -354,6 +406,29 @@ function handleExport() {
   );
 }
 
+function handleImport() {
+  upload.open = true;
+}
+
+function downloadImportTemplate() {
+  window.location.href = import.meta.env.VITE_APP_BASE_API + "/experiment/cardInfo/importTemplate";
+}
+
+function handleFileUploadProgress() {
+  upload.isUploading = true;
+}
+
+function handleFileSuccess(response) {
+  upload.open = false;
+  upload.isUploading = false;
+  proxy.$refs["uploadRef"].clearFiles();
+  proxy.$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.msg + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
+  getList();
+}
+
+function submitFileForm() {
+  proxy.$refs["uploadRef"].submit();
+}
+
 getList();
 </script>
-
