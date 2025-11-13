@@ -8,17 +8,17 @@
         <el-input v-model="queryParams.yardId" placeholder="请输入货场ID" clearable @keyup.enter.native="handleQuery" />
       </el-form-item>
       <el-form-item label="卡类型" prop="type">
-        <el-select v-model="queryParams.type" placeholder="请选择卡类型" clearable>
+        <el-select v-model="queryParams.type" placeholder="请选择卡类型" clearable :style="{ width: '200px' }">
           <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="业务类型" prop="bizType">
-        <el-select v-model="queryParams.bizType" placeholder="请选择业务类型" clearable>
+        <el-select v-model="queryParams.bizType" placeholder="请选择业务类型" clearable :style="{ width: '200px' }">
           <el-option v-for="item in bizTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="enabled">
-        <el-select v-model="queryParams.enabled" placeholder="请选择状态" clearable>
+        <el-select v-model="queryParams.enabled" placeholder="请选择状态" clearable :style="{ width: '200px' }">
           <el-option v-for="item in enabledOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
@@ -249,7 +249,12 @@ function reset() {
 }
 
 function handleAdd() {
-  reset();
+  // 再次新增时，优先回填上一次提交的数据
+  if (lastForm.value) {
+    form.value = { ...lastForm.value, id: undefined };
+  } else {
+    reset();
+  }
   open.value = true;
   title.value = "新增定位卡";
 }
@@ -297,12 +302,18 @@ function submitForm() {
       updateCardInfo(payload).then(() => {
         proxy.$modal.msgSuccess("修改成功");
         open.value = false;
+        // 关闭弹窗后清空表单，避免再次新增时残留
+        reset();
         getList();
       });
     } else {
       addCardInfo(payload).then(() => {
         proxy.$modal.msgSuccess("新增成功");
         open.value = false;
+      // 记录本次提交的表单用于下次新增时回填
+      lastForm.value = { ...form.value };
+        // 新增后回到第一页并刷新列表，确保看到最新数据
+        queryParams.value.pageNum = 1;
         getList();
       });
     }
@@ -328,7 +339,12 @@ function handleStatusChange(row) {
 
 function cancel() {
   open.value = false;
+  // 取消时也清空表单，避免下次打开残留上次数据
+  reset();
 }
+
+// 上次新增成功的表单快照，用于回填
+const lastForm = ref(null);
 
 function handleExport() {
   proxy.download(
