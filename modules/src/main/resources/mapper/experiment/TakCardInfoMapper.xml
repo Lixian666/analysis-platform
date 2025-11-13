@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwzt.modules.experiment.mapper.TakCardInfoMapper">
+
+    <resultMap id="TakCardInfoResult" type="com.jwzt.modules.experiment.domain.TakCardInfo">
+        <id property="id" column="ID"/>
+        <result property="cardId" column="CARD_ID"/>
+        <result property="yardId" column="YARD_ID"/>
+        <result property="yardName" column="YARD_NAME"/>
+        <result property="type" column="TYPE"/>
+        <result property="bizType" column="BIZ_TYPE"/>
+        <result property="enabled" column="ENABLED"/>
+        <result property="createTime" column="CREATE_TIME"/>
+        <result property="updateTime" column="UPDATE_TIME"/>
+    </resultMap>
+
+    <sql id="selectTakCardInfoVo">
+        select ID, CARD_ID, YARD_ID, YARD_NAME, TYPE, BIZ_TYPE, ENABLED, CREATE_TIME, UPDATE_TIME
+        from TAK_CARD_INFO
+    </sql>
+
+    <select id="selectTakCardInfoList" parameterType="com.jwzt.modules.experiment.domain.TakCardInfo"
+            resultMap="TakCardInfoResult">
+        <include refid="selectTakCardInfoVo"/>
+        <where>
+            <if test="cardId != null and cardId != ''"> and CARD_ID like concat('%', #{cardId}, '%')</if>
+            <if test="yardId != null and yardId != ''"> and YARD_ID = #{yardId}</if>
+            <if test="yardName != null and yardName != ''"> and YARD_NAME like concat('%', #{yardName}, '%')</if>
+            <if test="type != null and type != ''"> and TYPE = #{type}</if>
+            <if test="bizType != null"> and BIZ_TYPE = #{bizType}</if>
+            <if test="enabled != null"> and ENABLED = #{enabled}</if>
+        </where>
+        order by CREATE_TIME desc
+    </select>
+
+    <select id="selectTakCardInfoById" parameterType="long" resultMap="TakCardInfoResult">
+        <include refid="selectTakCardInfoVo"/>
+        where ID = #{id}
+    </select>
+
+    <insert id="insertTakCardInfo" parameterType="com.jwzt.modules.experiment.domain.TakCardInfo"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="ID">
+        insert into TAK_CARD_INFO
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="cardId != null and cardId != ''">CARD_ID,</if>
+            <if test="yardId != null and yardId != ''">YARD_ID,</if>
+            <if test="yardName != null and yardName != ''">YARD_NAME,</if>
+            <if test="type != null and type != ''">TYPE,</if>
+            <if test="bizType != null">BIZ_TYPE,</if>
+            <if test="enabled != null">ENABLED,</if>
+            <if test="createTime != null">CREATE_TIME,</if>
+            <if test="updateTime != null">UPDATE_TIME,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="cardId != null and cardId != ''">#{cardId},</if>
+            <if test="yardId != null and yardId != ''">#{yardId},</if>
+            <if test="yardName != null and yardName != ''">#{yardName},</if>
+            <if test="type != null and type != ''">#{type},</if>
+            <if test="bizType != null">#{bizType},</if>
+            <if test="enabled != null">#{enabled},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateTakCardInfo" parameterType="com.jwzt.modules.experiment.domain.TakCardInfo">
+        update TAK_CARD_INFO
+        <trim prefix="set" suffixOverrides=",">
+            <if test="cardId != null and cardId != ''">CARD_ID = #{cardId},</if>
+            <if test="yardId != null and yardId != ''">YARD_ID = #{yardId},</if>
+            <if test="yardName != null and yardName != ''">YARD_NAME = #{yardName},</if>
+            <if test="type != null and type != ''">TYPE = #{type},</if>
+            <if test="bizType != null">BIZ_TYPE = #{bizType},</if>
+            <if test="enabled != null">ENABLED = #{enabled},</if>
+            <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>
+        </trim>
+        where ID = #{id}
+    </update>
+
+    <delete id="deleteTakCardInfoById" parameterType="long">
+        delete from TAK_CARD_INFO where ID = #{id}
+    </delete>
+
+    <delete id="deleteTakCardInfoByIds" parameterType="long">
+        delete from TAK_CARD_INFO
+        where ID in
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>
+
