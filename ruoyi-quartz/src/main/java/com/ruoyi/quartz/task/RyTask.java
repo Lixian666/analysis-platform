@@ -190,7 +190,7 @@ public class RyTask
     }
 
     /**
-     * 实时任务测试（历史数据模拟）多线程
+     * 实时任务测试（历史数据模拟火车）多线程
      * 支持处理大量卡数据（几百甚至上千），自动根据可用资源调整并发数
      * 模拟实时处理：每次处理10秒的数据
      */
@@ -350,13 +350,13 @@ public class RyTask
     public void realDriverTrackerZQRealtimeTestWithCustomTime() {
         List<String> cards = new ArrayList<>(
                 Arrays.asList(
-                        "1918B3000561",
+                        "1918B3000BA3",
                         "1918B3000978")
         );
 //        RealTimeDriverTracker.VehicleType vt = RealTimeDriverTracker.VehicleType.CAR;
         RealTimeDriverTracker.VehicleType vt = RealTimeDriverTracker.VehicleType.TRUCK;
-        String startTimeStr = "2025-10-23 18:04:00";
-        String endTimeStr = "2025-10-23 18:19:00";
+        String startTimeStr = "2025-11-05 17:50:00";
+        String endTimeStr = "2025-11-05 19:00:00";
         if (isRealtimeTaskRunning) {
             System.out.println("实时任务已在运行中，无需重复启动");
             return;
@@ -1164,11 +1164,11 @@ public class RyTask
             String data = baseConfig.LOCATION_CARD_TYPE;
             String date = "未获取到日期";
             String buildId = baseConfig.getJoysuch().getBuildingId();
-            String cardId = "1918B3000561";
+            String cardId = "1918B3000978";
 //            String startTimeStr = "2025-10-29 18:39:00";
 //            String endTimeStr = "2025-10-29 19:50:00";
-            String startTimeStr = "2025-10-16 18:25:00";
-            String endTimeStr = "2025-10-16 19:50:00";
+            String startTimeStr = "2025-11-05 17:50:00";
+            String endTimeStr = "2025-11-05 19:00:00";
             LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
             LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
 //            List<ReqVehicleCode> reqVehicleCodes = centerWorkHttpUtils.getRfidList(baseConfig.getSwCenter().getTenantId(), startTimeStr + " 000", endTimeStr + " 000");
@@ -1340,8 +1340,9 @@ public class RyTask
 //                for (LocationPoint point : newPoints) {
 //                    tracker.handleNewRawPoint(tracker, point);
 //                }
-
             }
         }
     }
+
+
 }

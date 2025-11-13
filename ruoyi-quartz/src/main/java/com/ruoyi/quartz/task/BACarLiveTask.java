@@ -66,10 +66,9 @@ public class BACarLiveTask {
         // 火车装卸的卡号列表
         List<String> carCards = new ArrayList<>(
                 Arrays.asList(
-                "1918B3000978",
-                "1918B30005D6",
-                "1918B300061E",
-                "1918B300094E")
+                        "1918B30005D6",
+                        "1918B300061E",
+                        "1918B300094E")
         );
 
         // 开始时间：当前时间
@@ -622,7 +621,7 @@ public class BACarLiveTask {
         }
 
         // 所有重试都失败，抛出异常
-        throw new Exception("测试处理卡 " + cardId + " 失败", lastException);
+        throw new Exception("重试处理卡 " + cardId + " 失败", lastException);
     }
 
     /**

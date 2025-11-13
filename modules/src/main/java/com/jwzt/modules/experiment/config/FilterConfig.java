@@ -9,12 +9,12 @@ public class FilterConfig {
     // 行为识别配置
         // 感应距离配置
         public static final double SENSING_DISTANCE_THRESHOLD = 1.0 * 10000;  // 靠近感应距离阈值（毫米）
-        public static final int SEND_AFTER_DOWN_UWB_SIZE = 2;
+        public static final int SEND_AFTER_DOWN_UWB_SIZE = 3;
 
         // 速度配置
         public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
         public static final double MIN_SPEED_MPS = 0.0; // 最小速度，单位 m/s（比如步行 < 2，驾驶 < 17）
-        public static final double MIN_WALKING_SPEED = 0.3; // 最小步行速度，单位 m/s
+        public static final double MIN_WALKING_SPEED = 0.7; // 最小步行速度，单位 m/s
         public static final double MAX_WALKING_SPEED = 2.0; // 最大速度，单位 m/s
         public static final double MAX_RUNING_SPEED = 3.0; // 最大小跑速度，单位 m/s
         public static final double MAX_LOW_DRIVING_SPEED = 7.0; // 最大低速驾驶速度，单位 m/s
