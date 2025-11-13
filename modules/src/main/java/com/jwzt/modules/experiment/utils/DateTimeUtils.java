@@ -121,9 +121,33 @@ public class DateTimeUtils {
      */
     public static long convertToTimestamp(String dateTimeStr) {
         // 先尝试修复错误格式（比如形如 2025-07-05 09:34:14:000）
-        int lastColonIndex = dateTimeStr.lastIndexOf(':');
+        if (dateTimeStr == null) {
+            throw new IllegalArgumentException("时间字符串不能为空");
+        }
+        String normalized = dateTimeStr.trim();
+        int lastColonIndex = normalized.lastIndexOf(':');
         if (lastColonIndex > 18) { // 确保是毫秒部分的冒号
-            dateTimeStr = dateTimeStr.substring(0, lastColonIndex) + "." + dateTimeStr.substring(lastColonIndex + 1);
+            normalized = normalized.substring(0, lastColonIndex) + "." + normalized.substring(lastColonIndex + 1);
+        }
+
+        // 统一毫秒位数（截断或补齐至 3 位），便于使用 yyyy-MM-dd HH:mm:ss.SSS 解析
+        int dotIndex = normalized.lastIndexOf('.');
+        if (dotIndex > 0 && dotIndex < normalized.length() - 1) {
+            String fractional = normalized.substring(dotIndex + 1);
+            // 提取连续数字，忽略潜在的尾随字符（如时区标记）
+            int digitCount = 0;
+            while (digitCount < fractional.length() && Character.isDigit(fractional.charAt(digitCount))) {
+                digitCount++;
+            }
+            String digits = fractional.substring(0, digitCount);
+            if (!digits.isEmpty()) {
+                if (digits.length() > 3) {
+                    digits = digits.substring(0, 3);
+                } else if (digits.length() < 3) {
+                    digits = String.format("%-3s", digits).replace(' ', '0');
+                }
+                normalized = normalized.substring(0, dotIndex + 1) + digits + fractional.substring(digitCount);
+            }
         }
 
         // 定义多个可能的日期格式
@@ -134,10 +158,10 @@ public class DateTimeUtils {
 
         // 尝试使用带毫秒格式解析
         try {
-            localDateTime = LocalDateTime.parse(dateTimeStr, formatterWithMillis);
+            localDateTime = LocalDateTime.parse(normalized, formatterWithMillis);
         } catch (Exception e) {
             // 若失败则尝试使用不带毫秒格式解析
-            localDateTime = LocalDateTime.parse(dateTimeStr, formatterWithoutMillis);
+            localDateTime = LocalDateTime.parse(normalized, formatterWithoutMillis);
         }
 
         // 转换为时间戳（毫秒）

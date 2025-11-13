@@ -1,0 +1,190 @@
+# 项目相关配置
+ruoyi:
+  # 文件路径
+  profile: /Users/lixian/Cache/Platform/uploadPath
+
+# 开发环境配置
+server:
+  # 服务器的HTTP端口，默认为8080
+  port: 8020
+  servlet:
+    domain-name: http://192.168.9.100
+
+# Spring配置
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: dm.jdbc.driver.DmDriver
+    druid:
+      # 主库数据源
+      master:
+        url: jdbc:dm://192.168.9.101:5236
+        username: ANALYSIS_PLATFORM
+        password: LR@2025.dxy0217
+      # 从库数据源
+      slave:
+        # 从数据源开关/默认关闭
+        enabled: false
+        url:
+        username:
+        password:
+      # 初始连接数
+      initialSize: 10
+      # 最小连接池数量
+      minIdle: 20
+      # 最大连接池数量（增加以支持多线程并发）
+      maxActive: 100
+      # 配置获取连接等待超时的时间（增加超时时间）
+      maxWait: 120000
+      # 配置连接超时时间
+      connectTimeout: 30000
+      # 配置网络超时时间
+      socketTimeout: 60000
+      # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+      timeBetweenEvictionRunsMillis: 60000
+      # 配置一个连接在池中最小生存的时间，单位是毫秒
+      minEvictableIdleTimeMillis: 300000
+      # 配置一个连接在池中最大生存的时间，单位是毫秒
+      maxEvictableIdleTimeMillis: 900000
+      # 配置检测连接是否有效
+      validationQuery: SELECT 1 FROM DUAL
+      testWhileIdle: true
+      testOnBorrow: false
+      testOnReturn: false
+      webStatFilter:
+        enabled: true
+      statViewServlet:
+        enabled: true
+        # 设置白名单，不填则允许所有访问
+        allow:
+        url-pattern: /druid/*
+        # 控制台管理用户名和密码
+        login-username: dxy
+        login-password: admin@2025
+      filter:
+        stat:
+          enabled: true
+          # 慢SQL记录
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+  # redis 配置
+  redis:
+    # 地址
+    host: 192.168.9.101
+    # 端口，默认为6379
+    port: 6379
+    # 数据库索引
+    database: 0
+    # 密码
+    password: jwzt@2020
+    # 连接超时时间
+    timeout: 10s
+    lettuce:
+      pool:
+        # 连接池中的最小空闲连接
+        min-idle: 0
+        # 连接池中的最大空闲连接
+        max-idle: 8
+        # 连接池的最大数据库连接数
+        max-active: 8
+        # #连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1ms
+
+# 行为分析配置 - 董家镇
+experiment:
+  platform-dir: /Users/lixian/Cache/Platform
+  base:
+    stay-verify: false
+    ranging-verify: true
+    push-data: true
+    output-shp: false
+    output-shp-path: ${experiment.platform-dir}/PlatformData/output
+    delete-datetime:
+    yard-name: luorong
+    location-card-type: other
+    card-type: car
+    locate-data-sources: xrkc
+
+    data-match:
+      time-interval-seconds: null
+      ignore-matched: true
+      update-match-status: true
+      save-rfid-data: true
+
+    joysuch:
+      building-name: 董家镇
+      building-id: 209983
+      username: client
+      password: JoySuch@client10
+      base-url: http://61.50.136.180:46000
+      api:
+        # 获取建筑列表
+        build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
+        # 获取设备列表
+        cards: ${experiment.base.joysuch.base-url}/api/v4/device/blts
+        # 获取标签列表
+        beacons: ${experiment.base.joysuch.base-url}/api/v1/device/uwbBeacons
+        # 获取标签历史轨迹
+        points: ${experiment.base.joysuch.base-url}/api/v1/datacenter/historyPath
+        # 订阅http和mq
+        subscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/subscribe
+        # 取消订阅
+        unsubscribe: ${experiment.base.joysuch.base-url}/api/v2/subscribe/http/unsubscribe
+        # 获取标签和uwb扫描历史（测距）
+        tag-scan-uwb-history: ${experiment.base.joysuch.base-url}/api/v1/device/tagScanUwbHistory
+    sw-center:
+      tenant-id: 10003
+      # 中心服务地址
+      status: 1
+      center-ip: http://172.30.17.116:8001/sw-centralOpen-api
+      # RFID识别记录列表
+      get-list: /api/station/getCompleteRfidList
+    card-analysis:
+      push-ip: http://192.168.6.8/sw-fusion-api/
+      # 车辆进场、出场推送
+      vehicle-entry-exit: /api/cardAnalysis/vehicleEntryAndExit
+      # 车辆停放车位、车辆离开车位
+      assignment-record: /api/cardAnalysis/assignmentRecord
+      # 实时轨迹
+      vehicle-track: /api/cardAnalysis/mqVehicleTrackVo
+      # UWB推送
+      beacon-push: /api/cardAnalysis/beaconPush
+      # 车辆删除
+      remove-vehicle: /api/cardAnalysis/removeAssignmentRecord
+  file-path:
+    yard-name: ${experiment.base.yard-name}
+    base-path: ${experiment.platform-dir}/PlatformData/shp
+    yards:
+      luorong:
+        driving:
+          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
+          - ${experiment.file-path.base-path}/luorong/董家镇道路/zhugandao.shp
+          - ${experiment.file-path.base-path}/luorong/董家镇货运线J车/huoyunxianjc.shp
+          - ${experiment.file-path.base-path}/luorong/董家镇货运线作业台/huoyunxianzyt.shp
+        parking:
+          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
+        road:
+          - ${experiment.file-path.base-path}/luorong/董家镇道路/zhugandao.shp
+        parking2road:
+          - ${experiment.file-path.base-path}/luorong/董家镇道路/zhugandao.shp
+          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
+        kuqu:
+          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
+        huoyunxin:
+          - ${experiment.file-path.base-path}/luorong/董家镇货运线J车/huoyunxianjc.shp
+          - ${experiment.file-path.base-path}/luorong/董家镇货运线作业台/huoyunxianzyt.shp
+        huoyunxinzyt:
+          - ${experiment.file-path.base-path}/luorong/董家镇货运线作业台/huoyunxianzyt.shp
+        huoyunxinjc:
+          - ${experiment.file-path.base-path}/luorong/董家镇货运线J车/huoyunxianjc.shp
+        banche:
+          - ${experiment.file-path.base-path}/luorong/董家镇板车作业区/banchezuoyequ.shp
+        zikuqu:
+          - ${experiment.file-path.base-path}/luorong/董家镇库区/zikuqu.shp
+        kuwei:
+          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuwei.shp
+

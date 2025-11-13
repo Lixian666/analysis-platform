@@ -48,6 +48,7 @@ experiment:
     yard-name: dongjiazhen
     location-card-type: other
     card-type: car
+    locate-data-sources: zq
 
     data-match:
       time-interval-seconds: null
