@@ -67,5 +67,15 @@ public interface ITakCardInfoService {
      * @return 结果
      */
     int deleteTakCardInfoById(Long id);
+
+    /**
+     * 导入定位卡信息数据
+     *
+     * @param cardInfoList 数据列表
+     * @param updateSupport 存在时是否更新
+     * @param operName 操作用户
+     * @return 导入结果信息
+     */
+    String importTakCardInfo(java.util.List<com.jwzt.modules.experiment.domain.TakCardInfo> cardInfoList, boolean updateSupport, String operName);
 }
 

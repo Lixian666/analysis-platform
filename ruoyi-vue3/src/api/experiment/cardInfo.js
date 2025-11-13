@@ -9,6 +9,15 @@ export function listCardInfo(query) {
   })
 }
 
+// 下载定位卡导入模板
+export function importTemplate() {
+  return request({
+    url: '/experiment/cardInfo/importTemplate',
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
 // 查询定位卡信息详细
 export function getCardInfo(id) {
   return request({
