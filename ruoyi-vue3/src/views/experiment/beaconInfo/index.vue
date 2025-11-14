@@ -125,7 +125,7 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table ref="beaconInfoRef" v-loading="loading" :data="beaconInfoList" @selection-change="handleSelectionChange" :default-sort="defaultSort" @sort-change="handleSortChange">
+    <el-table ref="beaconInfoTableRef" v-loading="loading" :data="beaconInfoList" @selection-change="handleSelectionChange" :default-sort="defaultSort" @sort-change="handleSortChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column type="index" label="序号" align="center" width="50" />
       <el-table-column label="名称" align="center" prop="name" sortable="custom" :sort-orders="['descending', 'ascending']" />
@@ -140,6 +140,7 @@
       <el-table-column label="建筑ID" align="center" prop="buildId" />
       <el-table-column label="信标ID" align="center" prop="beaconId" />
       <el-table-column label="位置" align="center" prop="location" />
+      <el-table-column label="感应距离(m)" align="center" prop="distance" />
       <el-table-column label="状态" align="center" prop="status" />
       <el-table-column label="创建时间" align="center" prop="createTime" width="180">
         <template #default="scope">
@@ -169,7 +170,7 @@
 
     <!-- 添加或修改信标信息对话框 -->
     <el-dialog :title="title" v-model="open" width="500px" append-to-body>
-      <el-form ref="beaconInfoRef" :model="form" :rules="rules" label-width="80px">
+      <el-form ref="beaconInfoFormRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入名称" />
         </el-form-item>
@@ -213,6 +214,9 @@
         </el-form-item>
         <el-form-item label="位置" prop="location">
           <el-input v-model="form.location" placeholder="请输入位置" />
+        </el-form-item>
+        <el-form-item label="感应距离(m)" prop="distance">
+          <el-input-number v-model="form.distance" :precision="2" :step="0.1" :min="0" placeholder="请输入感应距离" style="width: 100%" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -308,6 +312,7 @@ const data = reactive({
     beaconId: null,
     location: null,
     status: null,
+    distance: null,
   },
   queryParams: {
     pageNum: 1,
@@ -321,6 +326,7 @@ const data = reactive({
     beaconId: null,
     location: null,
     status: null,
+    distance: null,
     createTime: null,
     updateTime: null,
     orderByColumn: undefined,
@@ -347,6 +353,10 @@ const data = reactive({
     ],
     status: [
       { required: true, message: "状态，0-启用，1-禁用不能为空", trigger: "change" }
+    ],
+    distance: [
+      { required: true, message: "感应距离不能为空", trigger: "blur" },
+      { type: "number", min: 0, message: "感应距离不能小于0", trigger: ["blur", "change"] }
     ],
   }
 });
@@ -392,10 +402,11 @@ function reset() {
     beaconId: null,
     location: null,
     status: null,
+    distance: null,
     createTime: null,
     updateTime: null
   };
-  proxy.resetForm("beaconInfoRef");
+  proxy.resetForm("beaconInfoFormRef");
 }
 
 /** 搜索按钮操作 */
@@ -410,7 +421,7 @@ function resetQuery() {
   queryParams.value.pageNum = 1;
   queryParams.value.orderByColumn = undefined;
   queryParams.value.isAsc = undefined;
-  proxy.$refs["beaconInfoRef"].sort(defaultSort.value.prop, defaultSort.value.order);
+  proxy.$refs["beaconInfoTableRef"].sort(defaultSort.value.prop, defaultSort.value.order);
 }
 
 // 多选框选中数据
@@ -447,7 +458,7 @@ function handleUpdate(row) {
 
 /** 提交按钮 */
 function submitForm() {
-  proxy.$refs["beaconInfoRef"].validate(valid => {
+  proxy.$refs["beaconInfoFormRef"].validate(valid => {
     if (valid) {
       if (form.value.id != null) {
         updateBeaconInfo(form.value).then(response => {
