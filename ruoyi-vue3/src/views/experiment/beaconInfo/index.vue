@@ -203,14 +203,7 @@
           <el-input v-model="form.buildId" placeholder="请输入建筑ID" />
         </el-form-item>
         <el-form-item label="信标ID" prop="beaconId">
-          <el-select v-model="form.beaconId" placeholder="请选择信标ID">
-            <el-option
-                v-for="beaconId in beaconIdList"
-                :key="beaconId"
-                :label="beaconId"
-                :value="beaconId"
-            ></el-option>
-          </el-select>
+          <el-input v-model="form.beaconId" placeholder="请输入信标ID" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" placeholder="请选择状态" clearable :style="{width: '100%'}">
@@ -267,14 +260,13 @@
 </template>
 
 <script setup name="BeaconInfo">
-import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo, listBeaconId, importTemplate } from "@/api/experiment/beaconInfo";
+import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo, importTemplate } from "@/api/experiment/beaconInfo";
 import { getToken } from "@/utils/auth";
 import { UploadFilled } from '@element-plus/icons-vue';
 
 const { proxy } = getCurrentInstance();
 const { tracker_beacon_type } = proxy.useDict('tracker_beacon_type');
 
-const beaconIdList = ref([]);
 const beaconInfoList = ref([]);
 const open = ref(false);
 const loading = ref(true);
@@ -361,12 +353,6 @@ const data = reactive({
 
 const { queryParams, form, rules } = toRefs(data);
 
-onMounted(() => {
-  // 在这里初始化 beaconIdList
-  // 示例：beaconIdList.value = [1, 2, 3];
-  // 或者调用 API 获取数据
-  getBeaconIds();
-});
 
 /** 查询信标信息列表 */
 function getList() {
@@ -378,21 +364,6 @@ function getList() {
   });
 }
 
-/** 查询信标ID列表 */
-function getBeaconIds() {
-  // 如果已经加载过数据，则不再重复加载
-  if (beaconIdList.value && beaconIdList.value.length > 0) {
-    return Promise.resolve();
-  }
-  return listBeaconId().then(response => {
-    console.log("完整 response：", response);
-    console.log("信标ID接口返回：", response.data);
-    beaconIdList.value = response;
-  }).catch(error => {
-    console.error('获取信标ID列表失败:', error);
-    proxy.$modal.message({ message: '获取信标ID列表失败', type: 'error' });
-  });
-}
 
 // 取消按钮
 function cancel() {
@@ -459,10 +430,6 @@ function handleSortChange(column, prop, order) {
 /** 新增按钮操作 */
 function handleAdd() {
   newReset();
-// 确保 beaconIdList 已经加载
-  if (!beaconIdList.value || beaconIdList.value.length === 0) {
-    getBeaconIds();
-  }
   open.value = true;
   title.value = "添加信标信息";
 }
