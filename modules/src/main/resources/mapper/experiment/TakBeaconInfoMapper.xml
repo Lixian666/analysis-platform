@@ -17,10 +17,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="createTime"    column="CREATE_TIME"    />
         <result property="updateTime"    column="UPDATE_TIME"    />
         <result property="rfidName"    column="RFID_NAME"    />
+        <result property="distance"    column="DISTANCE"    />
     </resultMap>
 
     <sql id="selectTakBeaconInfoVo">
-        select ID, NAME, RFID_NAME, TYPE, AREA, BUILD_NAME, BUILD_ID, BEACON_ID, LOCATION, STATUS, CREATE_TIME, UPDATE_TIME from TAK_BEACON_INFO
+        select ID, NAME, RFID_NAME, TYPE, AREA, BUILD_NAME, BUILD_ID, BEACON_ID, LOCATION, STATUS, CREATE_TIME, UPDATE_TIME, DISTANCE from TAK_BEACON_INFO
     </sql>
 
     <select id="selectTakBeaconInfoList" parameterType="com.jwzt.modules.experiment.domain.TakBeaconInfo" resultMap="TakBeaconInfoResult">
@@ -37,6 +38,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createTime != null "> and CREATE_TIME = #{createTime}</if>
             <if test="updateTime != null "> and UPDATE_TIME = #{updateTime}</if>
             <if test="rfidName != null and rfidName != ''"> and RFID_NAME = #{rfidName}</if>
+            <if test="distance != null"> and DISTANCE = #{distance}</if>
         </where>
     </select>
     
@@ -59,6 +61,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createTime != null">CREATE_TIME,</if>
             <if test="updateTime != null">UPDATE_TIME,</if>
             <if test="rfidName != null and rfidName != ''">RFID_NAME,</if>
+            <if test="distance != null">DISTANCE,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="name != null and name != ''">#{name},</if>
@@ -72,6 +75,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createTime != null">#{createTime},</if>
             <if test="updateTime != null">#{updateTime},</if>
             <if test="rfidName != null and rfidName != ''">#{rfidName},</if>
+            <if test="distance != null">#{distance},</if>
          </trim>
     </insert>
 
@@ -89,6 +93,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createTime != null">CREATE_TIME = #{createTime},</if>
             <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>
             <if test="rfidName != null and rfidName != ''">RFID_NAME = #{rfidName},</if>
+            <if test="distance != null">DISTANCE = #{distance},</if>
         </trim>
         where ID = #{id}
     </update>
