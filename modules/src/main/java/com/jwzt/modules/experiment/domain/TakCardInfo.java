@@ -38,8 +38,8 @@ public class TakCardInfo extends BaseEntity {
     @Excel(name = "业务类型", readConverterExp = "0=板车,1=火车")
     private Integer bizType;
 
-    /** 是否启用（0禁用 1启用） */
-    @Excel(name = "是否启用", readConverterExp = "0=禁用,1=启用")
+    /** 是否启用（0启用 1禁用） */
+    @Excel(name = "是否启用", readConverterExp = "0=启用,1=禁用")
     private Integer enabled;
 
     public Long getId() {

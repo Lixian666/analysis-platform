@@ -77,5 +77,13 @@ public interface ITakCardInfoService {
      * @return 导入结果信息
      */
     String importTakCardInfo(java.util.List<com.jwzt.modules.experiment.domain.TakCardInfo> cardInfoList, boolean updateSupport, String operName);
+
+    /**
+     * 查询定位卡ID列表（仅返回CARD_ID）
+     *
+     * @param takCardInfo 查询条件
+     * @return 卡ID集合
+     */
+    List<String> selectTakCardIdList(TakCardInfo takCardInfo);
 }
 
