@@ -94,7 +94,7 @@ spring:
         # #连接池最大阻塞等待时间（使用负值表示没有限制）
         max-wait: -1ms
 
-# 行为分析配置 - 董家镇
+# 行为分析配置 - 雒容
 experiment:
   platform-dir: /Users/lixian/Cache/Platform
   base:
@@ -116,8 +116,8 @@ experiment:
       save-rfid-data: true
 
     joysuch:
-      building-name: 董家镇
-      building-id: 209983
+      building-name: 雒容
+      building-id: luorong
       username: client
       password: JoySuch@client10
       base-url: http://61.50.136.180:46000
@@ -144,7 +144,7 @@ experiment:
       # RFID识别记录列表
       get-list: /api/station/getCompleteRfidList
     card-analysis:
-      push-ip: http://192.168.6.8/sw-fusion-api/
+      push-ip: http://192.168.9.101/sw-fusion-api/
       # 车辆进场、出场推送
       vehicle-entry-exit: /api/cardAnalysis/vehicleEntryAndExit
       # 车辆停放车位、车辆离开车位
@@ -161,30 +161,30 @@ experiment:
     yards:
       luorong:
         driving:
-          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
-          - ${experiment.file-path.base-path}/luorong/董家镇道路/zhugandao.shp
-          - ${experiment.file-path.base-path}/luorong/董家镇货运线J车/huoyunxianjc.shp
-          - ${experiment.file-path.base-path}/luorong/董家镇货运线作业台/huoyunxianzyt.shp
+          - ${experiment.file-path.base-path}/luorong/雒容库区/kuqu.shp
+          - ${experiment.file-path.base-path}/luorong/雒容道路/zhugandao.shp
+          - ${experiment.file-path.base-path}/luorong/雒容货运线J车/huoyunxianjc.shp
+          - ${experiment.file-path.base-path}/luorong/雒容货运线作业台/huoyunxianzyt.shp
         parking:
-          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
+          - ${experiment.file-path.base-path}/luorong/雒容库区/kuqu.shp
         road:
-          - ${experiment.file-path.base-path}/luorong/董家镇道路/zhugandao.shp
+          - ${experiment.file-path.base-path}/luorong/雒容道路/zhugandao.shp
         parking2road:
-          - ${experiment.file-path.base-path}/luorong/董家镇道路/zhugandao.shp
-          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
+          - ${experiment.file-path.base-path}/luorong/雒容道路/zhugandao.shp
+          - ${experiment.file-path.base-path}/luorong/雒容库区/kuqu.shp
         kuqu:
-          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuqu.shp
+          - ${experiment.file-path.base-path}/luorong/雒容库区/kuqu.shp
         huoyunxin:
-          - ${experiment.file-path.base-path}/luorong/董家镇货运线J车/huoyunxianjc.shp
-          - ${experiment.file-path.base-path}/luorong/董家镇货运线作业台/huoyunxianzyt.shp
+          - ${experiment.file-path.base-path}/luorong/雒容货运线J车/huoyunxianjc.shp
+          - ${experiment.file-path.base-path}/luorong/雒容货运线作业台/huoyunxianzyt.shp
         huoyunxinzyt:
-          - ${experiment.file-path.base-path}/luorong/董家镇货运线作业台/huoyunxianzyt.shp
+          - ${experiment.file-path.base-path}/luorong/雒容货运线作业台/huoyunxianzyt.shp
         huoyunxinjc:
-          - ${experiment.file-path.base-path}/luorong/董家镇货运线J车/huoyunxianjc.shp
+          - ${experiment.file-path.base-path}/luorong/雒容货运线J车/huoyunxianjc.shp
         banche:
-          - ${experiment.file-path.base-path}/luorong/董家镇板车作业区/banchezuoyequ.shp
+          - ${experiment.file-path.base-path}/luorong/雒容板车作业区/banchezuoyequ.shp
         zikuqu:
-          - ${experiment.file-path.base-path}/luorong/董家镇库区/zikuqu.shp
+          - ${experiment.file-path.base-path}/luorong/雒容库区/zikuqu.shp
         kuwei:
-          - ${experiment.file-path.base-path}/luorong/董家镇库区/kuwei.shp
+          - ${experiment.file-path.base-path}/luorong/雒容库区/kuwei.shp
 
