@@ -465,42 +465,47 @@ function setMsaaSamples(samples) {
     map.value.addLayer(graphicLayer_map3D.value)
   }
 
-  function add2DTileLayer(){
-    // graphicLayer_map2Dtdt.value = new mars3d.layer.XyzLayer({
-    //   url: proxy.$tdt,
-    //   opacity: 1
-    // })
-    // map.value.addLayer(graphicLayer_map2Dtdt.value)
-    // 使用天地图影像服务作为底图
-    graphicLayer_map2Dtdt.value = new mars3d.layer.WmtsLayer({
-      url: proxy.$tdt_img,
-      layer: "img",
-      style: "default",
-      tileMatrixSetID: "w",
-      format: "tiles",
-      maximumLevel: 18,
-      show: true,
-      zIndex: 1  // 底图层级
-    })
-    map.value.addLayer(graphicLayer_map2Dtdt.value)
-    
-    // 叠加董家镇本地TIF切片图层（TMS格式）
-    graphicLayer_map2D.value = new mars3d.layer.XyzLayer({
-      name: "董家镇DOM影像",
-      url: proxy.$tifTiles,
-      tms: true, // 使用TMS坐标系（Y轴从下往上）
-      minimumLevel: 10,
-      maximumLevel: 18,
-      opacity: 1,  // 完全不透明
-      show: true,
-      zIndex: 10,  // 更高的层级，显示在天地图之上
-      // 使用tilemapresource.xml中的精确边界（EPSG:4326）
-      rectangle: proxy.$rectangle,
-      // 仅在覆盖范围内加载切片
-      enablePickFeatures: false
-    })
-    map.value.addLayer(graphicLayer_map2D.value)
-  }
+function add2DTileLayer(){
+  // graphicLayer_map2Dtdt.value = new mars3d.layer.XyzLayer({
+  //   url: proxy.$tdt,
+  //   opacity: 1
+  // })
+  // map.value.addLayer(graphicLayer_map2Dtdt.value)
+  // 使用天地图影像服务作为底图
+  // graphicLayer_map2Dtdt.value = new mars3d.layer.WmtsLayer({
+  //   url: proxy.$tdt_img,
+  //   layer: "img",
+  //   style: "default",
+  //   tileMatrixSetID: "w",
+  //   format: "tiles",
+  //   maximumLevel: 18,
+  //   show: true,
+  //   zIndex: 1  // 底图层级
+  // })
+  // map.value.addLayer(graphicLayer_map2Dtdt.value)
+
+  // 叠加董家镇本地TIF切片图层（TMS格式）
+  graphicLayer_map2D.value = new mars3d.layer.XyzLayer({
+    name: "底图影像",
+    url: proxy.$dataTiles,
+    tms: true, // 使用TMS坐标系（Y轴从下往上）
+    minimumLevel: 10,
+    maximumLevel: 18,
+    opacity: 1,  // 完全不透明
+    show: true,
+    zIndex: 10,  // 更高的层级，显示在天地图之上
+    // 使用tilemapresource.xml中的精确边界（EPSG:4326）
+    rectangle: proxy.$rectangle ? Cesium.Rectangle.fromDegrees(
+        proxy.$rectangle.xmin,  // west
+        proxy.$rectangle.ymin,  // south
+        proxy.$rectangle.xmax,  // east
+        proxy.$rectangle.ymax   // north
+    ) : undefined,
+    // 仅在覆盖范围内加载切片
+    enablePickFeatures: false
+  })
+  map.value.addLayer(graphicLayer_map2D.value)
+}
 
   function camerahistory (){
     // cameraHistory.value = new mars3d.thing.CameraHistory({
