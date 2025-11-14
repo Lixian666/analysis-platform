@@ -472,22 +472,22 @@ function setMsaaSamples(samples) {
     // })
     // map.value.addLayer(graphicLayer_map2Dtdt.value)
     // 使用天地图影像服务作为底图
-    // graphicLayer_map2Dtdt.value = new mars3d.layer.WmtsLayer({
-    //   url: proxy.$tdt_img,
-    //   layer: "img",
-    //   style: "default",
-    //   tileMatrixSetID: "w",
-    //   format: "tiles",
-    //   maximumLevel: 18,
-    //   show: true,
-    //   zIndex: 1  // 底图层级
-    // })
-    // map.value.addLayer(graphicLayer_map2Dtdt.value)
+    graphicLayer_map2Dtdt.value = new mars3d.layer.WmtsLayer({
+      url: proxy.$tdt_img,
+      layer: "img",
+      style: "default",
+      tileMatrixSetID: "w",
+      format: "tiles",
+      maximumLevel: 18,
+      show: true,
+      zIndex: 1  // 底图层级
+    })
+    map.value.addLayer(graphicLayer_map2Dtdt.value)
     
     // 叠加董家镇本地TIF切片图层（TMS格式）
     graphicLayer_map2D.value = new mars3d.layer.XyzLayer({
       name: "董家镇DOM影像",
-      url: proxy.$dongjiazhenTiles,
+      url: proxy.$tifTiles,
       tms: true, // 使用TMS坐标系（Y轴从下往上）
       minimumLevel: 10,
       maximumLevel: 18,
@@ -495,12 +495,7 @@ function setMsaaSamples(samples) {
       show: true,
       zIndex: 10,  // 更高的层级，显示在天地图之上
       // 使用tilemapresource.xml中的精确边界（EPSG:4326）
-      rectangle: {
-        xmin: 117.25785175068449,
-        ymin: 36.75709311589477,
-        xmax: 117.27989964583475,
-        ymax: 36.76446135333450
-      },
+      rectangle: proxy.$rectangle,
       // 仅在覆盖范围内加载切片
       enablePickFeatures: false
     })

@@ -99,6 +99,8 @@ axios.get('./config.json').then(response => {
   app.config.globalProperties.$zkyxLogout = config.zkyxLogout
   app.config.globalProperties.$dongjiazhenTif = config.dongjiazhen_tif
   app.config.globalProperties.$dongjiazhenTiles = config.dongjiazhen_tiles
+  app.config.globalProperties.$tifTiles = config.tif_tiles
+  app.config.globalProperties.$rectangle = config.rectangle
 
   // 挂载应用
   app.mount('#app')
