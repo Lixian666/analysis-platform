@@ -91,5 +91,20 @@
         </foreach>
     </delete>
 
+    <!-- 仅返回CARD_ID的列表查询 -->
+    <select id="selectTakCardIdList" parameterType="com.jwzt.modules.experiment.domain.TakCardInfo" resultType="java.lang.String">
+        select CARD_ID
+        from TAK_CARD_INFO
+        <where>
+            <if test="cardId != null and cardId != ''"> and CARD_ID like concat('%', #{cardId}, '%')</if>
+            <if test="yardId != null and yardId != ''"> and YARD_ID = #{yardId}</if>
+            <if test="yardName != null and yardName != ''"> and YARD_NAME like concat('%', #{yardName}, '%')</if>
+            <if test="type != null and type != ''"> and TYPE = #{type}</if>
+            <if test="bizType != null"> and BIZ_TYPE = #{bizType}</if>
+            <if test="enabled != null"> and ENABLED = #{enabled}</if>
+        </where>
+        order by CREATE_TIME desc
+    </select>
+
 </mapper>
 

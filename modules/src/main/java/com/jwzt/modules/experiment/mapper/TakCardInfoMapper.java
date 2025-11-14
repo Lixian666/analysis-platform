@@ -59,5 +59,13 @@ public interface TakCardInfoMapper {
      * @return 结果
      */
     int deleteTakCardInfoByIds(Long[] ids);
+
+    /**
+     * 查询定位卡ID列表（仅返回CARD_ID）
+     *
+     * @param takCardInfo 查询条件
+     * @return 卡ID集合
+     */
+    List<String> selectTakCardIdList(TakCardInfo takCardInfo);
 }
 

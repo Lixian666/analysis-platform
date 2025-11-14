@@ -71,8 +71,8 @@
         <template #default="scope">
           <el-switch
             v-model="scope.row.enabled"
-            :active-value="1"
-            :inactive-value="0"
+            :active-value="0"
+            :inactive-value="1"
             @change="handleStatusChange(scope.row)"
             :disabled="!canEdit"
           />
@@ -122,8 +122,8 @@
         </el-form-item>
         <el-form-item label="状态" prop="enabled">
           <el-radio-group v-model="form.enabled">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">禁用</el-radio>
+            <el-radio :label="0">启用</el-radio>
+            <el-radio :label="1">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -204,8 +204,8 @@ const bizTypeOptions = [
   { label: "火车", value: "1" }
 ];
 const enabledOptions = [
-  { label: "启用", value: 1 },
-  { label: "禁用", value: 0 }
+  { label: "启用", value: 0 },
+  { label: "禁用", value: 1 }
 ];
 const upload = reactive({
   open: false,
@@ -224,7 +224,7 @@ const data = reactive({
     yardName: null,
     type: null,
     bizType: null,
-    enabled: 1
+    enabled: 0
   },
   queryParams: {
     pageNum: 1,
@@ -295,7 +295,7 @@ function reset() {
     yardName: null,
     type: null,
     bizType: null,
-    enabled: 1
+    enabled: 0
   };
   proxy.resetForm("formRef");
 }
@@ -319,7 +319,7 @@ function handleUpdate(row = {}) {
     form.value = {
       ...data,
       bizType: data.bizType != null ? String(data.bizType) : "",
-      enabled: data.enabled != null ? data.enabled : 1
+      enabled: data.enabled != null ? data.enabled : 0
     };
     open.value = true;
     title.value = "修改定位卡";

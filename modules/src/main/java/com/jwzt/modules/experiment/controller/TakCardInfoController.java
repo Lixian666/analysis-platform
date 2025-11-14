@@ -154,7 +154,7 @@ public class TakCardInfoController extends BaseController {
             throw new IllegalArgumentException("业务类型不能为空");
         }
         if (takCardInfo.getEnabled() == null) {
-            takCardInfo.setEnabled(1);
+            takCardInfo.setEnabled(0);
         }
     }
 }

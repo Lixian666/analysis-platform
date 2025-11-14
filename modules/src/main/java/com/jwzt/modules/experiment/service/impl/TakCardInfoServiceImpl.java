@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.common.utils.uuid.IdUtils;
 
 /**
  * 定位卡信息Service业务层处理
@@ -108,6 +106,11 @@ public class TakCardInfoServiceImpl implements ITakCardInfoService {
             successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
         }
         return successMsg.toString();
+    }
+
+    @Override
+    public List<String> selectTakCardIdList(TakCardInfo takCardInfo) {
+        return takCardInfoMapper.selectTakCardIdList(takCardInfo);
     }
 }
 
