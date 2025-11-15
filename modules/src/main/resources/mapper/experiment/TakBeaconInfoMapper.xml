@@ -93,6 +93,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="createTime != null">CREATE_TIME = #{createTime},</if>
             <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>
             <if test="rfidName != null and rfidName != ''">RFID_NAME = #{rfidName},</if>
+            <if test="rfidName == null or rfidName == ''">RFID_NAME = null,</if>
             <if test="distance != null">DISTANCE = #{distance},</if>
         </trim>
         where ID = #{id}
