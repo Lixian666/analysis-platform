@@ -460,14 +460,19 @@ function handleUpdate(row) {
 function submitForm() {
   proxy.$refs["beaconInfoFormRef"].validate(valid => {
     if (valid) {
+      // 将空字符串转换为null，确保能够清空RFID名称
+      const submitData = { ...form.value };
+      if (submitData.rfidName === '') {
+        submitData.rfidName = null;
+      }
       if (form.value.id != null) {
-        updateBeaconInfo(form.value).then(response => {
+        updateBeaconInfo(submitData).then(response => {
           proxy.$modal.msgSuccess("修改成功");
           open.value = false;
           getList();
         });
       } else {
-        addBeaconInfo(form.value).then(response => {
+        addBeaconInfo(submitData).then(response => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();
