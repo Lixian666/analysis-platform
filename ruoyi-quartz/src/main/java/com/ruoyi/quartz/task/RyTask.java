@@ -236,16 +236,18 @@ public class RyTask
         System.out.println("========================================");
         
         long startTime = System.currentTimeMillis();
-        
-        // 预热：提前获取一次token，避免并发冲突
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            // 等待200ms确保token已缓存
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
         
         // 为每个卡创建一个处理任务，使用错峰启动
@@ -407,15 +409,18 @@ public class RyTask
         System.out.println("开始时间: " + startTimeStr);
         System.out.println("结束时间: " + endTimeStr);
         System.out.println("========================================");
-        
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
         
         // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动
@@ -652,15 +657,18 @@ public class RyTask
         System.out.println("数据获取间隔: 10秒");
         System.out.println("开始时间: " + startTime);
         System.out.println("========================================");
-        
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
         
         // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动

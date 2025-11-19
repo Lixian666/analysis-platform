@@ -120,6 +120,29 @@ public class DataSender {
             request.setRegionType(4);
             request.setCarType("car");
         }
+        if (vehicleType == RealTimeDriverTracker.VehicleType.CAR){
+            if (sess.kind == RealTimeDriverTracker.EventKind.CAR_ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.CAR_SEND){
+                request.setType(0);
+                request.setVehicleThirdId(sess.sessionId);
+                request.setVehicleTime(DateTimeUtils.timestampToDateTimeSSSStr(sess.endTime));
+                request.setCameraId(sess.cardId);
+                request.setThrough(String.valueOf(sess.endLongitude));
+                request.setWeft(String.valueOf(sess.endLatitude));
+                request.setRegionType(1);
+                request.setCarType("car");
+            }
+            if (sess.kind == RealTimeDriverTracker.EventKind.ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.SEND){
+                request.setType(0);
+                request.setVehicleThirdId(sess.sessionId);
+                request.setVehicleTime(DateTimeUtils.timestampToDateTimeSSSStr(sess.endTime));
+                request.setCameraId(sess.cardId);
+                request.setThrough(String.valueOf(sess.endLongitude));
+                request.setWeft(String.valueOf(sess.endLatitude));
+                request.setRegionType(2);
+                request.setCarType("car");
+            }
+
+        }
         JSONObject result = centerWorkHttpUtils.assignmentRecord(request);
         System.out.println("推送车辆入库信息：" + result);
         return result;

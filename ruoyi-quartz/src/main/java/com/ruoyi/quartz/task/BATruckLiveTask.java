@@ -6,6 +6,7 @@ import com.jwzt.modules.experiment.RealTimeDriverTracker;
 import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.domain.LocationPoint2;
+import com.jwzt.modules.experiment.utils.DataAcquisition;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.http.HttpUtils;
 import com.jwzt.modules.experiment.utils.third.zq.FusionData;
@@ -93,12 +94,14 @@ public class BATruckLiveTask {
      */
     public void realDriverTrackerZQRealtimeTruckWithNowTimeV2() {
         // 板车装卸的卡号列表
-        List<String> truckCards = new ArrayList<>(
-                Arrays.asList(
-                        "1918B3000561",
-                        "1918B3000BA3",
-                        "1918B3000978")
-        );
+        DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
+        List<String> truckCards = dataAcquisition.getCardIdList(1);
+//        List<String> truckCards = new ArrayList<>(
+//                Arrays.asList(
+//                        "1918B3000561",
+//                        "1918B3000BA3",
+//                        "1918B3000978")
+//        );
 
         // 开始时间：当前时间
         LocalDateTime now = LocalDateTime.now().minusMinutes(1);
@@ -176,14 +179,17 @@ public class BATruckLiveTask {
         System.out.println("结束时间: " + endTimeStr);
         System.out.println("========================================");
 
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
 
         // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动
@@ -344,14 +350,17 @@ public class BATruckLiveTask {
         System.out.println("结束时间: " + endTimeStr);
         System.out.println("========================================");
 
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
 
         // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动
@@ -505,14 +514,17 @@ public class BATruckLiveTask {
         System.out.println("结束时间: " + endTimeStr);
         System.out.println("========================================");
 
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
 
         // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动
@@ -640,53 +652,59 @@ public class BATruckLiveTask {
         String startTimeStr = DateTimeUtils.localDateTime2String(lastTime);
         String endTimeStr = DateTimeUtils.localDateTime2String(currentTime);
 
-        // 获取位置点数据 - 添加空值检查
-        String pointsResponse = zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr);
-        System.out.println("获取位置点数据：" + pointsResponse);
-        if (pointsResponse == null) {
-            throw new RuntimeException("获取位置点数据返回null");
-        }
-        JSONObject jsonObject = JSONObject.parseObject(pointsResponse);
-
-        String tagResponse = zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId,
-                DateTimeUtils.localDateTime2String(lastTime.minusSeconds(2)),
-                DateTimeUtils.localDateTime2String(currentTime.plusSeconds(2)));
-        if (tagResponse == null) {
-            throw new RuntimeException("获取标签状态数据返回null");
-        }
-        JSONObject tagJsonObject = JSONObject.parseObject(tagResponse);
-
-        JSONArray points = jsonObject.getJSONArray("data");
-        JSONArray tagData = tagJsonObject.getJSONArray("data");
-
-        if (points.size() == 0 || tagData.size() == 0){
+//        // 获取位置点数据 - 添加空值检查
+//        String pointsResponse = zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr);
+//        System.out.println("获取位置点数据：" + pointsResponse);
+//        if (pointsResponse == null) {
+//            throw new RuntimeException("获取位置点数据返回null");
+//        }
+//        JSONObject jsonObject = JSONObject.parseObject(pointsResponse);
+//
+//        String tagResponse = zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId,
+//                DateTimeUtils.localDateTime2String(lastTime.minusSeconds(2)),
+//                DateTimeUtils.localDateTime2String(currentTime.plusSeconds(2)));
+//        if (tagResponse == null) {
+//            throw new RuntimeException("获取标签状态数据返回null");
+//        }
+//        JSONObject tagJsonObject = JSONObject.parseObject(tagResponse);
+//
+//        JSONArray points = jsonObject.getJSONArray("data");
+//        JSONArray tagData = tagJsonObject.getJSONArray("data");
+//
+//        if (points.size() == 0 || tagData.size() == 0){
+//            log.info("标签：[{}] , {} - {} 未获取到数据，跳过处理", cardId, startTimeStr, endTimeStr);
+//            lastProcessTimeMap.put(cardId, currentTime);
+//            return;
+//        }
+//        List<LocationPoint> LocationPoints = new ArrayList<>();
+//        if (points != null && !points.isEmpty()) {
+//            for (int i = 0; i < points.size(); i++){
+//                JSONObject js = (JSONObject) points.get(i);
+//                JSONArray plist = js.getJSONArray("points");
+//                if (plist != null) {
+//                    for (int j = 0; j < plist.size(); j++){
+//                        LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+//                        LocationPoint point1 = new LocationPoint(
+//                                cardId,
+//                                point.getLongitude(),
+//                                point.getLatitude(),
+//                                DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+//                                Long.parseLong(point.getTime()));
+//                        LocationPoints.add(point1);
+//                    }
+//                }
+//            }
+//        }
+        DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
+        List<LocationPoint> LocationPoints = dataAcquisition.getLocationAndUWBData(cardId, buildId, startTimeStr, endTimeStr);
+        if (LocationPoints.size() == 0){
             log.info("标签：[{}] , {} - {} 未获取到数据，跳过处理", cardId, startTimeStr, endTimeStr);
             lastProcessTimeMap.put(cardId, currentTime);
             return;
         }
-        List<LocationPoint> LocationPoints = new ArrayList<>();
-        if (points != null && !points.isEmpty()) {
-            for (int i = 0; i < points.size(); i++){
-                JSONObject js = (JSONObject) points.get(i);
-                JSONArray plist = js.getJSONArray("points");
-                if (plist != null) {
-                    for (int j = 0; j < plist.size(); j++){
-                        LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
-                        LocationPoint point1 = new LocationPoint(
-                                cardId,
-                                point.getLongitude(),
-                                point.getLatitude(),
-                                DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
-                                Long.parseLong(point.getTime()));
-                        LocationPoints.add(point1);
-                    }
-                }
-            }
-        }
-
         // 融合位置数据和标签数据
         if (!LocationPoints.isEmpty()) {
-            LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints, tagData);
+//            LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints, tagData);
 
             if (LocationPoints.size() > 0){
                 // 使用该卡独立的 tracker 实例处理数据（维持状态连续性）

@@ -42,6 +42,15 @@ public class LocationPoint {
         this.timestamp = timestamp;
     }
 
+    public LocationPoint(String cardId, Double longitude, Double latitude, String acceptTime, Long timestamp, TagScanUwbData tagScanUwbData) {
+        this.cardUUID = cardId;
+        this.longitude = longitude;
+        this.latitude = latitude;
+        this.acceptTime = acceptTime;
+        this.timestamp = timestamp;
+        this.tagScanUwbData = tagScanUwbData;
+    }
+
     public LocationPoint(double avgX, double avgY, String acceptTime, Long timestamp, Double speed) {
         this.longitude = avgX;
         this.latitude = avgY;
