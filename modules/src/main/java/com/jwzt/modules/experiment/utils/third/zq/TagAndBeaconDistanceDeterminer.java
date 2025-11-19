@@ -30,6 +30,36 @@ public class TagAndBeaconDistanceDeterminer {
     private static final String BEACON_CACHE_KEY_PREFIX = "beacons:";
 
     /**
+     * 获取信标的距离阈值
+     * 如果信标的 distance 字段不为 null，使用该值
+     * 如果为 null，回退到默认阈值 SENSING_DISTANCE_THRESHOLD
+     * 
+     * @param beacon 信标信息
+     * @return 距离阈值
+     */
+    private double getDistanceThreshold(TakBeaconInfo beacon) {
+        if (beacon.getDistance() != null) {
+            // TakBeaconInfo.distance 单位是米
+            return beacon.getDistance();
+        }
+        // 回退到默认阈值
+        return SENSING_DISTANCE_THRESHOLD;
+    }
+
+    /**
+     * 获取信标的距离阈值（单位：米），用于日志显示
+     * 
+     * @param beacon 信标信息
+     * @return 距离阈值（米）
+     */
+    private double getDistanceThresholdInMeters(TakBeaconInfo beacon) {
+        if (beacon.getDistance() != null) {
+            return beacon.getDistance();
+        }
+        return SENSING_DISTANCE_THRESHOLD;
+    }
+
+    /**
      * 获取指定 buildId 的所有基站（优先从 Redis 获取，缓存10分钟）
      */
     private List<TakBeaconInfo> getBeaconsByBuildId(String buildId) {
@@ -102,15 +132,16 @@ public class TagAndBeaconDistanceDeterminer {
             boolean isClose = false;
             for (TagScanUwbData.BltScanUwbBeacon beacon : p.getTagScanUwbData().getUwbBeaconList()) {
                 for (TakBeaconInfo b : matchedBeacons) {
-                    if (beacon.getUwbBeaconMac().equals(b.getBeaconId()) &&
-                            beacon.getDistance() < SENSING_DISTANCE_THRESHOLD) {
+                    if (beacon.getUwbBeaconMac().equals(b.getBeaconId())) {
+                        double threshold = getDistanceThreshold(b);
+                        if (beacon.getDistance() < threshold) {
+                            System.out.println(
+                                    MessageFormat.format("⚠️ 标签【{0}】靠近基站【{1}】，距离【{2}米】，阈值【{3}米】",
+                                            p.getCardUUID(), b.getName(), beacon.getDistance(), getDistanceThresholdInMeters(b)));
 
-                        System.out.println(
-                                MessageFormat.format("⚠️ 标签【{0}】靠近基站【{1}】，距离【{2}米】",
-                                        p.getCardUUID(), b.getName(), beacon.getDistance() / 10000.0));
-
-                        isClose = true;
-                        break; // 只要靠近任意一个基站就计数
+                            isClose = true;
+                            break; // 只要靠近任意一个基站就计数
+                        }
                     }
                 }
                 if (isClose) break;
@@ -148,12 +179,13 @@ public class TagAndBeaconDistanceDeterminer {
                 for (TakBeaconInfo b : matchedBeacons) {
                     System.out.println(
                             MessageFormat.format("⚠️ 检测到标签【{0}】与基站id【{1}】距离为【{2}】米",
-                                    p.getCardUUID(), beacon.getUwbBeaconMac(), beacon.getDistance() / 10000));
+                                    p.getCardUUID(), beacon.getUwbBeaconMac(), beacon.getDistance()));
                     if (beacon.getUwbBeaconMac().equals(b.getBeaconId())) {
-                        if (beacon.getDistance() < SENSING_DISTANCE_THRESHOLD) {
+                        double threshold = getDistanceThreshold(b);
+                        if (beacon.getDistance() < threshold) {
                             System.out.println(
                                     MessageFormat.format("⚠️ 检测到标签【{0}】与基站【{1}】距离小于【{2}】米，距离为【{3}米】",
-                                            p.getCardUUID(), b.getName(), SENSING_DISTANCE_THRESHOLD / 10000, beacon.getDistance() / 10000));
+                                            p.getCardUUID(), b.getName(), getDistanceThresholdInMeters(b), beacon.getDistance()));
                             return true;
                         }
                     }
@@ -292,8 +324,11 @@ public class TagAndBeaconDistanceDeterminer {
             }
             for (com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData.BltScanUwbBeacon beacon : p.getTagScanUwbData().getUwbBeaconList()) {
                 for (TakBeaconInfo b : matchedBeacons) {
-                    if (beacon.getUwbBeaconMac().equals(b.getBeaconId()) && beacon.getDistance() < SENSING_DISTANCE_THRESHOLD) {
-                        result.add(b);
+                    if (beacon.getUwbBeaconMac().equals(b.getBeaconId())) {
+                        double threshold = getDistanceThreshold(b);
+                        if (beacon.getDistance() < threshold) {
+                            result.add(b);
+                        }
                     }
                 }
             }

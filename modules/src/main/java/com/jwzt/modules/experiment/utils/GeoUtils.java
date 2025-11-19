@@ -2,6 +2,7 @@ package com.jwzt.modules.experiment.utils;
 
 import com.jwzt.modules.experiment.domain.Coordinate;
 import com.jwzt.modules.experiment.domain.LocationPoint;
+import com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.data.FileDataStore;
@@ -387,6 +388,80 @@ public class GeoUtils {
                 sumLat / points.size());
 
     }
+
+    /**
+     * 处理一秒内多个点的情况（使用中位数）
+     */
+    public static List<LocationPoint> processMultiplePointsPerSecondByUwb(List<LocationPoint> points) {
+        points.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
+        Map<Long, List<LocationPoint>> perSecond = points.stream()
+                .collect(Collectors.groupingBy(p -> p.getTimestamp() / 1000));
+
+        List<LocationPoint> result = new ArrayList<>();
+        for (List<LocationPoint> secondPoints : perSecond.values()) {
+            if (secondPoints.isEmpty()) continue;
+
+            Map<TagScanUwbData, List<LocationPoint>> perTag = new LinkedHashMap<>();
+            List<LocationPoint> nullTagPoints = new ArrayList<>();
+            for (LocationPoint point : secondPoints) {
+                if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(point.getAcceptTime()).equals("2025-11-17 11:00:44")){
+                    System.out.println("无时间点");
+                }
+                if (point.getCardUUID() == null){
+                    System.out.println("无标签点");
+                }
+                TagScanUwbData tagData = point.getTagScanUwbData();
+                if (tagData == null) {
+                    nullTagPoints.add(point);
+                } else {
+                    perTag.computeIfAbsent(tagData, k -> new ArrayList<>()).add(point);
+                }
+            }
+
+            if (!nullTagPoints.isEmpty()) {
+                aggregatePoints(result, nullTagPoints);
+            }
+
+            for (List<LocationPoint> tagPoints : perTag.values()) {
+                aggregatePoints(result, tagPoints);
+            }
+        }
+
+        result.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
+        return result;
+    }
+
+    private static void aggregatePoints(List<LocationPoint> target, List<LocationPoint> source) {
+        if (source.size() == 1) {
+            target.add(source.get(0));
+            return;
+        }
+
+        double medianLng = calculateMedian(
+                source.stream().mapToDouble(LocationPoint::getLongitude).toArray());
+        double medianLat = calculateMedian(
+                source.stream().mapToDouble(LocationPoint::getLatitude).toArray());
+
+        LocationPoint medianPoint = new LocationPoint(
+                resolveCardKey(source.get(0)),
+                medianLng,
+                medianLat,
+                source.get(0).getAcceptTime(),
+                source.get(0).getTimestamp(),
+                source.get(0).getTagScanUwbData());
+        target.add(medianPoint);
+    }
+
+    /** 将 LocationPoint 的“卡标识”标准化成字符串 key，用于 stateByCard 映射 */
+    private static String resolveCardKey(LocationPoint p) {
+        // 你的数据源有两种：minhang（int cardId）/ yuzui（UUID 字符串）
+        // 这里统一转成字符串
+        if (p.getCardUUID() != null && !p.getCardUUID().isEmpty()) return p.getCardUUID();
+        if (p.getCardId() != null) return String.valueOf(p.getCardId());
+        // 若都没有，则用 recordThirdId 之类做兜底
+        return Optional.ofNullable(p.getCardUUID()).orElse("UNKNOWN");
+    }
+
 
     /**
      * 处理一秒内多个点的情况（使用中位数）

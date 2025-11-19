@@ -6,7 +6,9 @@ import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.domain.LocTrackRecord;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.domain.LocationPoint2;
+import com.jwzt.modules.experiment.domain.TakCardInfo;
 import com.jwzt.modules.experiment.service.ILocTrackRecordService;
+import com.jwzt.modules.experiment.service.ITakCardInfoService;
 import com.jwzt.modules.experiment.utils.third.zq.FusionData;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
 import com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData;
@@ -36,6 +38,25 @@ public class DataAcquisition {
     @Autowired
     private ILocTrackRecordService locTrackRecordService;
 
+    @Autowired
+    private ITakCardInfoService takCardInfoService;
+
+    /**
+     * 获取卡列表
+     *
+     * @param type 业务类型
+     * @return
+     */
+    public List<String> getCardIdList(Integer type) {
+        TakCardInfo takCardInfo = new TakCardInfo();
+        takCardInfo.setYardId(baseConfig.getYardName());
+        takCardInfo.setType(baseConfig.getLocateDataSources());
+        takCardInfo.setBizType(type);
+        takCardInfo.setEnabled(0);
+        List<String> carCards = takCardInfoService.selectTakCardIdList(takCardInfo);
+        return carCards;
+    }
+
     /**
      * 获取定位数据（包含信标测距）
      *
@@ -62,13 +83,14 @@ public class DataAcquisition {
     }
 
     private List<LocationPoint> getLocationAndUWBDataXrkc(String cardId, String buildId, String startTimeStr, String endTimeStr) {
+        List<LocationPoint> locationPoints = new ArrayList<>();
         LocTrackRecord params = new LocTrackRecord();
         params.setCardId(cardId);
+        params.setGpsIsValid("1");
         params.setQueryStartTime(startTimeStr);
         params.setQueryEndTime(endTimeStr);
         List<LocTrackRecord> locTrackRecords = locTrackRecordService.selectLocTrackRecordList(params);
         if (locTrackRecords != null && !locTrackRecords.isEmpty()) {
-            List<LocationPoint> locationPoints = new ArrayList<>();
             for (LocTrackRecord locTrackRecord : locTrackRecords) {
                 LocationPoint point = toLocationPoint(locTrackRecord);
                 if (point != null) {
@@ -77,7 +99,7 @@ public class DataAcquisition {
             }
             return locationPoints;
         }
-        return null;
+        return locationPoints;
     }
 
     private List<LocationPoint> getLocationAndUWBDataZq(String cardId, String buildId, String startTimeStr, String endTimeStr) {

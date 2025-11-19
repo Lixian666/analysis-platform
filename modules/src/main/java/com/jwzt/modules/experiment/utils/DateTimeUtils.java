@@ -190,6 +190,36 @@ public class DateTimeUtils {
     }
 
     /**
+     * 将带有毫秒/微秒的小数秒时间字符串转换为不带小数秒的时间字符串
+     * 支持格式：
+     *  - yyyy-MM-dd HH:mm:ss.SSS
+     *  - yyyy-MM-dd HH:mm:ss.SSSSSS（会截断为毫秒）
+     *  - 以及 convertToTimestamp 可解析的其他变体（如最后一段为 :SSS）
+     *
+     * 解析失败时返回 null，不抛出异常
+     *
+     * @param dateTimeStr 原始时间字符串
+     * @return 不带小数秒的时间字符串（yyyy-MM-dd HH:mm:ss），或解析失败时返回 null
+     */
+    public static String dateTimeSSSStrToDateTimeStr(String dateTimeStr) {
+        if (dateTimeStr == null) {
+            return null;
+        }
+        String normalized = dateTimeStr.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+
+        try {
+            long timestamp = convertToTimestamp(normalized);
+            return timestampToDateTimeStr(timestamp);
+        } catch (Exception e) {
+            // 解析失败时按约定返回 null，而不是向外抛出异常，避免影响现有调用逻辑
+            return null;
+        }
+    }
+
+    /**
      *  时间戳转日期时间字符串(yyyy-MM-dd HH:mm:ss:SSS)
      * @param timestamp
      * @return

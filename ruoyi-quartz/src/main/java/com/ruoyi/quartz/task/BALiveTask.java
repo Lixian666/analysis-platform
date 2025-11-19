@@ -237,14 +237,17 @@ public class BALiveTask {
         System.out.println("结束时间: " + endTimeStr);
         System.out.println("========================================");
 
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
 
         // 获取结束时间字符串（根据车辆类型）
@@ -416,14 +419,17 @@ public class BALiveTask {
         System.out.println("结束时间: " + endTimeStr);
         System.out.println("========================================");
 
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
 
         // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动
@@ -577,14 +583,17 @@ public class BALiveTask {
         System.out.println("结束时间: " + endTimeStr);
         System.out.println("========================================");
 
-        // 预热：提前获取token
-        try {
-            System.out.println("正在预热，获取AccessToken...");
-            zqOpenApi.getHeaders();
-            System.out.println("✓ AccessToken预热成功");
-            Thread.sleep(200);
-        } catch (Exception e) {
-            System.err.println("⚠️ AccessToken预热失败: " + e.getMessage());
+        if (baseConfig.getLocateDataSources().equals("zq")){
+            // 预热：提前获取一次token，避免并发冲突
+            try {
+                System.out.println("正在预热，获取AccessToken...");
+                zqOpenApi.getHeaders();
+                System.out.println("✓ AccessToken预热成功");
+                // 等待200ms确保token已缓存
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+            }
         }
 
         // 为每个卡创建定时任务，每10秒执行一次，使用错峰启动

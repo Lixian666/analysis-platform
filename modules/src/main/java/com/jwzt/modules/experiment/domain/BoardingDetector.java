@@ -68,6 +68,10 @@ public class BoardingDetector {
         ARRIVED_DROPPING,           // 火车到达下车
         SEND_BOARDING,           // 火车发运上车
         SEND_DROPPING,           // 火车发运下车
+        CAR_ARRIVED_BOARDING,       // CAR到达上车
+        CAR_ARRIVED_DROPPING,       // CAR到达下车
+        CAR_SEND_BOARDING,          // CAR发运上车
+        CAR_SEND_DROPPING,          // CAR发运下车
     }
 
     private List<MovementAnalyzer.MovementState> lastStates = new ArrayList<>();

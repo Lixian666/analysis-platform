@@ -124,7 +124,7 @@ public class RealTimeDriverTracker {
         public long endTime;
         public double endLongitude;
         public double endLatitude;
-        EventKind kind; // ARRIVED 或 SEND
+        public EventKind kind; // ARRIVED 或 SEND 或 CAR_ARRIVED 或 CAR_SEND 或 TRUCK_ARRIVED 或 TRUCK_SEND
         public String beaconName; // 最常命中的信标名称
         public String rfidName; // 最常命中的信标RFID名称
         public String area; // 最常命中的信标区域
@@ -132,7 +132,7 @@ public class RealTimeDriverTracker {
     }
 
     /** 事件类型归并：到达业务 与 发运业务 */
-    private enum EventKind { TRUCK_ARRIVED, TRUCK_SEND, ARRIVED, SEND }
+    public enum EventKind { CAR_ARRIVED, CAR_SEND, TRUCK_ARRIVED, TRUCK_SEND, ARRIVED, SEND }
 
     @PostConstruct
     public void init() {
@@ -154,7 +154,11 @@ public class RealTimeDriverTracker {
         // 分组：每张卡独立流
         Map<String, List<LocationPoint>> byCard = points.stream()
                 .collect(Collectors.groupingBy(this::resolveCardKey));
-        byCard.forEach((cardKey, list) -> ingestForCard(cardKey, list));
+        for (Map.Entry<String, List<LocationPoint>> entry : byCard.entrySet()) {
+            String cardKey = entry.getKey();
+            List<LocationPoint> list = entry.getValue();
+            ingestForCard(cardKey, list);
+        }
     }
 
     /**
@@ -221,6 +225,23 @@ public class RealTimeDriverTracker {
             }
 
             switch (es.getEvent()) {
+                case CAR_ARRIVED_BOARDING:
+                    onStart(cardKey, st, EventKind.CAR_ARRIVED, es, win);
+                    break;
+                case CAR_ARRIVED_DROPPING:
+                    onEnd(cardKey, st, EventKind.CAR_ARRIVED, es, win);
+                    break;
+                case CAR_SEND_BOARDING:
+                    break;
+                case CAR_SEND_DROPPING:
+                    // **修改点**：如果已有活动会话按原来的 onEnd；如果没有活动会话（未检测到上车），尝试回溯历史查找上车并直接入库
+                    if (st.activeSession != null && st.activeSession.kind == EventKind.CAR_SEND) {
+                        onEnd(cardKey, st, EventKind.CAR_SEND, es, win);
+                    } else {
+                        // 回溯并持久化发运段（先下后上）
+                        backfillAndPersistSendSession(cardKey, st, es, vehicleType);
+                    }
+                    break;
                 case TRUCK_ARRIVED_BOARDING:
                     onStart(cardKey, st, EventKind.TRUCK_ARRIVED, es, win);
                     break;
@@ -390,6 +411,9 @@ public class RealTimeDriverTracker {
 
             // 从 endIndex 向前扫描，寻找一个 candidate 做为“当前点”去重建窗口
             for (int candidate = listStartIndex; candidate >= 0; candidate++) {
+                if (candidate == history.size()){
+                    break;
+                }
                 LocationPoint candPoint = history.get(candidate);
                 if (candPoint.getTimestamp() < earliestAllowedTs) break; // 超过回溯上限
 
@@ -442,7 +466,9 @@ public class RealTimeDriverTracker {
                     continue; // 检测异常，跳过
                 }
                 
-                if (es != null && es.getEvent() != null && es.getEvent() == BoardingDetector.Event.SEND_BOARDING) {
+                if (es != null && es.getEvent() != null
+                        && (es.getEvent() == BoardingDetector.Event.SEND_BOARDING
+                        || es.getEvent() == BoardingDetector.Event.CAR_SEND_BOARDING)) {
                     // 找到上车事件
                     foundStartWindowStartIndex = windowStart;
                     foundStartEventState = es;
@@ -477,7 +503,12 @@ public class RealTimeDriverTracker {
 
                 // 构造一个模拟的 SEND_BOARDING 事件
                 EventState es = new EventState();
-                es.setEvent(BoardingDetector.Event.SEND_BOARDING);
+                es.setEvent(BoardingDetector.Event.NONE);
+                if (downEs.getEvent() == BoardingDetector.Event.CAR_SEND_DROPPING){
+                    es.setEvent(BoardingDetector.Event.CAR_SEND_BOARDING);
+                }else if (downEs.getEvent() == BoardingDetector.Event.SEND_DROPPING){
+                    es.setEvent(BoardingDetector.Event.SEND_BOARDING);
+                }
                 es.setTimestamp(fallbackPoint.getTimestamp());
 
                 foundStartEventState = es;
@@ -544,7 +575,11 @@ public class RealTimeDriverTracker {
             sess.endTime = dropTs;
             sess.endLongitude = sessionPoints.get(sessionPoints.size() - 1).getLongitude();
             sess.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
-            sess.kind = EventKind.SEND;
+            if (downEs.getEvent() == BoardingDetector.Event.CAR_SEND_DROPPING){
+                sess.kind = EventKind.CAR_SEND;
+            } else if (downEs.getEvent() == BoardingDetector.Event.SEND_DROPPING){
+                sess.kind = EventKind.SEND;
+            }
             sess.points.addAll(sessionPoints);
             persistSession(sess, dropTs, sessionPoints);
             dataSender.outParkPush(sess, vehicleType);
@@ -581,7 +616,11 @@ public class RealTimeDriverTracker {
     /** 批次预处理：修正 timestamp、过滤异常、排序、去重 */
     private List<LocationPoint> preprocessBatch(List<LocationPoint> batch, long cutoffTs) {
         List<LocationPoint> normal = new ArrayList<>();
+        batch.sort((p1, p2) -> Long.compare(p1.getTimestamp(), p2.getTimestamp()));
         for (LocationPoint raw : batch) {
+            if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(raw.getAcceptTime()).equals("2025-11-17 11:07:00")){
+                System.out.println("⚠️ 检测到车辆已进入地跑区域（地跑）");
+            }
             // 兜底：若 timestamp 未赋值，用 acceptTime 转换
             if (raw.getTimestamp() == 0 && raw.getAcceptTime() != null) {
                 raw.setTimestamp(DateTimeUtils.convertToTimestamp(raw.getAcceptTime()));
@@ -673,6 +712,8 @@ public class RealTimeDriverTracker {
             case SEND:      return 1L;
             case TRUCK_ARRIVED:   return 2L;
             case TRUCK_SEND: return 3L;
+            case CAR_ARRIVED:   return 4L;
+            case CAR_SEND: return 5L;
             default:        return 9L; // 默认值
         }
     }
@@ -868,7 +909,7 @@ public class RealTimeDriverTracker {
         String beaconType;
         String location;
         String area;
-        
+        List<TakBeaconInfo> beaconsInRangeAdd = new ArrayList<>();
         if (vehicleType == VehicleType.TRUCK) {
             // 板车作业区
             beaconType = "板车作业区";
@@ -877,8 +918,16 @@ public class RealTimeDriverTracker {
         } else {
             // 火车作业区（货运线作业台）
             beaconType = "货运线作业台";
-            location = "2号线";
+            location = null;
             area = null; // 不限制区域，A和B都统计
+            // 获取所有距离判定成功的信标列表（可包含重复）
+            beaconsInRangeAdd = tagBeacon.getBeaconsInRangeForPoints(
+                    sessionPoints,
+                    baseConfig.getJoysuch().getBuildingId(),
+                    "地跑",
+                    location,
+                    area
+            );
         }
         
         // 获取所有距离判定成功的信标列表（可包含重复）
@@ -889,6 +938,9 @@ public class RealTimeDriverTracker {
             location,
             area
         );
+        if (vehicleType == VehicleType.CAR){
+            beaconsInRange.addAll(beaconsInRangeAdd);
+        }
         
         if (beaconsInRange == null || beaconsInRange.isEmpty()) {
             System.out.println("⚠️ 会话期间未找到距离判定成功的信标信息（车辆类型：" + vehicleType + "）");

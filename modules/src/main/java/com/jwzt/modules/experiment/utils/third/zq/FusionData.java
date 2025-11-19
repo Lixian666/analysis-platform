@@ -23,6 +23,17 @@ public class FusionData {
 
         List<TagScanUwbData> tagList = tagDataList.toJavaList(TagScanUwbData.class);
 
+        // 对 tagList 中所有 BltScanUwbBeacon 的 distance 除以 10000
+        for (TagScanUwbData tag : tagList) {
+            if (tag.getUwbBeaconList() != null) {
+                for (TagScanUwbData.BltScanUwbBeacon beacon : tag.getUwbBeaconList()) {
+                    if (beacon.getDistance() != null) {
+                        beacon.setDistance(beacon.getDistance() / 10000.0);
+                    }
+                }
+            }
+        }
+
         // 用于快速索引：按 uwbBeaconMac 分组（或用 bltMac，如果你的业务以此为主键）
         Map<String, List<TagScanUwbData>> tagBuffer = new ConcurrentHashMap<>();
         for (TagScanUwbData tag : tagList) {
