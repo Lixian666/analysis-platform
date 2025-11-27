@@ -107,7 +107,7 @@ experiment:
     yard-name: luorong
     location-card-type: other
     card-type: car
-    locate-data-sources: zq
+    locate-data-sources: xrkc
 
     data-match:
       time-interval-seconds: null
@@ -117,10 +117,9 @@ experiment:
 
     joysuch:
       building-name: 雒容
-      building-id: 210327
+      building-id: luorong
       username: client
       password: JoySuch@client10
-#      base-url: http://172.30.17.116/zqapi
       base-url: http://61.50.136.180:46000
       api:
         # 获取建筑列表
