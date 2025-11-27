@@ -49,6 +49,8 @@ public class ZQOpenApi {
 
     private static String licence = null;
 
+    AccessTokenReq accessToken = new AccessTokenReq();
+
     /**
      * 获取UWB信标列表
      */
@@ -297,8 +299,11 @@ public class ZQOpenApi {
     }
 
     public JoySuchResponse<TokenEntity> getAccessToken(String username, String password) {
-        AccessTokenReq accessTokenReq = new AccessTokenReq(getLicence(username, password));
-        return AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessTokenReq.getLicence()).refreshAccessToken();
+        if (accessToken.getLicence() == null){
+            accessToken= new AccessTokenReq(getLicence(username, password));
+        }
+        AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessToken.getLicence()).getAccessToken();
+        return AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessToken.getLicence()).refreshAccessToken();
     }
 
     public JoySuchResponse<TokenEntity> refreshAccessToken() {

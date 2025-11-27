@@ -10,6 +10,7 @@ public class EventState {
     public Long timestamp = 0L;
     public Double lang = null;
     public Double lat = null;
+    public Integer newEventState = 0; // 0: 默认 1: 新的上车点
     public Integer state = 0; // 0: 默认 1: 超时 2: 两个识别点时间间隔过短
     public String zoneName = null;
     public String zoneNameRfid = null;
@@ -38,6 +39,15 @@ public class EventState {
         this.timestamp = timestamp;
         this.lang = lang;
         this.lat = lat;
+    }
+
+    public EventState(BoardingDetector.Event currentEvent, Long timestamp, String acceptTime, Double lang, Double lat, Integer newEventState) {
+        this.event = currentEvent;
+        this.acceptTime = acceptTime;
+        this.timestamp = timestamp;
+        this.lang = lang;
+        this.lat = lat;
+        this.newEventState = newEventState;
     }
 
     public EventState(BoardingDetector.Event currentEvent, Long timestamp, String acceptTime, Double lang, Double lat, String zoneName, String zoneNameRfid, String zone) {

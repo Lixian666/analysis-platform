@@ -497,36 +497,6 @@ public class GeoUtils {
         return result;
     }
 
-//    /**
-//     * 处理一秒内多个点的情况（使用中位数）
-//     */
-//    private static List<Coordinate> processMultiplePointsPerSecond(List<Coordinate> points) {
-//        points.sort(Comparator.comparingLong(Coordinate::getTimestamp));
-//        Map<Long, List<Coordinate>> perSecond = points.stream()
-//                .collect(Collectors.groupingBy(p -> p.getTimestamp() / 1000));
-//
-//        List<Coordinate> result = new ArrayList<>();
-//        for (List<Coordinate> secondPoints : perSecond.values()) {
-//            if (secondPoints.isEmpty()) continue;
-//
-//            if (secondPoints.size() == 1) {
-//                result.add(secondPoints.get(0));
-//            } else {
-//                double medianLng = calculateMedian(
-//                        secondPoints.stream().mapToDouble(Coordinate::getLongitude).toArray());
-//                double medianLat = calculateMedian(
-//                        secondPoints.stream().mapToDouble(Coordinate::getLatitude).toArray());
-//
-//                Coordinate medianPoint = new Coordinate(
-//                        medianLng, medianLat, secondPoints.get(0).getTimestamp());
-//                result.add(medianPoint);
-//            }
-//        }
-//
-//        result.sort(Comparator.comparingLong(Coordinate::getTimestamp));
-//        return result;
-//    }
-
     /**
      * 计算中位数
      */
