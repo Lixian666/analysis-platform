@@ -9,6 +9,8 @@ server:
   # 服务器的HTTP端口，默认为8080
   port: 8020
   servlet:
+    # 应用的访问路径
+    context-path: /analysis-platform-api
     domain-name: http://192.168.6.8
 
 # Spring配置
@@ -38,7 +40,7 @@ spring:
 
 # 行为分析配置 - 董家镇
 experiment:
-  platform-dir: /Users/lixian/Cache/Platform
+  platform-dir: /data/app/analysis-platform
   base:
     stay-verify: false
     ranging-verify: true
@@ -62,7 +64,8 @@ experiment:
       building-id: 209983
       username: client
       password: JoySuch@client10
-      base-url: http://61.50.136.180:46000
+      base-url: http://172.30.17.116/zqapi
+      # base-url: http://61.50.136.180:46000
       api:
         # 获取建筑列表
         build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
@@ -99,7 +102,7 @@ experiment:
       remove-vehicle: /api/cardAnalysis/removeAssignmentRecord
   file-path:
     yard-name: ${experiment.base.yard-name}
-    base-path: ${experiment.platform-dir}/PlatformData/shp
+    base-path: ${experiment.platform-dir}/data/shp/
     yards:
       dongjiazhen:
         driving:
