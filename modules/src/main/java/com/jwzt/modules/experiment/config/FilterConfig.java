@@ -11,6 +11,9 @@ public class FilterConfig {
         public static final double SENSING_DISTANCE_THRESHOLD = 1.0;  // 靠近感应距离阈值（m）
         public static final int SEND_AFTER_DOWN_UWB_SIZE = 2;
 
+        // 行为识别数配置
+        public static final int MIN_POINT_ANALYSIS_COUNT = 60;
+
         // 速度配置
         public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
         public static final double MIN_SPEED_MPS = 0.0; // 最小速度，单位 m/s（比如步行 < 2，驾驶 < 17）
@@ -25,7 +28,8 @@ public class FilterConfig {
     // 时间间隔配置
     public static final int ADJACENT_POINTS_TIME_INTERVAL_MS = 1000000;   // 相邻点位时间间隔 （毫秒）  0：不进行时间间隔判定
     public static final int IDENTIFY_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 上下车识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
-
+    public static final int SAME_STATE_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 相同状态识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
+    public static final int BEACON_DISTANCE_EFFECTIVE_TIME_INTERVAL_MS = 60000; // 信标距离判断有效时间间隔
     // 交通车状态标记数设置
     public static final int TRAFFICCAR_STATE_SIZE = 8;
 
@@ -47,7 +51,7 @@ public class FilterConfig {
     public static final int SEND_BEFORE_DOWN_STATE_SIZE = NUMBER;        // 发运上车识别判定标签数
     public static final int SEND_AFTER_DOWN_STATE_SIZE = NUMBER;     // 发运下车识别判定标签数
 
-    public static final int STOPPED_STATE_SIZE = 1;       // 停车识别判定标签数
+    public static final int STOPPED_STATE_SIZE = 3;       // 停车识别判定标签数
     public static final int DRIVING_STATE_SIZE = 2;       // 行驶识别判定标签数
 
     // 停留检测配置
