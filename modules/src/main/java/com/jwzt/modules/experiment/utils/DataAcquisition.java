@@ -123,11 +123,15 @@ public class DataAcquisition {
 
         JSONArray points = jsonObject.getJSONArray("data");
         JSONArray tagData = tagJsonObject.getJSONArray("data");
+        List<LocationPoint> LocationPoints = new ArrayList<>();
+        if (points == null || tagData == null){
+            return LocationPoints;
+        }
 
         if (points.size() == 0 || tagData.size() == 0){
-            return null;
+            return LocationPoints;
         };
-        List<LocationPoint> LocationPoints = new ArrayList<>();
+
         if (points != null && !points.isEmpty()) {
             for (int i = 0; i < points.size(); i++){
                 JSONObject js = (JSONObject) points.get(i);
