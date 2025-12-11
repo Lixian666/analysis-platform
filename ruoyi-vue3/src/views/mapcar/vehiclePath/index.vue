@@ -117,11 +117,11 @@
              </el-table-column> -->
         <el-table-column align="center" label="操作" width="150">
           <template v-slot="scope">
-            <el-button v-if="diagnosisRoles('vehicle:details') && scope.row.cardId" size="mini"
+            <el-button v-if="diagnosisRoles('vehicle:details') && scope.row.cardId" size="small"
               @click="handleEdit(scope.row.cardId, scope.row.id, scope.row.startTime, scope.row.endTime)">详情</el-button>
             <el-button 
               type="danger"
-              size="mini"
+              size="small"
               @click="handleDelete(scope.row)"
             >删除</el-button>
           </template>
