@@ -12,12 +12,14 @@ import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer
 import com.jwzt.modules.experiment.vo.EventState;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import static com.jwzt.modules.experiment.config.FilterConfig.ADJACENT_POINTS_TIME_INTERVAL_MS;
+import static com.jwzt.modules.experiment.config.FilterConfig.*;
 
 /**
  * 火车和地跑组合装卸策略实现
@@ -50,16 +52,22 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
     private EventState sendInLastEventState = null;
     private EventState carSendOutLastEventState = null;
     private EventState carSendInLastEventState = null;
+    private EventState lastCarInLastEventState = null;
     
     private int theTrafficCarCount = 0;
+
+    private int thePointAnalysisCount = 0;
+
     private Boolean inTheTrafficCar = false;
     
     @Data
     private static class TheUWBRecords {
         int theUWBSendDropsZytA = 0;
         long theUWBSendDropsZytALastTime = 0;
+        List<Long> theUWBSendDropsZytAList = new ArrayList<>();
         int theUWBSendDropsZytB = 0;
         long theUWBSendDropsZytBLastTime = 0;
+        List<Long> theUWBSendDropsZytBList = new ArrayList<>();
     }
     
     @Override
@@ -93,7 +101,15 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
             return new EventState();
         }
         List<LocationPoint> theLastTenPoints = recordPoints.subList(lastStart, lastEnd);
-        
+        if (currentPoint.getTagScanUwbData().getUwbBeaconList() != null && currentPoint.getTagScanUwbData().getUwbBeaconList().size() > 0){
+            System.out.println("开始处理: " + currentPoint.getAcceptTime() + "\n" + "信标列表" + currentPoint.getTagScanUwbData().getUwbBeaconList());
+        }
+        if (currentPoint.getAcceptTime().equals("2025-12-05 14:35:51")){
+            System.out.println("开始处理: " + currentPoint.getAcceptTime() + "\n" + "信标列表" + currentPoint.getTagScanUwbData().getUwbBeaconList());
+        }
+        if (carSendOutLastEventState != null && currentPoint.getAcceptTime().equals("2025-12-05 14:26:28")){
+            System.out.println("开始处理: " + currentPoint.getAcceptTime() + "\n" + "信标列表" + currentPoint.getTagScanUwbData().getUwbBeaconList());
+        }
         // 根据当前点位所在区域判断是火车装卸还是地跑装卸
         if (isInGroundVehicleZone(currentPoint) == 1 || sendOutLastEventState != null || sendInLastEventState != null) {
             System.out.println("开始处理（火车装卸）：" + currentPoint);
@@ -153,6 +169,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
 //        boolean isTheFreightLineArea = zoneChecker.isInHuoyunxinZone(currentPoint);
         // 判断是否在停车区域（发运上车区域）
         boolean isnParkingArea = zoneChecker.isInParkingZone(currentPoint);
+        thePointAnalysisCount ++;
         List<LocationPoint> theJTCList = theLastTenPoints.subList(0, 10);
         int theLastTenPointsNotInTOJTCCount = tagBeacon.countTagsCloseToBeacons(
                 theJTCList,
@@ -169,6 +186,15 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
             } else {
                 inTheTrafficCar = false;
             }
+        }
+        inTheTrafficCar = false;
+
+        if (currentPoint.getAcceptTime().equals("2025-12-04 17:07:00")){
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: " + currentPoint);
+        }
+
+        if (currentPoint.getAcceptTime().equals("2025-12-05 14:49:03")){
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: " + currentPoint);
         }
 
         // 统计最后10个点是否在地跑识别位置附近
@@ -201,6 +227,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
         if (isJCKAWithin && carSendOutLastEventState == null && carSendInLastEventState == null) {
             theUWBRecords.theUWBSendDropsZytA++;
             theUWBRecords.theUWBSendDropsZytALastTime = currentPoint.getTimestamp();
+            theUWBRecords.theUWBSendDropsZytAList.add(theUWBRecords.theUWBSendDropsZytALastTime);
         }
 
         // 判断是否靠近作业台fid附近
@@ -215,17 +242,10 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
         if (isJCKBWithin && carSendOutLastEventState == null && carSendInLastEventState == null) {
             theUWBRecords.theUWBSendDropsZytB++;
             theUWBRecords.theUWBSendDropsZytBLastTime = currentPoint.getTimestamp();
+            theUWBRecords.theUWBSendDropsZytBList.add(theUWBRecords.theUWBSendDropsZytBLastTime);
         }
 
-        // 判断上次流程是否超时
-        if (curPoint != null && currentPoint.getTimestamp() - curPoint.getTimestamp() > ADJACENT_POINTS_TIME_INTERVAL_MS) {
-            // 重置状态
-            lastEvent = BoardingDetector.Event.NONE;
-            currentEvent = BoardingDetector.Event.NONE;
-            curPoint = null;
-            return new EventState(currentEvent, currentPoint.getTimestamp(), 1);
-        }
-        if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(currentPoint.getAcceptTime()).equals("2025-11-19 10:32:23")){
+        if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(currentPoint.getAcceptTime()).equals("2025-11-20 15:07:24")){
             System.out.println("⚠️ 检测到车辆已进入地跑区域（地跑）");
         }
 
@@ -242,6 +262,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                     System.out.println("⚠️ 检测到车辆已进入发运下车区域（地跑）");
                     System.out.println("A附近" + theUWBRecords.theUWBSendDropsZytA + " fid附近" + theUWBRecords.theUWBSendDropsZytB);
                     resetInternalState();
+                    curPoint = currentPoint;
                     lastEvent = BoardingDetector.Event.CAR_SEND_DROPPING;
                     currentEvent = BoardingDetector.Event.CAR_SEND_DROPPING;
                     carSendOutLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
@@ -254,6 +275,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
         // 地跑发运上车事件
         if (carSendOutLastEventState != null
                 && currentPoint.getState() == MovementAnalyzer.MovementState.STOPPED
+                && carSendOutLastEventState.timestamp - currentPoint.getTimestamp()  > IDENTIFY_IDENTIFY_TIME_INTERVAL_MS
                 && isnParkingArea
                 && !inTheTrafficCar) {
 
@@ -305,11 +327,8 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
             }
         }
 
-
-
         // 地跑到达上车车事件
-        if (carSendInLastEventState == null
-                && theUWBRecords.theUWBSendDropsZytA >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE
+        if (theUWBRecords.theUWBSendDropsZytA >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE
                 && theUWBRecords.theUWBSendDropsZytB > FilterConfig.SEND_AFTER_DOWN_UWB_SIZE
                 && !inTheTrafficCar) {
             // 到达上车检测
@@ -321,6 +340,11 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                     lastEvent = BoardingDetector.Event.CAR_ARRIVED_BOARDING;
                     currentEvent = BoardingDetector.Event.CAR_ARRIVED_BOARDING;
                     lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                    if (carSendInLastEventState != null
+                            && currentPoint.getTimestamp() - carSendInLastEventState.timestamp > SAME_STATE_IDENTIFY_TIME_INTERVAL_MS){
+                        carSendInLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                        return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude(), 1);
+                    }
                     carSendInLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
                     return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
                 }
@@ -332,6 +356,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
             // 检测到达下车事件
             if (lastEvent == BoardingDetector.Event.CAR_ARRIVED_BOARDING
                     && currentPoint.getState() == MovementAnalyzer.MovementState.STOPPED
+                    && currentPoint.getTimestamp() - carSendInLastEventState.timestamp > IDENTIFY_IDENTIFY_TIME_INTERVAL_MS
                     && isnParkingArea) {
 
                 System.out.println("⚠️ 检测到车辆已进入到达下车区域（地跑）");
@@ -339,6 +364,8 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                 int arrivedDrivingTag = 0;
                 int arrivedFirstTag = 0;
                 int arrivedLastTag = 0;
+                int parkTags = 0;
+                boolean isParking = false;
 
                 // 判断到达下车点前10个点状态
                 for (LocationPoint point : theFirstTenPoints) {
@@ -366,14 +393,28 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                         arrivedStoppedTag++;
                     }
                 }
+                // 判断到达下车点前5个点状态
+                for (int i = 0; i < 5; i++) {
+                    LocationPoint point = theLastTenPoints.get(i);
+                    if (point.getSpeed() < FilterConfig.MIN_WALKING_SPEED){
+                        parkTags++;
+                    }else {
+                        parkTags = 0;
+                    }
+                    if (!isParking && parkTags >= 2){
+                        isParking = true;
+                    }
+                }
 
                 // 判断状态标签数量是否满足到达区域下车条件
                 if (arrivedFirstTag >= FilterConfig.ARRIVED_BEFORE_DOWN_STATE_SIZE
                         && arrivedLastTag >= FilterConfig.ARRIVED_AFTER_DOWN_STATE_SIZE
                         && arrivedStoppedTag >= FilterConfig.STOPPED_STATE_SIZE
-                        && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE) {
+                        && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE
+                        && isParking) {
                     System.out.println("⚠️ 检测到到达已下车（地跑）");
                     resetInternalState();
+                    curPoint = currentPoint;
                     lastEvent = BoardingDetector.Event.NONE;
                     currentEvent = BoardingDetector.Event.CAR_ARRIVED_DROPPING;
                     lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
@@ -382,7 +423,36 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                 }
             }
         }
+        lastInternalState(currentPoint.getTimestamp());
+//        if (theUWBRecords.theUWBSendDropsZytALastTime != 0L && theUWBRecords.theUWBSendDropsZytBLastTime != 0L) {
+//            if (currentPoint.getTimestamp() - theUWBRecords.theUWBSendDropsZytALastTime > BEACON_DISTANCE_EFFECTIVE_TIME_INTERVAL_MS
+//                    && currentPoint.getTimestamp() - theUWBRecords.theUWBSendDropsZytBLastTime > BEACON_DISTANCE_EFFECTIVE_TIME_INTERVAL_MS){
+//                resetInternalState();
+//            }
+//        }
         return new EventState();
+    }
+
+    private void cleanOld(List<Long> list, long nowTs) {
+        long threshold = nowTs - 60000; // 60秒之前的全部移除
+        list.removeIf(ts -> ts < threshold);
+    }
+
+    private void lastInternalState(long nowTs) {
+        cleanOld(theUWBRecords.theUWBSendDropsZytAList, nowTs);
+        cleanOld(theUWBRecords.theUWBSendDropsZytAList, nowTs);
+        if (theUWBRecords.theUWBSendDropsZytAList.size() > 0){
+            theUWBRecords.theUWBSendDropsZytA = theUWBRecords.theUWBSendDropsZytAList.size();
+        } else {
+            theUWBRecords.theUWBSendDropsZytA = 0;
+            theUWBRecords.theUWBSendDropsZytALastTime = 0L;
+        }
+        if (theUWBRecords.theUWBSendDropsZytBList.size() > 0){
+            theUWBRecords.theUWBSendDropsZytB = theUWBRecords.theUWBSendDropsZytBList.size();
+        } else {
+            theUWBRecords.theUWBSendDropsZytB = 0;
+            theUWBRecords.theUWBSendDropsZytBLastTime = 0L;
+        }
     }
     
     /**
@@ -663,8 +733,19 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
     private void resetInternalState() {
         theUWBRecords.theUWBSendDropsZytA = 0;
         theUWBRecords.theUWBSendDropsZytALastTime = 0;
+        theUWBRecords.theUWBSendDropsZytAList.clear();
         theUWBRecords.theUWBSendDropsZytB = 0;
         theUWBRecords.theUWBSendDropsZytBLastTime = 0;
+        theUWBRecords.theUWBSendDropsZytBList.clear();
+    }
+
+    public void resetSendSessionState() {
+        resetInternalState();
+        lastEvent = BoardingDetector.Event.NONE;
+        currentEvent = BoardingDetector.Event.CAR_SEND_BOARDING;
+        lastEventState = new EventState(currentEvent, curPoint.getTimestamp(), curPoint.getAcceptTime());
+        sendOutLastEventState = null;
+        carSendOutLastEventState = null;
     }
     
     @Override
