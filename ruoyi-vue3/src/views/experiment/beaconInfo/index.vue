@@ -9,7 +9,7 @@
             @keyup.enter="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="RFID名称" prop="rfidName">
+      <el-form-item label="RFID名称" prop="rfidName" label-width="80px">
         <el-input
             v-model="queryParams.rfidName"
             placeholder="请输入RFID名称"
@@ -51,6 +51,11 @@
             clearable
             @keyup.enter="handleQuery"
         />
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="请选择状态" clearable :style="{width: '200px'}">
+          <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
       </el-form-item>
 <!--      <el-form-item label="创建时间" prop="createTime">-->
 <!--        <el-date-picker clearable-->
@@ -135,13 +140,23 @@
           <dict-tag :options="tracker_beacon_type" :value="scope.row.type"/>
         </template>
       </el-table-column>
-      <el-table-column label="区域（靠近铁路为A）" align="center" prop="area" />
+      <el-table-column label="区域（靠近铁路或出入口为A）" align="center" prop="area" />
       <el-table-column label="建筑名称" align="center" prop="buildName" />
       <el-table-column label="建筑ID" align="center" prop="buildId" />
       <el-table-column label="信标ID" align="center" prop="beaconId" />
       <el-table-column label="位置" align="center" prop="location" />
       <el-table-column label="感应距离(m)" align="center" prop="distance" />
-      <el-table-column label="状态" align="center" prop="status" />
+      <el-table-column label="状态" align="center" prop="status" width="120">
+        <template #default="scope">
+          <el-switch
+            v-model="scope.row.status"
+            :active-value="0"
+            :inactive-value="1"
+            @change="handleStatusChange(scope.row)"
+            :disabled="!canEdit"
+          />
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="180">
         <template #default="scope">
           <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d} {h}:{i}:{s}') }}</span>
@@ -207,10 +222,10 @@
           <el-input v-model="form.beaconId" placeholder="请输入信标ID" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-model="form.status" placeholder="请选择状态" clearable :style="{width: '100%'}">
-            <el-option v-for="(item, index) in statusOptions" :key="index" :label="item.label"
-                       :value="item.value" :disabled="item.disabled"></el-option>
-          </el-select>
+          <el-radio-group v-model="form.status">
+            <el-radio :label="0">启用</el-radio>
+            <el-radio :label="1">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="位置" prop="location">
           <el-input v-model="form.location" placeholder="请输入位置" />
@@ -264,12 +279,14 @@
 </template>
 
 <script setup name="BeaconInfo">
-import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo, importTemplate } from "@/api/experiment/beaconInfo";
+import { computed } from "vue";
+import { listBeaconInfo, getBeaconInfo, delBeaconInfo, addBeaconInfo, updateBeaconInfo, changeBeaconStatus, importTemplate } from "@/api/experiment/beaconInfo";
 import { getToken } from "@/utils/auth";
 import { UploadFilled } from '@element-plus/icons-vue';
 
 const { proxy } = getCurrentInstance();
 const { tracker_beacon_type } = proxy.useDict('tracker_beacon_type');
+const canEdit = computed(() => proxy.$auth.hasPermi('experiment:beaconInfo:edit'));
 
 const beaconInfoList = ref([]);
 const open = ref(false);
@@ -325,7 +342,7 @@ const data = reactive({
     buildId: null,
     beaconId: null,
     location: null,
-    status: null,
+    status: 0,
     distance: null,
     createTime: null,
     updateTime: null,
@@ -419,6 +436,7 @@ function handleQuery() {
 function resetQuery() {
   proxy.resetForm("queryRef");
   queryParams.value.pageNum = 1;
+  queryParams.value.status = 0;
   queryParams.value.orderByColumn = undefined;
   queryParams.value.isAsc = undefined;
   proxy.$refs["beaconInfoTableRef"].sort(defaultSort.value.prop, defaultSort.value.order);
@@ -491,6 +509,24 @@ function handleDelete(row) {
     getList();
     proxy.$modal.msgSuccess("删除成功");
   }).catch(() => {});
+}
+
+/** 状态修改 */
+function handleStatusChange(row) {
+  const status = row.status;
+  const original = status === 1 ? 0 : 1;
+  const text = status === 1 ? "禁用" : "启用";
+  proxy.$modal
+    .confirm('确认要' + text + '名称为"' + row.name + '"的信标信息吗？')
+    .then(() => {
+      return changeBeaconStatus({ id: row.id, status: status });
+    })
+    .then(() => {
+      proxy.$modal.msgSuccess(text + "成功");
+    })
+    .catch(() => {
+      row.status = original;
+    });
 }
 
 /** 导出按钮操作 */
