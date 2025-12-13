@@ -140,7 +140,7 @@
           <dict-tag :options="tracker_beacon_type" :value="scope.row.type"/>
         </template>
       </el-table-column>
-      <el-table-column label="区域（靠近铁路或出入口为A）" align="center" prop="area" />
+      <el-table-column label="区域（靠近铁路或出入口为A）" align="center" prop="area" sortable="custom" :sort-orders="['descending', 'ascending']"/>
       <el-table-column label="建筑名称" align="center" prop="buildName" />
       <el-table-column label="建筑ID" align="center" prop="buildId" />
       <el-table-column label="信标ID" align="center" prop="beaconId" />
