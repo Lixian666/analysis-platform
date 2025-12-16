@@ -1,7 +1,6 @@
 package com.jwzt.modules.experiment.controller;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 
@@ -125,6 +124,25 @@ public class TakBeaconInfoController extends BaseController
     public AjaxResult edit(@RequestBody TakBeaconInfo takBeaconInfo)
     {
         return toAjax(takBeaconInfoService.updateTakBeaconInfo(takBeaconInfo));
+    }
+
+    /**
+     * 修改信标启用状态
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:beaconInfo:edit')")
+    @Log(title = "信标信息", businessType = BusinessType.UPDATE)
+    @PutMapping("/status")
+    public AjaxResult changeStatus(@RequestBody TakBeaconInfo takBeaconInfo)
+    {
+        if (takBeaconInfo.getId() == null)
+        {
+            return error("信标信息ID不能为空");
+        }
+        if (takBeaconInfo.getStatus() == null)
+        {
+            return error("状态不能为空");
+        }
+        return toAjax(takBeaconInfoService.changeTakBeaconInfoStatus(takBeaconInfo));
     }
 
     /**
