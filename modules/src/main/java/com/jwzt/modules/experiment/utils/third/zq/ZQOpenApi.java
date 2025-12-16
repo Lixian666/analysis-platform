@@ -63,6 +63,9 @@ public class ZQOpenApi {
         return sendPost(baseConfig.getJoysuch().getApi().getBeacons(), headers, jsonBody);
     }
 
+    /**
+     * 获取定位卡轨迹列表
+     */
     public String getTagStateHistoryOfTagID(String buildingID, String tagID, String startTime, String endTime){
         long startTimestamp = DateTimeUtils.convertToTimestamp(startTime);
         long endTimestamp = DateTimeUtils.convertToTimestamp(endTime);
@@ -80,6 +83,9 @@ public class ZQOpenApi {
         JSONObject jsonObject = JSONObject.parseObject(result);
         JSONArray data = jsonObject.getJSONArray("data");
         List<TagScanUwbData> tagScanUwbDataList = new ArrayList<>();
+        if (data == null){
+            return "{}";
+        }
         for (int i = 0; i < data.size(); i++) {
             TagScanUwbData tag = data.getObject(i, TagScanUwbData.class);
             tag.setDateTime(DateTimeUtils.timestampToDateTimeStr(tag.getTime()));
@@ -226,7 +232,7 @@ public class ZQOpenApi {
 //            // 提前60秒过期，避免临界点失效
 //            long ttl = expireAt - System.currentTimeMillis() - 60 * 1000;
 //            if (ttl < 0) ttl = 60 * 1000; // 最少缓存1分钟
-            long ttl = 10 * 60 * 1000;
+            long ttl = 3 * 60 * 1000;
             redisCache.setCacheObject(TOKEN_KEY, accessToken, (int)(ttl/1000), TimeUnit.SECONDS);
             redisCache.setCacheObject(SIGNID_KEY, signId, (int)(ttl/1000), TimeUnit.SECONDS);
         }
