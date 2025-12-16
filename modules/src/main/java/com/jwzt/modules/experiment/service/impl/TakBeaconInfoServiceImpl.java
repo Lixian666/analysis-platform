@@ -72,6 +72,19 @@ public class TakBeaconInfoServiceImpl implements ITakBeaconInfoService
     }
 
     /**
+     * 修改信标启用状态
+     * 
+     * @param takBeaconInfo 信标信息（仅包含id和status）
+     * @return 结果
+     */
+    @Override
+    public int changeTakBeaconInfoStatus(TakBeaconInfo takBeaconInfo)
+    {
+        takBeaconInfo.setUpdateTime(DateUtils.getNowDate());
+        return takBeaconInfoMapper.updateTakBeaconInfo(takBeaconInfo);
+    }
+
+    /**
      * 批量删除信标信息
      * 
      * @param ids 需要删除的信标信息主键

@@ -44,6 +44,14 @@ public interface ITakBeaconInfoService
     public int updateTakBeaconInfo(TakBeaconInfo takBeaconInfo);
 
     /**
+     * 修改信标启用状态
+     * 
+     * @param takBeaconInfo 信标信息（仅包含id和status）
+     * @return 结果
+     */
+    public int changeTakBeaconInfoStatus(TakBeaconInfo takBeaconInfo);
+
+    /**
      * 批量删除信标信息
      * 
      * @param ids 需要删除的信标信息主键集合
