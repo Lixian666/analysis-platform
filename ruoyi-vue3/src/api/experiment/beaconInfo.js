@@ -51,6 +51,15 @@ export function delBeaconInfo(id) {
   })
 }
 
+// 修改信标启用状态
+export function changeBeaconStatus(data) {
+  return request({
+    url: '/experiment/beaconInfo/status',
+    method: 'put',
+    data: data
+  })
+}
+
 // 下载信标信息导入模板
 export function importTemplate() {
   return request({
