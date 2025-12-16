@@ -161,20 +161,38 @@ public class BAHistoryTask
      * 支持处理大量卡数据（几百甚至上千），自动根据可用资源调整并发数
      * 模拟实时处理：每次处理10秒的数据
      */
-    public void realDriverTrackerZQTestMultitaskingWithVehicleType(){
+    public void realDriverTrackerZQTestMultitaskingWithVehicleType(String type, String startT , String endT){
         DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
         List<String> cards = dataAcquisition.getCardIdList(1);
+        if (cards == null || cards.isEmpty()) {
+            System.out.println("没有需要处理的卡，任务跳过");
+            return;
+        }
 
-        String startTimeStr = "2025-11-19 09:50:00";
-        String endTimeStr = "2025-11-19 11:20:00";
+//        String startTimeStr = "2025-12-05 14:00:00";
+//        String endTimeStr = "2025-12-05 17:23:00";
+        String startTimeStr = startT;
+        String endTimeStr = endT;
+        if (startTimeStr == null || endTimeStr == null){
+            System.out.println("开始结束时间为null，任务跳过");
+            return;
+        }
         Map<String, RealTimeDriverTracker.VehicleType> vehicleTypeMap = null;
         // 如果没有提供vehicleTypeMap，创建空Map
         if (vehicleTypeMap == null) {
             vehicleTypeMap = new HashMap<>();
         }
-        
+
         // 默认车辆类型：CAR（火车装卸）
-        final RealTimeDriverTracker.VehicleType defaultVehicleType = RealTimeDriverTracker.VehicleType.CAR;
+        RealTimeDriverTracker.VehicleType defaultVehicleType = RealTimeDriverTracker.VehicleType.CAR;
+        if (type != null){
+            if (type.equals("car")){
+                defaultVehicleType = RealTimeDriverTracker.VehicleType.CAR;
+            }
+            else if (type.equals("truck")){
+                defaultVehicleType = RealTimeDriverTracker.VehicleType.TRUCK;
+            }
+        }
 //        final RealTimeDriverTracker.VehicleType defaultVehicleType = RealTimeDriverTracker.VehicleType.TRUCK;
 
         // 根据CPU核心数和卡数量智能计算线程池大小
@@ -329,7 +347,7 @@ public class BAHistoryTask
 
     /**
      * 带重试机制的卡数据处理（解决并发token冲突问题）- 支持车辆类型
-     * 
+     *
      * @param cardId 卡号
      * @param startTimeStr 开始时间字符串
      * @param endTimeStr 结束时间字符串
