@@ -393,6 +393,9 @@ public class GeoUtils {
      * 处理一秒内多个点的情况（使用中位数）
      */
     public static List<LocationPoint> processMultiplePointsPerSecondByUwb(List<LocationPoint> points) {
+        if (points.size() == 0){
+            return points;
+        }
         points.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
         Map<Long, List<LocationPoint>> perSecond = points.stream()
                 .collect(Collectors.groupingBy(p -> p.getTimestamp() / 1000));
@@ -467,6 +470,9 @@ public class GeoUtils {
      * 处理一秒内多个点的情况（使用中位数）
      */
     public static List<LocationPoint> processMultiplePointsPerSecond(List<LocationPoint> points) {
+        if (points.size() == 0){
+            return points;
+        }
         points.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
         Map<Long, List<LocationPoint>> perSecond = points.stream()
                 .collect(Collectors.groupingBy(p -> p.getTimestamp() / 1000));
