@@ -76,6 +76,7 @@ public class TagAndBeaconDistanceDeterminer {
         if (beacons == null || beacons.isEmpty()) {
             TakBeaconInfo query = new TakBeaconInfo();
             query.setBuildId(buildId);
+            query.setStatus(0);
             beacons = takBeaconInfoService.selectTakBeaconInfoList(query);
 
             if (beacons != null && !beacons.isEmpty()) {
@@ -176,6 +177,11 @@ public class TagAndBeaconDistanceDeterminer {
         // 3. 判断标签是否靠近基站
         if (p.getTagScanUwbData() != null && p.getTagScanUwbData().getUwbBeaconList().size() > 0) {
             for (TagScanUwbData.BltScanUwbBeacon beacon : p.getTagScanUwbData().getUwbBeaconList()) {
+                if (beacon.getUwbBeaconMac().equals("1918FD01385B")){
+                    System.out.println(
+                            MessageFormat.format("⚠️ 检测到标签【{0}】与基站id【{1}】距离为【{2}】米",
+                                    p.getCardUUID(), beacon.getUwbBeaconMac(), beacon.getDistance()));
+                }
                 for (TakBeaconInfo b : matchedBeacons) {
                     System.out.println(
                             MessageFormat.format("⚠️ 检测到标签【{0}】与基站id【{1}】距离为【{2}】米",
@@ -193,6 +199,47 @@ public class TagAndBeaconDistanceDeterminer {
             }
         }
         return false;
+    }
+
+    /**
+     * 判断标签靠近最近基站的距离
+     */
+    public double getTagDistanceToNearestBeacon(LocationPoint p, String buildId, String type, String location, String area) {
+        // 1. 获取某个 buildId 下的所有 beacons
+        List<TakBeaconInfo> allBeacons = getBeaconsByBuildId(buildId);
+        if (allBeacons == null || allBeacons.isEmpty()) {
+            return -1;
+        }
+
+        // 2. 筛选符合条件的 beacons
+        List<TakBeaconInfo> matchedBeacons = allBeacons.stream()
+                .filter(b -> (type == null || type.equals(b.getType())) &&
+                        (location == null || location.equals(b.getLocation())) &&
+                        (area == null || area.equals(b.getArea())))
+                .collect(Collectors.toList());
+        if (matchedBeacons.isEmpty()) {
+            return -1;
+        }
+
+        // 3. 遍历标签扫描到的基站，找出符合阈值的最近距离
+        double minDistance = Double.MAX_VALUE;
+        if (p.getTagScanUwbData() != null && p.getTagScanUwbData().getUwbBeaconList() != null) {
+            for (TagScanUwbData.BltScanUwbBeacon beacon : p.getTagScanUwbData().getUwbBeaconList()) {
+                for (TakBeaconInfo b : matchedBeacons) {
+                    if (!beacon.getUwbBeaconMac().equals(b.getBeaconId())) {
+                        continue;
+                    }
+                    double threshold = getDistanceThreshold(b);
+                    double dist = beacon.getDistance();
+                    if (dist < threshold && dist < minDistance) {
+                        minDistance = dist;
+                    }
+                }
+            }
+        }
+
+        // 4. 未命中阈值内基站返回 -1
+        return minDistance == Double.MAX_VALUE ? -1 : minDistance;
     }
 
     /**
