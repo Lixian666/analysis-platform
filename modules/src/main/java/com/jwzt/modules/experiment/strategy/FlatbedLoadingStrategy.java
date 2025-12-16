@@ -44,7 +44,10 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
     private BoardingDetector.Event currentEvent = BoardingDetector.Event.NONE;
     private LocationPoint curPoint = null;
     private EventState lastEventState = new EventState();
+    private EventState sendOutLastEventState = null;
     private EventState sendInLastEventState = null;
+    private EventState carSendOutLastEventState = null;
+    private EventState carSendInLastEventState = null;
     private int parkingTags = 0;
 
     private int driverTags = 0;
@@ -237,5 +240,15 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
             System.out.println("⛔ 当前静止，时间为：" + point.getAcceptTime());
         }
     }
+
+    public void resetSendSessionState() {
+        resetInternalState();
+        lastEvent = BoardingDetector.Event.NONE;
+        currentEvent = BoardingDetector.Event.CAR_SEND_BOARDING;
+        lastEventState = new EventState(currentEvent, curPoint.getTimestamp(), curPoint.getAcceptTime());
+        sendOutLastEventState = null;
+        carSendOutLastEventState = null;
+    }
+
 }
 
