@@ -107,6 +107,7 @@ experiment:
     yard-name: luorong
     location-card-type: other
     card-type: car
+    # 数据源 zq xrkc
     locate-data-sources: zq
 
     data-match:
