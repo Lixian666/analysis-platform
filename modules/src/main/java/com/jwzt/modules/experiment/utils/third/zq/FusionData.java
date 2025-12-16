@@ -28,7 +28,7 @@ public class FusionData {
             if (tag.getUwbBeaconList() != null) {
                 for (TagScanUwbData.BltScanUwbBeacon beacon : tag.getUwbBeaconList()) {
                     if (beacon.getDistance() != null) {
-                        beacon.setDistance(beacon.getDistance() / 10000.0);
+                        beacon.setDistance(beacon.getDistance() / 1000.0);
                     }
                 }
             }
