@@ -242,4 +242,22 @@ public class DateTimeUtils {
             return (seconds / 3600) + " 小时 " + ((seconds % 3600) / 60) + " 分 " + (seconds % 60) + " 秒";
         }
     }
+
+    /**
+     * 添加几秒并保持时间单位不变
+     * @param  ts 时间戳
+     * @param seconds 秒数
+     * @return
+     */
+    public static long addSecondKeepUnit(long ts, int seconds) {
+        int len = String.valueOf(ts).length();
+        if (len == 10) {
+            return ts + seconds;
+        } else if (len == 13) {
+            return ts + seconds * 1000L;
+        } else {
+            return ts + seconds; // 可按需调整
+        }
+    }
+
 }
