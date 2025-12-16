@@ -10,8 +10,10 @@ import com.jwzt.modules.experiment.filter.LocationSmoother;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
 import com.jwzt.modules.experiment.service.ITakBehaviorRecordDetailService;
 import com.jwzt.modules.experiment.service.ITakBehaviorRecordsService;
+import com.jwzt.modules.experiment.strategy.FlatbedLoadingStrategy;
 import com.jwzt.modules.experiment.strategy.LoadingStrategyFactory;
 import com.jwzt.modules.experiment.strategy.LoadingUnloadingStrategy;
+import com.jwzt.modules.experiment.strategy.TrainLoadingStrategy;
 import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.geo.ShapefileWriter;
 import com.jwzt.modules.experiment.utils.third.manage.DataSender;
@@ -226,6 +228,9 @@ public class RealTimeDriverTracker {
 
             switch (es.getEvent()) {
                 case CAR_ARRIVED_BOARDING:
+                    if (es.newEventState == 1){
+                        onEnd(cardKey, st, EventKind.CAR_ARRIVED, es, win);
+                    }
                     onStart(cardKey, st, EventKind.CAR_ARRIVED, es, win);
                     break;
                 case CAR_ARRIVED_DROPPING:
@@ -243,12 +248,18 @@ public class RealTimeDriverTracker {
                     }
                     break;
                 case TRUCK_ARRIVED_BOARDING:
+                    if (es.newEventState == 1){
+                        onEnd(cardKey, st, EventKind.TRUCK_ARRIVED, es, win);
+                    }
                     onStart(cardKey, st, EventKind.TRUCK_ARRIVED, es, win);
                     break;
                 case TRUCK_ARRIVED_DROPPING:
                     onEnd(cardKey, st, EventKind.TRUCK_ARRIVED, es, win);
                     break;
                 case ARRIVED_BOARDING:
+                    if (es.newEventState == 1){
+                        onEnd(cardKey, st, EventKind.ARRIVED, es, win);
+                    }
                     onStart(cardKey, st, EventKind.ARRIVED, es, win);
                     break;
                 case ARRIVED_DROPPING:
@@ -344,7 +355,8 @@ public class RealTimeDriverTracker {
                 " 点数=" + sessionPoints.size() +
                 " 起=" + new Date(st.activeSession.startTime) +
                 " 止=" + new Date(es.getTimestamp()));
-
+        st.sendLastEventTime = es.getTimestamp();
+        st.sendLastEventTimeStr = DateTimeUtils.timestampToDateTimeStr(es.getTimestamp());
         // 清空会话
         st.activeSession = null;
     }
@@ -409,6 +421,7 @@ public class RealTimeDriverTracker {
             int foundStartWindowStartIndex = -1;
             EventState foundStartEventState = null;
 
+            // 回溯查找发运上车点
             // 从 endIndex 向前扫描，寻找一个 candidate 做为“当前点”去重建窗口
             for (int candidate = listStartIndex; candidate >= 0; candidate++) {
                 if (candidate == history.size()){
@@ -476,16 +489,21 @@ public class RealTimeDriverTracker {
                 }
             }
 
+
+            // 回溯查找发运上车点失败后，找符合条件上车点
             if (foundStartWindowStartIndex < 0) {
                 System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯未找到发运上车点（回溯时段内未检测到 SEND_BOARDING），以上一个流程结束的点位的后一个点为上车点");
 
-                // 计算“候选上车点时间”
-                long fallbackTs = st.sendLastEventTime + 1000; // 回溯时间结束点 +1秒
+                // 如果时间戳单位区分毫秒和秒，都需要加1秒
+                long fallbackTs = DateTimeUtils.addSecondKeepUnit(st.sendLastEventTime,1);// 回溯时间结束点 +1秒
 
                 // 在历史点中找到最接近 fallbackTs 的点（时间 >= fallbackTs）
                 LocationPoint fallbackPoint = null;
                 LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vehicleType);
-                for (LocationPoint p : history) {
+                // 重置策略会话状态
+                resetStrategySessionStateForVehicleType(vehicleType);
+                List<LocationPoint> fallbackHistory = new ArrayList<>(history.subList(listStartIndex, history.size()));
+                for (LocationPoint p : fallbackHistory) {
                     if (p.getTimestamp() >= fallbackTs) {
                         // 判断是否在停车区域（发运上车区域）
                         if (strategy.isInParkingArea(p)){
@@ -496,9 +514,9 @@ public class RealTimeDriverTracker {
                 }
 
                 if (fallbackPoint == null) {
-                    // 如果仍然没找到，则使用最后一个点兜底
-                    fallbackPoint = history.get(history.size() - 1);
-                    System.out.println("警告日志 ⚠️ [" + cardKey + "] 未找到 fallbackTs 对应点，使用最后一个点兜底");
+                    // 如果仍然没找到，则使用符合的点位区间的第一个点为上车点
+                    fallbackPoint = fallbackHistory.get(0);
+                    System.out.println("警告日志 ⚠️ [" + cardKey + "] 未找到 fallbackTs 对应点，使用第一个点兜底");
                 }
 
                 // 构造一个模拟的 SEND_BOARDING 事件
@@ -535,7 +553,6 @@ public class RealTimeDriverTracker {
             // 边界检查：确保 startIndex 和 endIndex 在有效范围内
             if (startIndex >= history.size()) {
                 System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：startIndex 超出范围");
-                return;
             }
             if (endIndex >= history.size()) {
                 endIndex = history.size() - 1;
@@ -543,9 +560,7 @@ public class RealTimeDriverTracker {
             }
             if (startIndex > endIndex) {
                 System.out.println("异常日志 ⚠️ [" + cardKey + "] 回溯失败：startIndex > endIndex");
-                return;
             }
-
             // 最终截取：从 startIndex 到 endIndex（包含）
             List<LocationPoint> tripPoints = new ArrayList<>(history.subList(startIndex, endIndex + 1));
 
@@ -582,6 +597,8 @@ public class RealTimeDriverTracker {
             }
             sess.points.addAll(sessionPoints);
             persistSession(sess, dropTs, sessionPoints);
+            // 重置策略会话状态
+            resetStrategySessionStateForVehicleType(vehicleType);
             dataSender.outParkPush(sess, vehicleType);
             for (LocationPoint p : sessionPoints){
                 dataSender.trackPush(null, p, sess, vehicleType);
@@ -590,7 +607,6 @@ public class RealTimeDriverTracker {
             st.sendLastEventTime = downEs.getTimestamp();
             st.sendLastEventTimeStr = DateTimeUtils.timestampToDateTimeStr(downEs.getTimestamp());
             System.out.println("📤 [" + cardKey + "] 回溯并持久化发运轨迹段 成功 起=" + new Date(startTs) + " 止=" + new Date(dropTs) + " 点数=" + sessionPoints.size());
-
             // 可选：输出 shp
             if (baseConfig.isOutputShp()) {
                 String shp = ensureShpPath(shpFileRoot, sess.sessionId, EventKind.SEND);
@@ -871,6 +887,30 @@ public class RealTimeDriverTracker {
             }
             return loadingStrategyFactory.getStrategy(strategyType);
         });
+    }
+
+    /**
+     * 对 strategyCache 中已缓存的策略实例重置会话标识状态
+     * 只清 4 个 EventState 字段，不调用 resetState/resetSessionState
+     */
+    private void resetStrategySessionStateForVehicleType(VehicleType vehicleType) {
+        // 只拿缓存里的实例，不再 new 新对象
+        LoadingUnloadingStrategy strategy = strategyCache.get(vehicleType);
+        if (strategy == null) {
+            // 还没创建过策略实例，就不用重置
+            return;
+        }
+
+        if (strategy instanceof TrainLoadingStrategy) {
+            TrainLoadingStrategy s = (TrainLoadingStrategy) strategy;
+             s.resetSendSessionState();
+        } else if (strategy instanceof FlatbedLoadingStrategy) {
+            FlatbedLoadingStrategy s = (FlatbedLoadingStrategy) strategy;
+            s.resetSendSessionState();
+            // 如以后需要连内部状态一起清，再打开这一行：
+            // s.resetSessionState();
+        }
+        // 如果还有 GroundVehicleLoadingStrategy，可以按需要在这里补一段分支
     }
     
     /**
