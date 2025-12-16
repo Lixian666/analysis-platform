@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -124,37 +125,136 @@ public class DataAcquisition {
         JSONArray points = jsonObject.getJSONArray("data");
         JSONArray tagData = tagJsonObject.getJSONArray("data");
         List<LocationPoint> LocationPoints = new ArrayList<>();
+
+        // 基础空值保护：任意一侧为 null 直接返回空列表
         if (points == null || tagData == null){
             return LocationPoints;
         }
 
-        if (points.size() == 0 || tagData.size() == 0){
+        // tag 数据为空：保持原有行为，直接返回空列表（不返回纯 GPS）
+        if (tagData.isEmpty()) {
             return LocationPoints;
-        };
+        }
 
-        if (points != null && !points.isEmpty()) {
-            for (int i = 0; i < points.size(); i++){
-                JSONObject js = (JSONObject) points.get(i);
-                JSONArray plist = js.getJSONArray("points");
-                if (plist != null) {
-                    for (int j = 0; j < plist.size(); j++){
-                        LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
-                        LocationPoint point1 = new LocationPoint(
-                                cardId,
-                                point.getLongitude(),
-                                point.getLatitude(),
-                                DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
-                                Long.parseLong(point.getTime()));
-                        LocationPoints.add(point1);
+        // points 完全为空，但 tag 有数据：以 tag 补齐虚拟点（经纬度填 0,0）
+        if (points.isEmpty() && !tagData.isEmpty()) {
+            List<TagScanUwbData> tagList = tagData.toJavaList(TagScanUwbData.class);
+            // 对 tagList 中所有 BltScanUwbBeacon 的 distance 做单位转换（与 FusionData 保持一致，/1000）
+            for (TagScanUwbData tag : tagList) {
+                if (tag.getUwbBeaconList() != null) {
+                    for (TagScanUwbData.BltScanUwbBeacon beacon : tag.getUwbBeaconList()) {
+                        if (beacon.getDistance() != null) {
+                            beacon.setDistance(beacon.getDistance() / 1000.0);
+                        }
                     }
+                }
+            }
+            for (TagScanUwbData tag : tagList) {
+                LocationPoint lp = new LocationPoint(
+                        cardId,
+                        0.0,
+                        0.0,
+                        DateTimeUtils.timestampToDateTimeStr(tag.getTime()),
+                        tag.getTime()
+                );
+                // 写入第三方速度（与 FusionData 保持一致）
+                if (tag.getGnssInfo() != null && tag.getGnssInfo().getSpeedKmh() != null) {
+                    lp.setThirdSpeed(tag.getGnssInfo().getSpeedKmh() / 3.6);
+                } else {
+                    lp.setThirdSpeed(0.0);
+                }
+                lp.setTagScanUwbData(tag);
+                LocationPoints.add(lp);
+            }
+            LocationPoints.sort(Comparator.comparing(
+                    LocationPoint::getTimestamp,
+                    Comparator.nullsLast(Long::compareTo)
+            ));
+            return LocationPoints;
+        }
+
+        // 正常情况：以 points 为主，先解析所有定位点
+        for (int i = 0; i < points.size(); i++){
+            JSONObject js = (JSONObject) points.get(i);
+            JSONArray plist = js.getJSONArray("points");
+            if (plist != null) {
+                for (int j = 0; j < plist.size(); j++){
+                    LocationPoint2 point = plist.getObject(j, LocationPoint2.class);
+                    LocationPoint point1 = new LocationPoint(
+                            cardId,
+                            point.getLongitude(),
+                            point.getLatitude(),
+                            DateTimeUtils.timestampToDateTimeStr(Long.parseLong(point.getTime())),
+                            Long.parseLong(point.getTime()));
+                    LocationPoints.add(point1);
                 }
             }
         }
 
-        // 融合位置数据和标签数据
+        // 融合位置数据和标签数据（保持原有行为）
         if (!LocationPoints.isEmpty()) {
             LocationPoints = FusionData.processesFusionLocationDataAndTagData(LocationPoints, tagData);
         }
+
+        // 在已有融合结果基础上，再用 tag 数据补齐“points 中间缺口”的虚拟点（经纬度 0,0，cardUUID=cardId）
+        if (!LocationPoints.isEmpty() && tagData != null && !tagData.isEmpty()) {
+            // 使用与 FusionData 相同的时间窗口（毫秒）
+            final long TIME_WINDOW_MS = 1000L;
+
+            List<TagScanUwbData> tagList = tagData.toJavaList(TagScanUwbData.class);
+            // 与 FusionData 一致，对 distance 再做一次单位转换
+            for (TagScanUwbData tag : tagList) {
+                if (tag.getUwbBeaconList() != null) {
+                    for (TagScanUwbData.BltScanUwbBeacon beacon : tag.getUwbBeaconList()) {
+                        if (beacon.getDistance() != null) {
+                            beacon.setDistance(beacon.getDistance() / 1000.0);
+                        }
+                    }
+                }
+            }
+
+            for (TagScanUwbData tag : tagList) {
+                boolean existsNearbyPoint = false;
+                for (LocationPoint loc : LocationPoints) {
+                    Long ts = loc.getTimestamp();
+                    if (ts == null) {
+                        continue;
+                    }
+                    long diff = Math.abs(tag.getTime() - ts);
+                    if (diff <= TIME_WINDOW_MS) {
+                        existsNearbyPoint = true;
+                        break;
+                    }
+                }
+                // 已有 1 秒内的真实点，则不再补虚拟点
+                if (existsNearbyPoint) {
+                    continue;
+                }
+
+                // points 在这一秒完全缺失，但 tag 有数据：补一个 0,0 的虚拟点
+                LocationPoint lp = new LocationPoint(
+                        cardId,
+                        0.0,
+                        0.0,
+                        DateTimeUtils.timestampToDateTimeStr(tag.getTime()),
+                        tag.getTime()
+                );
+                if (tag.getGnssInfo() != null && tag.getGnssInfo().getSpeedKmh() != null) {
+                    lp.setThirdSpeed(tag.getGnssInfo().getSpeedKmh() / 3.6);
+                } else {
+                    lp.setThirdSpeed(0.0);
+                }
+                lp.setTagScanUwbData(tag);
+                LocationPoints.add(lp);
+            }
+
+            // 重新按时间排序，保证整体时序连续
+            LocationPoints.sort(Comparator.comparing(
+                    LocationPoint::getTimestamp,
+                    Comparator.nullsLast(Long::compareTo)
+            ));
+        }
+
         return LocationPoints;
     }
 
