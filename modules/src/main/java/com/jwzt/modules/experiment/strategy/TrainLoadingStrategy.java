@@ -53,7 +53,8 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
     private EventState carSendOutLastEventState = null;
     private EventState carSendInLastEventState = null;
     private EventState lastCarInLastEventState = null;
-    
+
+    // 统计交通车定位数
     private int theTrafficCarCount = 0;
 
     private int thePointAnalysisCount = 0;
@@ -64,9 +65,11 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
     private static class TheUWBRecords {
         int theUWBSendDropsZytA = 0;
         long theUWBSendDropsZytALastTime = 0;
+        double theUWBSendDropsZytALastDistance = 9999;
         List<Long> theUWBSendDropsZytAList = new ArrayList<>();
         int theUWBSendDropsZytB = 0;
         long theUWBSendDropsZytBLastTime = 0;
+        double theUWBSendDropsZytBLastDistance = 9999;
         List<Long> theUWBSendDropsZytBList = new ArrayList<>();
     }
     
@@ -166,7 +169,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                                                 LocationPoint currentPoint,
                                                 List<LocationPoint> theLastTenPoints) {
         // 判断是否在货运线区域（到达上车区域）
-//        boolean isTheFreightLineArea = zoneChecker.isInHuoyunxinZone(currentPoint);
+        // boolean isTheFreightLineArea = zoneChecker.isInHuoyunxinZone(currentPoint);
         // 判断是否在停车区域（发运上车区域）
         boolean isnParkingArea = zoneChecker.isInParkingZone(currentPoint);
         thePointAnalysisCount ++;
@@ -454,11 +457,311 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
             theUWBRecords.theUWBSendDropsZytBLastTime = 0L;
         }
     }
-    
+
+    /**
+     * 火车装卸事件检测
+     */
+
+    private EventState detectTrainEvent(List<LocationPoint> recordPoints,
+                                                List<LocationPoint> historyPoints,
+                                                List<LocationPoint> theFirstTenPoints,
+                                                LocationPoint currentPoint,
+                                                List<LocationPoint> theLastTenPoints) {
+        // 判断是否在货运线区域（到达上车区域）
+        //        boolean isTheFreightLineArea = zoneChecker.isInHuoyunxinZone(currentPoint);
+        // 判断是否在停车区域（发运上车区域）
+        boolean isnParkingArea = zoneChecker.isInParkingZone(currentPoint);
+        thePointAnalysisCount ++;
+        List<LocationPoint> theJTCList = theLastTenPoints.subList(0, 10);
+        int theLastTenPointsNotInTOJTCCount = tagBeacon.countTagsCloseToBeacons(
+                theJTCList,
+                baseConfig.getJoysuch().getBuildingId(),
+                "交通车",
+                null,
+                null
+        );
+        // 获取交通车数
+        if (sendOutLastEventState == null || sendInLastEventState != null) {
+            // 判断是否在交通车上
+            if (theLastTenPointsNotInTOJTCCount >= FilterConfig.TRAFFICCAR_STATE_SIZE) {
+                inTheTrafficCar = true;
+            } else {
+                inTheTrafficCar = false;
+            }
+        }
+
+        // 统计最后10个点是否接近交通车附近
+        int theLastTenPointsNotInTrafficCarCount = tagBeacon.countTagsCloseToBeacons(
+                theLastTenPoints,
+                baseConfig.getJoysuch().getBuildingId(),
+                "交通车",
+                null,
+                "A"
+        );
+
+        inTheTrafficCar = false;
+
+        if (currentPoint.getAcceptTime().equals("2025-12-04 17:07:00")){
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: " + currentPoint);
+        }
+
+        if (currentPoint.getAcceptTime().equals("2025-12-05 14:49:03")){
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: " + currentPoint);
+        }
+
+        // 统计最后10个点是否在J车附近
+        int theLastTenPointsNotInTOJCKCount = tagBeacon.countTagsCloseToBeacons(
+                theLastTenPoints,
+                baseConfig.getJoysuch().getBuildingId(),
+                "货运线作业台",
+                null,
+                "A"
+        );
+
+        // 判断是否靠近进出口附近
+        boolean isJCKAWithin = tagBeacon.theTagIsCloseToTheBeacon(
+                currentPoint,
+                baseConfig.getJoysuch().getBuildingId(),
+                "货运线作业台",
+                null,
+                "A"
+        );
+
+        if (isJCKAWithin && sendOutLastEventState == null && sendInLastEventState == null) {
+            theUWBRecords.theUWBSendDropsZytA++;
+            theUWBRecords.theUWBSendDropsZytALastTime = currentPoint.getTimestamp();
+            double zytALastDistance = tagBeacon.getTagDistanceToNearestBeacon(
+                    currentPoint,
+                    baseConfig.getJoysuch().getBuildingId(),
+                    "货运线作业台",
+                    null,
+                    "A"
+            );
+            if (zytALastDistance != -1){
+                theUWBRecords.theUWBSendDropsZytALastDistance = zytALastDistance;
+            }
+            theUWBRecords.theUWBSendDropsZytAList.add(theUWBRecords.theUWBSendDropsZytALastTime);
+        }
+
+        // 判断是否靠近作业台fid附近
+        boolean isJCKBWithin = tagBeacon.theTagIsCloseToTheBeacon(
+                currentPoint,
+                baseConfig.getJoysuch().getBuildingId(),
+                "货运线作业台",
+                null,
+                "B"
+        );
+
+        if (isJCKBWithin && sendOutLastEventState == null && sendInLastEventState == null) {
+            theUWBRecords.theUWBSendDropsZytB++;
+            theUWBRecords.theUWBSendDropsZytBLastTime = currentPoint.getTimestamp();
+            double zytBLastDistance = tagBeacon.getTagDistanceToNearestBeacon(
+                    currentPoint,
+                    baseConfig.getJoysuch().getBuildingId(),
+                    "货运线作业台",
+                    null,
+                    "B"
+            );
+            if (zytBLastDistance != -1){
+                theUWBRecords.theUWBSendDropsZytBLastDistance = zytBLastDistance;
+            }
+            theUWBRecords.theUWBSendDropsZytBList.add(theUWBRecords.theUWBSendDropsZytBLastTime);
+        }
+
+        if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(currentPoint.getAcceptTime()).equals("2025-11-20 15:07:24")){
+            System.out.println("⚠️ 检测到车辆已进入地跑区域（地跑）");
+        }
+
+        // 地跑发运下车检测
+        if (sendOutLastEventState == null
+                && theUWBRecords.theUWBSendDropsZytA >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE
+                && theUWBRecords.theUWBSendDropsZytB > FilterConfig.SEND_AFTER_DOWN_UWB_SIZE
+                && !inTheTrafficCar) {
+
+            if (theLastTenPointsNotInTOJCKCount <= 0
+                    && theUWBRecords.theUWBSendDropsZytALastTime > theUWBRecords.theUWBSendDropsZytBLastTime
+                    && theUWBRecords.theUWBSendDropsZytALastDistance < theUWBRecords.theUWBSendDropsZytBLastDistance) {
+
+                if (lastEvent == BoardingDetector.Event.NONE) {
+                    System.out.println("⚠️ 检测到车辆已进入发运下车区域（地跑）");
+                    System.out.println("A附近" + theUWBRecords.theUWBSendDropsZytA + " fid附近" + theUWBRecords.theUWBSendDropsZytB);
+                    resetInternalState();
+                    curPoint = currentPoint;
+                    lastEvent = BoardingDetector.Event.SEND_DROPPING;
+                    currentEvent = BoardingDetector.Event.SEND_DROPPING;
+                    sendOutLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                    lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                    return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
+                }
+            }
+        }
+
+        // 地跑发运上车事件
+        if (sendOutLastEventState != null
+                && currentPoint.getState() == MovementAnalyzer.MovementState.STOPPED
+                && sendOutLastEventState.timestamp - currentPoint.getTimestamp()  > IDENTIFY_IDENTIFY_TIME_INTERVAL_MS
+                && isnParkingArea
+                && !inTheTrafficCar) {
+
+            System.out.println("⚠️ 检测到车辆已进入发运上车区域（地跑）");
+            int arrivedStoppedTag = 0;
+            int arrivedDrivingTag = 0;
+            int arrivedFirstTag = 0;
+            int arrivedLastTag = 0;
+
+            // 判断发运上车点前10个点状态
+            for (LocationPoint point : theFirstTenPoints) {
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED
+                        || point.getState() == MovementAnalyzer.MovementState.WALKING) {
+                    arrivedFirstTag++;
+                }
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED) {
+                    arrivedStoppedTag++;
+                }
+            }
+
+            // 判断发运上车点后10个点状态
+            for (LocationPoint point : theLastTenPoints) {
+                if (point.getState() == MovementAnalyzer.MovementState.WALKING
+                        || point.getState() == MovementAnalyzer.MovementState.RUNNING
+                        || point.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
+                        || point.getState() == MovementAnalyzer.MovementState.DRIVING) {
+                    arrivedLastTag++;
+                }
+                if (point.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
+                        || point.getState() == MovementAnalyzer.MovementState.DRIVING
+                        || point.getState() == MovementAnalyzer.MovementState.RUNNING) {
+                    arrivedDrivingTag++;
+                }
+            }
+
+            // 判断状态标签数量是否满足发运区域上车条件
+            if (arrivedFirstTag >= FilterConfig.SEND_BEFORE_UP_STATE_SIZE
+                    && arrivedLastTag >= FilterConfig.SEND_AFTER_UP_STATE_SIZE
+                    && arrivedStoppedTag >= FilterConfig.STOPPED_STATE_SIZE
+                    && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE) {
+                System.out.println("⚠️ 检测到发运已上车（地跑）");
+                resetInternalState();
+                curPoint = currentPoint;
+                lastEvent = BoardingDetector.Event.NONE;
+                currentEvent = BoardingDetector.Event.SEND_BOARDING;
+                lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                sendOutLastEventState = null;
+                return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
+            }
+        }
+
+        // 地跑到达上车车事件
+        if (theUWBRecords.theUWBSendDropsZytA >= FilterConfig.SEND_AFTER_DOWN_UWB_SIZE
+                && theUWBRecords.theUWBSendDropsZytB > FilterConfig.SEND_AFTER_DOWN_UWB_SIZE
+                && !inTheTrafficCar) {
+            // 到达上车检测
+            if (theUWBRecords.theUWBSendDropsZytALastTime < theUWBRecords.theUWBSendDropsZytBLastTime
+                && theUWBRecords.theUWBSendDropsZytALastDistance > theUWBRecords.theUWBSendDropsZytBLastDistance) {
+                if (lastEvent == BoardingDetector.Event.NONE) {
+                    System.out.println("⚠️ 检测到到达已上车（地跑）");
+                    resetInternalState();
+                    curPoint = currentPoint;
+                    lastEvent = BoardingDetector.Event.ARRIVED_BOARDING;
+                    currentEvent = BoardingDetector.Event.ARRIVED_BOARDING;
+                    lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                    if (sendInLastEventState != null
+                            && currentPoint.getTimestamp() - sendInLastEventState.timestamp > SAME_STATE_IDENTIFY_TIME_INTERVAL_MS){
+                        sendInLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                        return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude(), 1);
+                    }
+                    sendInLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                    return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
+                }
+            }
+        }
+
+        // 地跑到达下车事件
+        if (sendInLastEventState != null && !inTheTrafficCar) {
+            // 检测到达下车事件
+            if (lastEvent == BoardingDetector.Event.ARRIVED_BOARDING
+                    && currentPoint.getState() == MovementAnalyzer.MovementState.STOPPED
+                    && currentPoint.getTimestamp() - sendInLastEventState.timestamp > IDENTIFY_IDENTIFY_TIME_INTERVAL_MS
+                    && isnParkingArea) {
+
+                System.out.println("⚠️ 检测到车辆已进入到达下车区域（地跑）");
+                int arrivedStoppedTag = 0;
+                int arrivedDrivingTag = 0;
+                int arrivedFirstTag = 0;
+                int arrivedLastTag = 0;
+                int parkTags = 0;
+                boolean isParking = false;
+
+                // 判断到达下车点前10个点状态
+                for (LocationPoint point : theFirstTenPoints) {
+                    if (point.getState() == MovementAnalyzer.MovementState.DRIVING
+                            || point.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
+                            || point.getState() == MovementAnalyzer.MovementState.RUNNING
+                            || point.getState() == MovementAnalyzer.MovementState.WALKING) {
+                        arrivedFirstTag++;
+                    }
+                    if (point.getState() == MovementAnalyzer.MovementState.LOW_DRIVING
+                            || point.getState() == MovementAnalyzer.MovementState.DRIVING
+                            || point.getState() == MovementAnalyzer.MovementState.RUNNING
+                            || point.getState() == MovementAnalyzer.MovementState.WALKING) {
+                        arrivedDrivingTag++;
+                    }
+                }
+
+                // 判断到达下车点后10个点状态
+                for (LocationPoint point : theLastTenPoints) {
+                    if (point.getState() == MovementAnalyzer.MovementState.STOPPED
+                            || point.getState() == MovementAnalyzer.MovementState.WALKING) {
+                        arrivedLastTag++;
+                    }
+                    if (point.getState() == MovementAnalyzer.MovementState.STOPPED) {
+                        arrivedStoppedTag++;
+                    }
+                }
+                // 判断到达下车点前5个点状态
+                for (int i = 0; i < 5; i++) {
+                    LocationPoint point = theLastTenPoints.get(i);
+                    if (point.getSpeed() < FilterConfig.MIN_WALKING_SPEED){
+                        parkTags++;
+                    }else {
+                        parkTags = 0;
+                    }
+                    if (!isParking && parkTags >= 2){
+                        isParking = true;
+                    }
+                }
+
+                // 判断状态标签数量是否满足到达区域下车条件
+                if (arrivedFirstTag >= FilterConfig.ARRIVED_BEFORE_DOWN_STATE_SIZE
+                        && arrivedLastTag >= FilterConfig.ARRIVED_AFTER_DOWN_STATE_SIZE
+                        && arrivedStoppedTag >= FilterConfig.STOPPED_STATE_SIZE
+                        && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE
+                        && isParking) {
+                    System.out.println("⚠️ 检测到到达已下车（地跑）");
+                    resetInternalState();
+                    curPoint = currentPoint;
+                    lastEvent = BoardingDetector.Event.NONE;
+                    currentEvent = BoardingDetector.Event.ARRIVED_DROPPING;
+                    lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+                    sendInLastEventState = null;
+                    return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
+                }
+            }
+        }
+        lastInternalState(currentPoint.getTimestamp());
+//        if (theUWBRecords.theUWBSendDropsZytALastTime != 0L && theUWBRecords.theUWBSendDropsZytBLastTime != 0L) {
+//            if (currentPoint.getTimestamp() - theUWBRecords.theUWBSendDropsZytALastTime > BEACON_DISTANCE_EFFECTIVE_TIME_INTERVAL_MS
+//                    && currentPoint.getTimestamp() - theUWBRecords.theUWBSendDropsZytBLastTime > BEACON_DISTANCE_EFFECTIVE_TIME_INTERVAL_MS){
+//                resetInternalState();
+//            }
+//        }
+        return new EventState();
+    }
+
     /**
      * 火车装卸事件检测（原有逻辑）
      */
-    private EventState detectTrainEvent(List<LocationPoint> recordPoints,
+    private EventState detectTrainEvent_o(List<LocationPoint> recordPoints,
                                         List<LocationPoint> historyPoints,
                                         List<LocationPoint> theFirstTenPoints,
                                         LocationPoint currentPoint,
