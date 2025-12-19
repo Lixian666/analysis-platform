@@ -215,7 +215,7 @@ public class RealTimeDriverTracker {
             
             // 使用策略模式进行事件检测（使用局部变量避免多线程竞态）
             LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vehicleType);
-            EventState es = strategy.detectEvent(newPoints, st.historyPoints);
+            EventState es = strategy.detectEvent(newPoints, st.historyPoints, 0);
 
             if (es == null || es.getEvent() == null) {
                 if (st.activeSession != null) st.activeSession.points.add(p);
@@ -451,7 +451,7 @@ public class RealTimeDriverTracker {
                 LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vehicleType);
                 EventState es = null;
                 try {
-                    es = strategy.detectEvent(newPoints, history);
+                    es = strategy.detectEvent(newPoints, history, 1);
                 } catch (IndexOutOfBoundsException e) {
                     // 详细日志：记录调用前的参数状态
                     System.out.println("🔍 [" + cardKey + "] 准备调用 detectEvent: " +
