@@ -59,7 +59,7 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
     }
     
     @Override
-    public EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints) {
+    public EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints, Integer status) {
         if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) {
             return new EventState();
         }
