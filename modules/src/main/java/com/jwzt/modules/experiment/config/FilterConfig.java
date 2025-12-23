@@ -2,9 +2,11 @@ package com.jwzt.modules.experiment.config;
 
 public class FilterConfig {
 
+
     // 数据获取配置（需比RECORD_POINTS_SIZE大）
     public static final int POINTS_SIZE = 60;
     public static final int RECORD_POINTS_SIZE = 51;        // 上下车识别窗口大小
+
 
     // 行为识别配置
         // 感应距离配置
@@ -25,13 +27,25 @@ public class FilterConfig {
         public static final int MIN_TIME_INTERVAL_MS = 1; // 最小时间间隔 （毫秒）
         public static final int WINDOW_STATE_SIZE = 2;      // 行为状态识别窗口大小
 
+
     // 时间间隔配置
-    public static final int ADJACENT_POINTS_TIME_INTERVAL_MS = 1000000;   // 相邻点位时间间隔 （毫秒）  0：不进行时间间隔判定
+    public static final int ADJACENT_POINTS_TIME_INTERVAL_MS = 600000;   // 识别时间间隔 （毫秒）  0：不进行时间间隔判定
     public static final int IDENTIFY_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 上下车识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
     public static final int SAME_STATE_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 相同状态识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
     public static final int BEACON_DISTANCE_EFFECTIVE_TIME_INTERVAL_MS = 60000; // 信标距离判断有效时间间隔
-    // 交通车状态标记数设置
-    public static final int TRAFFICCAR_STATE_SIZE = 8;
+
+
+    // 信标距离判定相关配置
+        // 交通车状态标记数设置
+        public static final int TRAFFICCAR_STATE_SIZE = 8;
+
+        // AB信标距离配置
+        public static final int AB_DISTANCE_STATE_SIZE = 3;
+
+        // AB信标距离、最后时间配置
+        public static final int AB_DISTANCE_THRESHOLD = 2;
+        public static final int AB_LAST_TIME_THRESHOLD = 2;
+
 
     // 上下车识别配置
     public static final int WINDOW_SIZE = 5; // 数据缓存大小
@@ -54,10 +68,12 @@ public class FilterConfig {
     public static final int STOPPED_STATE_SIZE = 3;       // 停车识别判定标签数
     public static final int DRIVING_STATE_SIZE = 2;       // 行驶识别判定标签数
 
+
     // 停留检测配置
     public static final int STAY_WINDOW_SIZE = 5;       // 停留检测窗口大小
     public static final double STAY_RADIUS = 10.0;      // 停留区域半径（米）
     public static final long STAY_DURATION_THRESHOLD = 30 * 1000; // 最小停留时长（毫秒）
+
 
     // 运动检测配置
     public static final double MAX_SPEED = 120 * 1000 / 3600.0;         // 最大合理速度（m/s），按120km/h计算

@@ -16,9 +16,10 @@ public interface LoadingUnloadingStrategy {
      * 
      * @param recordPoints 当前窗口的点位记录
      * @param historyPoints 历史点位记录
+     * @param status 当前点位状态（0-默认状态，1-回溯）
      * @return 事件状态（上车/下车/无事件）
      */
-    EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints);
+    EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints, Integer status);
     
     /**
      * 重置策略内部状态

@@ -16,7 +16,7 @@ import java.util.List;
 public class GroundVehicleLoadingStrategy implements LoadingUnloadingStrategy {
     
     @Override
-    public EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints) {
+    public EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints, Integer status) {
         // TODO: 实现地跑装卸的具体检测逻辑
         System.out.println("⚠️ 地跑装卸策略尚未实现，请实现具体业务逻辑");
         return new EventState();
