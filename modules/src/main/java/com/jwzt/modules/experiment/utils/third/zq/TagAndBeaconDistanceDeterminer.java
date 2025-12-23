@@ -136,10 +136,7 @@ public class TagAndBeaconDistanceDeterminer {
                     if (beacon.getUwbBeaconMac().equals(b.getBeaconId())) {
                         double threshold = getDistanceThreshold(b);
                         if (beacon.getDistance() < threshold) {
-                            System.out.println(
-                                    MessageFormat.format("⚠️ 标签【{0}】靠近基站【{1}】，距离【{2}米】，阈值【{3}米】",
-                                            p.getCardUUID(), b.getName(), beacon.getDistance(), getDistanceThresholdInMeters(b)));
-
+//                            System.out.println(MessageFormat.format("⚠️ 标签【{0}】靠近基站【{1}】，距离【{2}米】，阈值【{3}米】",p.getCardUUID(), b.getName(), beacon.getDistance(), getDistanceThresholdInMeters(b)));
                             isClose = true;
                             break; // 只要靠近任意一个基站就计数
                         }
@@ -177,21 +174,12 @@ public class TagAndBeaconDistanceDeterminer {
         // 3. 判断标签是否靠近基站
         if (p.getTagScanUwbData() != null && p.getTagScanUwbData().getUwbBeaconList().size() > 0) {
             for (TagScanUwbData.BltScanUwbBeacon beacon : p.getTagScanUwbData().getUwbBeaconList()) {
-                if (beacon.getUwbBeaconMac().equals("1918FD01385B")){
-                    System.out.println(
-                            MessageFormat.format("⚠️ 检测到标签【{0}】与基站id【{1}】距离为【{2}】米",
-                                    p.getCardUUID(), beacon.getUwbBeaconMac(), beacon.getDistance()));
-                }
                 for (TakBeaconInfo b : matchedBeacons) {
-                    System.out.println(
-                            MessageFormat.format("⚠️ 检测到标签【{0}】与基站id【{1}】距离为【{2}】米",
-                                    p.getCardUUID(), beacon.getUwbBeaconMac(), beacon.getDistance()));
+//                    System.out.println(MessageFormat.format("⚠️ 检测到标签【{0}】与基站id【{1}】距离为【{2}】米", p.getCardUUID(), beacon.getUwbBeaconMac(), beacon.getDistance()));
                     if (beacon.getUwbBeaconMac().equals(b.getBeaconId())) {
                         double threshold = getDistanceThreshold(b);
                         if (beacon.getDistance() < threshold) {
-                            System.out.println(
-                                    MessageFormat.format("⚠️ 检测到标签【{0}】与基站【{1}】距离小于【{2}】米，距离为【{3}米】",
-                                            p.getCardUUID(), b.getName(), getDistanceThresholdInMeters(b), beacon.getDistance()));
+//                            System.out.println(MessageFormat.format("⚠️ 检测到标签【{0}】与基站【{1}】距离小于【{2}】米，距离为【{3}米】", p.getCardUUID(), b.getName(), getDistanceThresholdInMeters(b), beacon.getDistance()));
                             return true;
                         }
                     }
