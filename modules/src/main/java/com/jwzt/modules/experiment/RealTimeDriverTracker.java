@@ -271,6 +271,9 @@ public class RealTimeDriverTracker {
                     break;
 
                 case SEND_DROPPING:
+//                    if (es.newEventState == 2){
+//                        onEnd(cardKey, st, EventKind.ARRIVED, es, win);
+//                    }
                     // **修改点**：如果已有活动会话按原来的 onEnd；如果没有活动会话（未检测到上车），尝试回溯历史查找上车并直接入库
                     if (st.activeSession != null && st.activeSession.kind == EventKind.SEND) {
                         onEnd(cardKey, st, EventKind.SEND, es, win);
