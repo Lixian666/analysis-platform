@@ -119,7 +119,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
         if (currentPoint.getAcceptTime().equals("2025-12-05 14:35:51")){
             System.out.println("开始处理: " + currentPoint.getAcceptTime() + "\n" + "信标列表" + currentPoint.getTagScanUwbData().getUwbBeaconList());
         }
-        if (currentPoint.getAcceptTime().equals("2025-12-17 14:08:27")){
+        if (currentPoint.getAcceptTime().equals("2025-12-17 14:24:10")){
             System.out.println("开始处理: " + currentPoint.getAcceptTime() + "\n" + "信标列表" + currentPoint.getTagScanUwbData().getUwbBeaconList());
         }
         // 根据当前点位所在区域判断是火车装卸还是地跑装卸
@@ -570,7 +570,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                 "A"
         );
 
-        if (isJCKAWithin && sendOutLastEventState == null && sendInLastEventState == null) {
+        if (isJCKAWithin && (sendOutLastEventState == null || sendInLastEventState == null)) {
             theUWBRecords.theUWBSendDropsZytA++;
             theUWBRecords.theUWBSendDropsZytALastTime = currentPoint.getTimestamp();
             double zytALastDistance = tagBeacon.getTagDistanceToNearestBeacon(
@@ -595,7 +595,7 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                 "B"
         );
 
-        if (isJCKBWithin && sendOutLastEventState == null && sendInLastEventState == null) {
+        if (isJCKBWithin && (sendOutLastEventState == null || sendInLastEventState == null)) {
             theUWBRecords.theUWBSendDropsZytB++;
             theUWBRecords.theUWBSendDropsZytBLastTime = currentPoint.getTimestamp();
             double zytBLastDistance = tagBeacon.getTagDistanceToNearestBeacon(
@@ -610,6 +610,15 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
             }
             theUWBRecords.theUWBSendDropsZytBList.add(theUWBRecords.theUWBSendDropsZytBLastTime);
         }
+//        信标距离优化
+//        if ((sendOutLastEventState == null || sendInLastEventState == null) && isJCKAWithin && !isJCKBWithin ){
+//            theUWBRecords.theUWBSendDropsZytBLastDistance = 9999;
+//        }else if ((sendOutLastEventState == null || sendInLastEventState == null) && !isJCKAWithin && isJCKBWithin){
+//            theUWBRecords.theUWBSendDropsZytALastDistance = 9999;
+//        }else if ((sendOutLastEventState == null || sendInLastEventState == null) && !isJCKAWithin && !isJCKBWithin){
+//            theUWBRecords.theUWBSendDropsZytALastDistance = 9999;
+//            theUWBRecords.theUWBSendDropsZytBLastDistance = 9999;
+//        }
 
         // 判断上次流程是否超时
         if (curPoint != null && currentPoint.getTimestamp() - curPoint.getTimestamp() > ADJACENT_POINTS_TIME_INTERVAL_MS && status == 0) {
@@ -647,6 +656,20 @@ public class TrainLoadingStrategy implements LoadingUnloadingStrategy {
                     if (status == 0){
                         isTrainOutLoading = true;
                     }
+                    // 在识别到到达上车后又识别到发运下车（识别有冲突 不启用）
+//                    if (sendOutLastEventState == null && sendInLastEventState != null && lastEvent == BoardingDetector.Event.ARRIVED_BOARDING){
+//                        sendInLastEventState = null;
+//                        System.out.println("⚠️ 检测到车辆已进入发运下车区域（火车）已有到达识别流程，结束到达识别流程");
+//                        System.out.println("A附近" + theUWBRecords.theUWBSendDropsZytA + " fid附近" + theUWBRecords.theUWBSendDropsZytB);
+//                        resetInternalState();
+//                        curPoint = currentPoint;
+//                        lastEvent = BoardingDetector.Event.SEND_DROPPING;
+//                        currentEvent = BoardingDetector.Event.SEND_DROPPING;
+//                        sendOutLastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+//                        lastEventState = new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime());
+//                        isTrainOutLoading = false;
+//                        return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude(), 2);
+//                    }
                     if (lastEvent == BoardingDetector.Event.NONE
                             && theLastPointsInTOACount <= AB_DISTANCE_STATE_SIZE) {
                         System.out.println("⚠️ 检测到车辆已进入发运下车区域（火车）");
