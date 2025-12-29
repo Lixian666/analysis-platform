@@ -67,6 +67,12 @@ public class TakBehaviorRecords extends BaseEntity {
     private Date endTime;
 
     /**
+     * 上/下车识别时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date identifyTime;
+
+    /**
      * 点数量
      */
     @Excel(name = "点数量")
@@ -198,6 +204,10 @@ public class TakBehaviorRecords extends BaseEntity {
         return endTime;
     }
 
+    public void setIdentifyTime(Date identifyTime) { this.identifyTime = identifyTime; }
+
+    public Date getIdentifyTime() { return identifyTime; }
+
     public void setPointCount(Long pointCount) {
         this.pointCount = pointCount;
     }
@@ -295,6 +305,6 @@ public class TakBehaviorRecords extends BaseEntity {
 
     @Override
     public String toString() {
-        return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE).append("id", getId()).append("cardId", getCardId()).append("yardId", getYardId()).append("trackId", getTrackId()).append("startTime", getStartTime()).append("endTime", getEndTime()).append("pointCount", getPointCount()).append("createTime", getCreateTime()).append("updateTime", getUpdateTime()).append("type", getType()).append("duration", getDuration()).append("state", getState()).append("takBehaviorRecordDetailList", getTakBehaviorRecordDetailList()).toString();
+        return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE).append("id", getId()).append("cardId", getCardId()).append("yardId", getYardId()).append("trackId", getTrackId()).append("startTime", getStartTime()).append("endTime", getEndTime()).append("identifyTime", getIdentifyTime()).append("pointCount", getPointCount()).append("createTime", getCreateTime()).append("updateTime", getUpdateTime()).append("type", getType()).append("duration", getDuration()).append("state", getState()).append("takBehaviorRecordDetailList", getTakBehaviorRecordDetailList()).toString();
     }
 }

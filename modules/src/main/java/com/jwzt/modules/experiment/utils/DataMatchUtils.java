@@ -63,7 +63,7 @@ public class DataMatchUtils {
         
         // 将时间转换为时间戳进行匹配
         List<JobDataWithTimestamp> jobDataWithTimestamps = jobDataList.stream()
-                .filter(data -> data.getStartTime() != null)
+                .filter(data -> data.getIdentifyTime() != null)
                 .map(JobDataWithTimestamp::new)
                 .sorted(Comparator.comparingLong(JobDataWithTimestamp::getTimestamp))
                 .collect(Collectors.toList());
@@ -381,7 +381,7 @@ public class DataMatchUtils {
         
         public JobDataWithTimestamp(TakBehaviorRecords jobData) {
             this.jobData = jobData;
-            this.timestamp = jobData.getStartTime() != null ? jobData.getStartTime().getTime() : null;
+            this.timestamp = jobData.getIdentifyTime() != null ? jobData.getIdentifyTime().getTime() : null;
         }
         
         public TakBehaviorRecords getJobData() {
