@@ -365,6 +365,18 @@ public class BAHistoryTask
                     long waitTime = (long) Math.pow(2, retry - 1) * 1000;
                     System.out.println("卡 " + cardId + " 第 " + (retry + 1) + " 次尝试（等待" + waitTime + "ms后重试）");
                     Thread.sleep(waitTime);
+                    if (baseConfig.getLocateDataSources().equals("zq")){
+                        // 预热：重试提前获取一次token，避免并发冲突
+                        try {
+                            System.out.println("正在预热，获取AccessToken...");
+                            zqOpenApi.getHeaders();
+                            System.out.println("✓ AccessToken预热成功");
+                            // 等待200ms确保token已缓存
+                            Thread.sleep(200);
+                        } catch (Exception e) {
+                            System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+                        }
+                    }
                 }
 
                 processCardData(cardId, startTimeStr, endTimeStr, tracker, vehicleType);
@@ -407,14 +419,14 @@ public class BAHistoryTask
      * @param vehicleType 车辆类型
      */
     private void processCardData(String cardId, String startTimeStr, String endTimeStr, RealTimeDriverTracker tracker, RealTimeDriverTracker.VehicleType vehicleType) {
-        System.out.println("线程 " + Thread.currentThread().getName() + " 开始处理卡: " + cardId + " (一次查询，分批处理, 车辆类型: " + 
+        System.out.println("线程 " + Thread.currentThread().getName() + " 开始处理卡: " + cardId + " (一次查询，分批处理, 车辆类型: " +
                 (vehicleType == RealTimeDriverTracker.VehicleType.TRUCK ? "板车(TRUCK)" : "火车/地跑(CAR)") + ")");
 
         String buildId = baseConfig.getJoysuch().getBuildingId();
         String date = "未获取到日期";
         LocalDateTime startTime = DateTimeUtils.str2DateTime(startTimeStr);
         LocalDateTime endTime = DateTimeUtils.str2DateTime(endTimeStr);
-        
+
         // 确保车辆类型已设置
         tracker.upsertVehicleType(cardId, vehicleType);
 
