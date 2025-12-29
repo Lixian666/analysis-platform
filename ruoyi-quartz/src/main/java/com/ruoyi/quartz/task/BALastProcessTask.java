@@ -205,7 +205,7 @@ public class BALastProcessTask {
         String endTimeStr = sdf.format(now);
 
         startTimeStr = "2025-12-17 10:00:00";
-        endTimeStr = "2025-12-17 11:00:00";
+        endTimeStr = "2025-12-17 10:30:00";
 
         try {
             log.info("开始数据匹配处理，时间范围：{} - {}", startTimeStr, endTimeStr);
@@ -263,16 +263,16 @@ public class BALastProcessTask {
             for (String cardId : cardIdList) {
                 log.info("========== 处理卡ID：{} ==========", cardId);
 
-                // 1. 处理板车卸车作业数据（type=4L, queryTimeType=0）
-                processJobDataMatch(cardId, 1L, 0, "火车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+                // 1. 处理火车卸车作业数据（type=4L, queryTimeType=0）
+                processJobDataMatch(cardId, 0L, 0, "火车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
 
-                // 2. 处理板车装车作业数据（type=3L, queryTimeType=1）
-                processJobDataMatch(cardId, 0L, 1, "火车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+                // 2. 处理火车装车作业数据（type=3L, queryTimeType=1）
+                processJobDataMatch(cardId, 1L, 1, "火车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
 
-                // 3. 处理板车卸车作业数据（type=4L, queryTimeType=0）
+                // 3. 处理地跑卸车作业数据（type=4L, queryTimeType=0）
                 processJobDataMatch(cardId, 4L, 0, "地跑卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
 
-                // 4. 处理板车装车作业数据（type=3L, queryTimeType=1）
+                // 4. 处理地跑装车作业数据（type=3L, queryTimeType=1）
                 processJobDataMatch(cardId, 5L, 1, "地跑装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
             }
 
@@ -329,7 +329,18 @@ public class BALastProcessTask {
                 log.info("没有{}作业数据，跳过匹配", typeName);
                 return;
             }
-            
+
+            // 初始化识别时间
+            for (TakBehaviorRecords job : takBehaviorRecords){
+                if (queryTimeType == 0){
+                    job.setIdentifyTime(job.getStartTime());
+                }else if (queryTimeType == 1){
+                    job.setIdentifyTime(job.getEndTime());
+                }else {
+                    job.setIdentifyTime(job.getStartTime());
+                }
+            }
+
             // 匹配数据
             Integer timeInterval = getTimeIntervalSeconds();
             log.info("开始匹配{}数据，时间间隔配置：{}秒（null表示自动分析）", typeName, timeInterval);
