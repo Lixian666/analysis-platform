@@ -6,6 +6,7 @@ import com.jwzt.modules.experiment.domain.TakRfidRecord;
 import com.jwzt.modules.experiment.domain.vo.DataMatchResult;
 import com.jwzt.modules.experiment.service.ITakBehaviorRecordsService;
 import com.jwzt.modules.experiment.service.ITakRfidRecordService;
+import com.jwzt.modules.experiment.utils.DataAcquisition;
 import com.jwzt.modules.experiment.utils.DataMatchUtils;
 import com.jwzt.modules.experiment.utils.third.manage.CenterWorkHttpUtils;
 import com.jwzt.modules.experiment.utils.third.manage.domain.ReqVehicleCode;
@@ -14,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -26,6 +28,9 @@ import java.util.stream.Collectors;
 
 @Component("BALastProcessTask")
 public class BALastProcessTask {
+
+    @Autowired
+    private ApplicationContext applicationContext;  // 用于获取 prototype bean
 
     private static final Logger log = LoggerFactory.getLogger(BALastProcessTask.class);
 
@@ -89,8 +94,12 @@ public class BALastProcessTask {
      */
     public void theJobDataMatchesTheRFIDData() {
         // 卡ID列表
-        List<String> cardIdList = new ArrayList<>();
-        cardIdList.add("1918B3000561");
+        DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
+        List<String> cardIdList = dataAcquisition.getCardIdList(0);
+        if (cardIdList == null || cardIdList.isEmpty()) {
+            System.out.println("没有需要处理的卡，任务跳过");
+            return;
+        }
         // 可以添加更多卡ID
         // cardIdList.add("其他卡ID");
         
@@ -152,10 +161,10 @@ public class BALastProcessTask {
                 log.info("========== 处理卡ID：{} ==========", cardId);
                 
                 // 1. 处理板车卸车作业数据（type=4L, queryTimeType=0）
-                processJobDataMatch(cardId, 3L, 0, "板车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+                processJobDataMatch(cardId, 2L, 0, "板车卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
                 
                 // 2. 处理板车装车作业数据（type=3L, queryTimeType=1）
-                processJobDataMatch(cardId, 2L, 1, "板车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+                processJobDataMatch(cardId, 3L, 1, "板车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
             }
             
             log.info("所有卡ID的数据匹配处理完成");
@@ -165,12 +174,16 @@ public class BALastProcessTask {
     }
 
     /**
-     * 作业数据与rfid数据匹配（火车）
+     * 作业数据与rfid数据匹配（火车、地跑）
      */
     public void theJobDataMatchesTheRFIDDataTrain() {
         // 卡ID列表
-        List<String> cardIdList = new ArrayList<>();
-        cardIdList.add("1918B3000561");
+        DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
+        List<String> cardIdList = dataAcquisition.getCardIdList(1);
+        if (cardIdList == null || cardIdList.isEmpty()) {
+            System.out.println("没有需要处理的卡，任务跳过");
+            return;
+        }
         // 可以添加更多卡ID
         // cardIdList.add("其他卡ID");
         // String startTimeStr = "2025-10-16 18:25:00";
@@ -234,6 +247,12 @@ public class BALastProcessTask {
 
                 // 2. 处理板车装车作业数据（type=3L, queryTimeType=1）
                 processJobDataMatch(cardId, 0L, 1, "火车装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+
+                // 3. 处理板车卸车作业数据（type=4L, queryTimeType=0）
+                processJobDataMatch(cardId, 4L, 0, "地跑卸车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
+
+                // 4. 处理板车装车作业数据（type=3L, queryTimeType=1）
+                processJobDataMatch(cardId, 5L, 1, "地跑装车", startTimeStr, endTimeStr, rfidDataToMatch, rfidStartTime, rfidEndTime);
             }
 
             log.info("所有卡ID的数据匹配处理完成");
