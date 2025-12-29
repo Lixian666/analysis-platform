@@ -11,14 +11,16 @@ import com.jwzt.modules.experiment.service.ILocTrackRecordService;
 import com.jwzt.modules.experiment.service.ITakCardInfoService;
 import com.jwzt.modules.experiment.utils.third.zq.FusionData;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
+import com.jwzt.modules.experiment.utils.third.zq.beacon.BeaconFaultDetector;
+import com.jwzt.modules.experiment.utils.third.zq.beacon.BeaconRepair;
+import com.jwzt.modules.experiment.utils.third.zq.beacon.DriverLocation;
+import com.jwzt.modules.experiment.utils.third.zq.beacon.LocationSolver;
 import com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /**
  * 数据获取类
@@ -253,6 +255,108 @@ public class DataAcquisition {
                     LocationPoint::getTimestamp,
                     Comparator.nullsLast(Long::compareTo)
             ));
+        }
+
+        for (LocationPoint point : LocationPoints){
+            // 空值保护：检查 tagScanUwbData 和 uwbBeaconList
+            if (point.getTagScanUwbData() == null || point.getTagScanUwbData().getUwbBeaconList() == null) {
+                continue;
+            }
+            
+            Map<String, Double> deviceReport = new HashMap<>();
+            for (TagScanUwbData.BltScanUwbBeacon beacon : point.getTagScanUwbData().getUwbBeaconList()){
+                deviceReport.put(beacon.getUwbBeaconMac(), beacon.getDistance());
+            }
+            try {
+                if (deviceReport.size() > 3){
+                    BeaconRepair beaconRepair = new BeaconRepair();
+                    deviceReport = beaconRepair.repairBeaconDistance(deviceReport, 2.0);
+                    if (deviceReport != null && !deviceReport.isEmpty()){
+                        List<TagScanUwbData.BltScanUwbBeacon> uwbBeaconList = point.getTagScanUwbData().getUwbBeaconList();
+
+                        // 记录改动
+                        List<String> addedBeacons = new ArrayList<>();
+                        List<String> removedBeacons = new ArrayList<>();
+                        List<String> modifiedBeacons = new ArrayList<>();
+
+                        // 同步 deviceReport 到 uwbBeaconList
+                        Map<String, TagScanUwbData.BltScanUwbBeacon> existingBeaconMap = new HashMap<>();
+                        for (TagScanUwbData.BltScanUwbBeacon beacon : uwbBeaconList) {
+                            if (beacon.getUwbBeaconMac() != null) {
+                                existingBeaconMap.put(beacon.getUwbBeaconMac(), beacon);
+                            }
+                        }
+
+                        // 更新或新增信标
+                        for (Map.Entry<String, Double> entry : deviceReport.entrySet()) {
+                            String beaconId = entry.getKey();
+                            Double newDistance = entry.getValue();
+
+                            if (beaconId == null || newDistance == null) {
+                                continue;
+                            }
+
+                            TagScanUwbData.BltScanUwbBeacon existingBeacon = existingBeaconMap.get(beaconId);
+                            if (existingBeacon != null) {
+                                // 已存在，检查距离是否不同
+                                Double oldDistance = existingBeacon.getDistance();
+                                if (oldDistance == null || !oldDistance.equals(newDistance)) {
+                                    existingBeacon.setDistance(newDistance);
+                                    modifiedBeacons.add(String.format("%s: %.3f -> %.3f", beaconId,
+                                            oldDistance != null ? oldDistance : 0.0, newDistance));
+                                }
+                            } else {
+                                // 不存在，新增
+                                TagScanUwbData.BltScanUwbBeacon newBeacon = new TagScanUwbData.BltScanUwbBeacon();
+                                newBeacon.setUwbBeaconMac(beaconId);
+                                newBeacon.setDistance(newDistance);
+                                uwbBeaconList.add(newBeacon);
+                                addedBeacons.add(String.format("%s: %.3f", beaconId, newDistance));
+                            }
+                        }
+
+                        // 移除不存在的信标
+                        Set<String> deviceReportIds = deviceReport.keySet();
+                        Iterator<TagScanUwbData.BltScanUwbBeacon> iterator = uwbBeaconList.iterator();
+                        while (iterator.hasNext()) {
+                            TagScanUwbData.BltScanUwbBeacon beacon = iterator.next();
+                            String beaconId = beacon.getUwbBeaconMac();
+                            if (beaconId != null && !deviceReportIds.contains(beaconId)) {
+                                Double oldDistance = beacon.getDistance();
+                                iterator.remove();
+                                removedBeacons.add(String.format("%s: %.3f", beaconId,
+                                        oldDistance != null ? oldDistance : 0.0));
+                            }
+                        }
+
+                        // 输出改动日志
+                        if (!addedBeacons.isEmpty() || !removedBeacons.isEmpty() || !modifiedBeacons.isEmpty()) {
+                            StringBuilder log = new StringBuilder();
+                            if (point.getAcceptTime() != null) {
+                                log.append("[").append(point.getAcceptTime()).append("] ");
+                            }
+                            log.append("信标同步日志");
+
+                            if (!addedBeacons.isEmpty()) {
+                                log.append(" - 新增: ").append(String.join(", ", addedBeacons));
+                            }
+                            if (!modifiedBeacons.isEmpty()) {
+                                log.append(" - 修改: ").append(String.join(", ", modifiedBeacons));
+                            }
+                            if (!removedBeacons.isEmpty()) {
+                                log.append(" - 移除: ").append(String.join(", ", removedBeacons));
+                            }
+
+                            System.out.println(log.toString());
+                        }
+                    }
+                }
+            } catch (Exception e){
+                System.out.println(point.getAcceptTime() + "信标距离计算处理异常: " + e.getMessage() );
+            }
+            // 计算位置经纬度
+//            LocationSolver locationSolver = new LocationSolver();
+//            DriverLocation results = locationSolver.calculateUserLocation(deviceReport);
         }
 
         return LocationPoints;
