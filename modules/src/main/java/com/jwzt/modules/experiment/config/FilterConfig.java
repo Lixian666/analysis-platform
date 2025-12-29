@@ -33,14 +33,19 @@ public class FilterConfig {
     public static final int IDENTIFY_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 上下车识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
     public static final int SAME_STATE_IDENTIFY_TIME_INTERVAL_MS = 10000;  // 相同状态识别标签时间间隔 （毫秒） 0：不进行时间间隔判定
     public static final int BEACON_DISTANCE_EFFECTIVE_TIME_INTERVAL_MS = 60000; // 信标距离判断有效时间间隔
+    public static final int SEND_AFTER_DOWN_TIME_THRESHOLD = 40000;  // 发运下车识别时间间隔 （毫秒）
 
 
     // 信标距离判定相关配置
         // 交通车状态标记数设置
-        public static final int TRAFFICCAR_STATE_SIZE = 8;
+        public static final int TRAFFICCAR_STATE_SIZE = 6;
+
+        // A信标距离配置
+        public static final int A_DISTANCE_STATE_SIZE = 2;
 
         // AB信标距离配置
         public static final int AB_DISTANCE_STATE_SIZE = 3;
+        public static final int AB_IDENTIFY_DISTANCE_STATE_SIZE = 2;
 
         // AB信标距离、最后时间配置
         public static final int AB_DISTANCE_THRESHOLD = 2;

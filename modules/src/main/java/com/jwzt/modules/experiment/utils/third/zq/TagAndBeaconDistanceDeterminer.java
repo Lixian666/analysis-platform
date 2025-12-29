@@ -105,7 +105,7 @@ public class TagAndBeaconDistanceDeterminer {
     /**
      * 统计靠近基站的标签数量
      */
-    public int countTagsCloseToBeacons(List<LocationPoint> points, String buildId, String type, String location, String area) {
+    public int countTagsCloseToBeacons(List<LocationPoint> points, String buildId, String type, String location, String area, Integer floor, boolean includingFloorDefault) {
         // 1. 获取某个 buildId 下的所有 beacons
         List<TakBeaconInfo> allBeacons = getBeaconsByBuildId(buildId);
         if (allBeacons == null || allBeacons.isEmpty()) {
@@ -116,9 +116,80 @@ public class TagAndBeaconDistanceDeterminer {
         List<TakBeaconInfo> matchedBeacons = allBeacons.stream()
                 .filter(b -> (type == null || type.equals(b.getType())) &&
                         (location == null || location.equals(b.getLocation())) &&
-                        (area == null || area.equals(b.getArea())))
+                        (area == null || area.equals(b.getArea())) &&
+                        (floor == null || b.getFloor() == 0 || floor.equals(b.getFloor())))
                 .collect(Collectors.toList());
 
+        if (!includingFloorDefault){
+            matchedBeacons = matchedBeacons.stream()
+                    .filter(b -> (b.getFloor() != 0))
+                    .collect(Collectors.toList());
+        }
+        if (matchedBeacons.isEmpty()) {
+            return 0;
+        }
+
+        // 3. 遍历所有点位，判断是否靠近任意一个匹配的基站
+        int closeCount = 0;
+        for (LocationPoint p : points) {
+            if (p.getTagScanUwbData() == null || p.getTagScanUwbData().getUwbBeaconList().isEmpty()) {
+                continue;
+            }
+
+            boolean isClose = false;
+            for (TagScanUwbData.BltScanUwbBeacon beacon : p.getTagScanUwbData().getUwbBeaconList()) {
+                for (TakBeaconInfo b : matchedBeacons) {
+                    if (beacon.getUwbBeaconMac().equals(b.getBeaconId())) {
+                        double threshold = getDistanceThreshold(b);
+                        if (beacon.getDistance() < threshold) {
+//                            System.out.println(MessageFormat.format("⚠️ 标签【{0}】靠近基站【{1}】，距离【{2}米】，阈值【{3}米】",p.getCardUUID(), b.getName(), beacon.getDistance(), getDistanceThresholdInMeters(b)));
+                            isClose = true;
+                            break; // 只要靠近任意一个基站就计数
+                        }
+                    }
+                }
+                if (isClose) break;
+            }
+
+            if (isClose) {
+                closeCount++;
+            }
+        }
+
+        return closeCount;
+    }
+
+    /**
+     * 统计靠近基站的标签数量，可修改基站距离参数
+     */
+    public int countTagsCloseToBeaconsCustom(List<LocationPoint> points, String buildId, String type, String location, String area, Integer floor, boolean includingFloorDefault, double distance) {
+        // 1. 获取某个 buildId 下的所有 beacons
+        List<TakBeaconInfo> allBeacons = getBeaconsByBuildId(buildId);
+        if (allBeacons == null || allBeacons.isEmpty()) {
+            return 0;
+        }
+
+        // 2. 在内存中过滤符合条件的 beacons
+        List<TakBeaconInfo> matchedBeacons = allBeacons.stream()
+                .filter(b -> (type == null || type.equals(b.getType())) &&
+                        (location == null || location.equals(b.getLocation())) &&
+                        (area == null || area.equals(b.getArea())) &&
+                        (floor == null || b.getFloor() == 0 || floor.equals(b.getFloor())))
+                .collect(Collectors.toList());
+
+        if (!includingFloorDefault){
+            matchedBeacons = matchedBeacons.stream()
+                    .filter(b -> (b.getFloor() != 0))
+                    .collect(Collectors.toList());
+            for (TakBeaconInfo b : matchedBeacons){
+                Double objectDistance =  b.getDistance();
+                Double calculatedDistance  =  objectDistance - distance;
+                if (calculatedDistance < 0){
+                    calculatedDistance = distance;
+                }
+                b.setDistance(calculatedDistance);
+            }
+        }
         if (matchedBeacons.isEmpty()) {
             return 0;
         }
@@ -156,7 +227,7 @@ public class TagAndBeaconDistanceDeterminer {
     /**
      * 判断标签是否靠近基站
      */
-    public Boolean theTagIsCloseToTheBeacon(LocationPoint p, String buildId, String type, String location, String area) {
+    public Boolean theTagIsCloseToTheBeacon(LocationPoint p, String buildId, String type, String location, String area, Integer floor) {
         // 1. 获取某个 buildId 下的所有 beacons
         List<TakBeaconInfo> allBeacons = getBeaconsByBuildId(buildId);
 
@@ -168,7 +239,8 @@ public class TagAndBeaconDistanceDeterminer {
         List<TakBeaconInfo> matchedBeacons = allBeacons.stream()
                 .filter(b -> (type == null || type.equals(b.getType())) &&
                         (location == null || location.equals(b.getLocation())) &&
-                        (area == null || area.equals(b.getArea())))
+                        (area == null || area.equals(b.getArea())) &&
+                        (floor == null || b.getFloor() == 0 || floor.equals(b.getFloor())))
                 .collect(Collectors.toList());
 
         // 3. 判断标签是否靠近基站
@@ -192,7 +264,7 @@ public class TagAndBeaconDistanceDeterminer {
     /**
      * 判断标签靠近最近基站的距离
      */
-    public double getTagDistanceToNearestBeacon(LocationPoint p, String buildId, String type, String location, String area) {
+    public double getTagDistanceToNearestBeacon(LocationPoint p, String buildId, String type, String location, String area, Integer floor) {
         // 1. 获取某个 buildId 下的所有 beacons
         List<TakBeaconInfo> allBeacons = getBeaconsByBuildId(buildId);
         if (allBeacons == null || allBeacons.isEmpty()) {
@@ -203,7 +275,8 @@ public class TagAndBeaconDistanceDeterminer {
         List<TakBeaconInfo> matchedBeacons = allBeacons.stream()
                 .filter(b -> (type == null || type.equals(b.getType())) &&
                         (location == null || location.equals(b.getLocation())) &&
-                        (area == null || area.equals(b.getArea())))
+                        (area == null || area.equals(b.getArea())) &&
+                        (floor == null || b.getFloor() == 0 || floor.equals(b.getFloor())))
                 .collect(Collectors.toList());
         if (matchedBeacons.isEmpty()) {
             return -1;

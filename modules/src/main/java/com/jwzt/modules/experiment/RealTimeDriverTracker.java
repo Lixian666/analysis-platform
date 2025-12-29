@@ -504,7 +504,11 @@ public class RealTimeDriverTracker {
                 LocationPoint fallbackPoint = null;
                 LoadingUnloadingStrategy strategy = getStrategyForVehicleType(vehicleType);
                 // 重置策略会话状态
-                resetStrategySessionStateForVehicleType(vehicleType);
+                if (downEs.getEvent() == BoardingDetector.Event.CAR_SEND_DROPPING){
+                    resetStrategySessionStateForVehicleType(vehicleType, EventKind.CAR_SEND);
+                } else if (downEs.getEvent() == BoardingDetector.Event.SEND_DROPPING){
+                    resetStrategySessionStateForVehicleType(vehicleType, EventKind.SEND);
+                }
                 List<LocationPoint> fallbackHistory = new ArrayList<>(history.subList(listStartIndex, history.size()));
                 for (LocationPoint p : fallbackHistory) {
                     if (p.getTimestamp() >= fallbackTs) {
@@ -601,7 +605,7 @@ public class RealTimeDriverTracker {
             sess.points.addAll(sessionPoints);
             persistSession(sess, dropTs, sessionPoints);
             // 重置策略会话状态
-            resetStrategySessionStateForVehicleType(vehicleType);
+            resetStrategySessionStateForVehicleType(vehicleType, sess.kind);
             dataSender.outParkPush(sess, vehicleType);
             for (LocationPoint p : sessionPoints){
                 dataSender.trackPush(null, p, sess, vehicleType);
@@ -896,7 +900,7 @@ public class RealTimeDriverTracker {
      * 对 strategyCache 中已缓存的策略实例重置会话标识状态
      * 只清 4 个 EventState 字段，不调用 resetState/resetSessionState
      */
-    private void resetStrategySessionStateForVehicleType(VehicleType vehicleType) {
+    private void resetStrategySessionStateForVehicleType(VehicleType vehicleType, EventKind kind) {
         // 只拿缓存里的实例，不再 new 新对象
         LoadingUnloadingStrategy strategy = strategyCache.get(vehicleType);
         if (strategy == null) {
@@ -906,10 +910,10 @@ public class RealTimeDriverTracker {
 
         if (strategy instanceof TrainLoadingStrategy) {
             TrainLoadingStrategy s = (TrainLoadingStrategy) strategy;
-             s.resetSendSessionState();
+             s.resetSendSessionState(kind);
         } else if (strategy instanceof FlatbedLoadingStrategy) {
             FlatbedLoadingStrategy s = (FlatbedLoadingStrategy) strategy;
-            s.resetSendSessionState();
+            s.resetSendSessionState(kind);
             // 如以后需要连内部状态一起清，再打开这一行：
             // s.resetSessionState();
         }

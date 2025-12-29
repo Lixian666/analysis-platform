@@ -1,24 +1,19 @@
 package com.jwzt.modules.experiment.domain;
 
 import com.jwzt.modules.experiment.config.BaseConfig;
-import com.jwzt.modules.experiment.config.FilePathConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.map.ZoneChecker;
 import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer;
 import com.jwzt.modules.experiment.vo.EventState;
-import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 
 import static com.jwzt.modules.experiment.config.FilterConfig.ADJACENT_POINTS_TIME_INTERVAL_MS;
-import static com.jwzt.modules.experiment.config.FilterConfig.IDENTIFY_IDENTIFY_TIME_INTERVAL_MS;
 
 /**
  * 上下车识别器
@@ -150,8 +145,9 @@ public class BoardingDetector {
                 baseConfig.getJoysuch().getBuildingId(),
                 "货运线作业台",
                 "2号线",
-                "A"
-        );
+                "A",
+                null,
+                true);
 
         // 判断是否靠近作业台J车附近
         boolean isZYTAWithin = tagBeacon.theTagIsCloseToTheBeacon(
@@ -159,8 +155,8 @@ public class BoardingDetector {
                 baseConfig.getJoysuch().getBuildingId(),
                 "货运线作业台",
                 "2号线",
-                "A"
-                );
+                "A",
+                0);
         if (isZYTAWithin){
             theUWBRecords.theUWBSendDropsZytA++;
             theUWBRecords.theUWBSendDropsZytALastTime = currentPoint.getTimestamp();
@@ -171,8 +167,8 @@ public class BoardingDetector {
                 baseConfig.getJoysuch().getBuildingId(),
                 "货运线作业台",
                 "2号线",
-                "B"
-        );
+                "B",
+                0);
         if (isZYTBWithin){
             theUWBRecords.theUWBSendDropsZytB++;
             theUWBRecords.theUWBSendDropsZytBLastTime = currentPoint.getTimestamp();
@@ -386,8 +382,9 @@ public class BoardingDetector {
                 baseConfig.getJoysuch().getBuildingId(),
                 "板车作业区",
                 null,
-                null
-        );
+                null,
+                null,
+                true);
 
         // 判断是否靠近作业台J车附近
         boolean isRFIDWithin = tagBeacon.theTagIsCloseToTheBeacon(
@@ -395,8 +392,8 @@ public class BoardingDetector {
                 baseConfig.getJoysuch().getBuildingId(),
                 "板车作业区",
                 null,
-                null
-        );
+                null,
+                0);
         if (isRFIDWithin){
             theUWBRecordsTruck.theUWBSendDropsRFID++;
         }
@@ -496,8 +493,8 @@ public class BoardingDetector {
                 baseConfig.getJoysuch().getBuildingId(),
                 "货运线作业台",
                 "2号线",
-                "A"
-        );
+                "A",
+                0);
         if (isZYTAWithin){
             theUWBRecords.theUWBSendDropsZytA++;
             theUWBRecords.theUWBSendDropsZytALastTime = currentPoint.getTimestamp();
@@ -508,8 +505,8 @@ public class BoardingDetector {
                 baseConfig.getJoysuch().getBuildingId(),
                 "货运线作业台",
                 "2号线",
-                "B"
-        );
+                "B",
+                0);
         if (isZYTBWithin){
             theUWBRecords.theUWBSendDropsZytB++;
             theUWBRecords.theUWBSendDropsZytBLastTime = currentPoint.getTimestamp();
