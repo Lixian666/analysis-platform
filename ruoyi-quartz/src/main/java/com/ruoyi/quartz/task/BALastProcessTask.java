@@ -128,6 +128,15 @@ public class BALastProcessTask {
                 log.info("RFID数据为空，结束程序执行");
                 return;
             }
+            
+            // 根据reqVehicleCodes集合中vehicleTime的最大值和最小值重新计算rfidStartTime和rfidEndTime
+            String[] timeRange = calculateRfidTimeRange(reqVehicleCodes);
+            if (timeRange != null && timeRange[0] != null && timeRange[1] != null) {
+                rfidStartTime = timeRange[0];
+                rfidEndTime = timeRange[1];
+                log.info("根据RFID数据重新计算时间范围：{} - {}", rfidStartTime, rfidEndTime);
+            }
+            
             // 如果开启忽略已匹配，从数据库查询已保存的RFID数据并过滤
             List<ReqVehicleCode> rfidDataToMatch = reqVehicleCodes;
             if (ignoreMatched && saveRfidData) {
@@ -195,6 +204,9 @@ public class BALastProcessTask {
         String startTimeStr = sdf.format(startTime);
         String endTimeStr = sdf.format(now);
 
+        startTimeStr = "2025-12-17 10:00:00";
+        endTimeStr = "2025-12-17 11:00:00";
+
         try {
             log.info("开始数据匹配处理，时间范围：{} - {}", startTimeStr, endTimeStr);
             log.info("配置信息 - 忽略已匹配：{}, 更新状态：{}, 保存RFID：{}", ignoreMatched, updateMatchStatus, saveRfidData);
@@ -210,6 +222,15 @@ public class BALastProcessTask {
                 log.info("RFID数据为空，结束程序执行");
                 return;
             }
+            
+            // 根据reqVehicleCodes集合中vehicleTime的最大值和最小值重新计算rfidStartTime和rfidEndTime
+            String[] timeRange = calculateRfidTimeRange(reqVehicleCodes);
+            if (timeRange != null && timeRange[0] != null && timeRange[1] != null) {
+                rfidStartTime = timeRange[0];
+                rfidEndTime = timeRange[1];
+                log.info("根据RFID数据重新计算时间范围：{} - {}", rfidStartTime, rfidEndTime);
+            }
+            
             // 如果开启忽略已匹配，从数据库查询已保存的RFID数据并过滤
             List<ReqVehicleCode> rfidDataToMatch = reqVehicleCodes;
             if (ignoreMatched && saveRfidData) {
@@ -525,5 +546,88 @@ public class BALastProcessTask {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             return sdf.parse(normalizedTime);
         }
+    }
+    
+    /**
+     * 从reqVehicleCodes集合中计算vehicleTime的最小值和最大值
+     * 返回格式为 [minTime, maxTime]，格式为 yyyy-MM-dd HH:mm:ss 000
+     * 
+     * @param reqVehicleCodes RFID数据集合
+     * @return String数组，[0]为最小值，[1]为最大值，如果集合为空则返回null
+     */
+    private String[] calculateRfidTimeRange(List<ReqVehicleCode> reqVehicleCodes) {
+        if (reqVehicleCodes == null || reqVehicleCodes.isEmpty()) {
+            return null;
+        }
+        
+        String minTime = null;
+        String maxTime = null;
+        long minTimestamp = Long.MAX_VALUE;
+        long maxTimestamp = Long.MIN_VALUE;
+        
+        for (ReqVehicleCode code : reqVehicleCodes) {
+            if (code.getVehicleTime() == null || code.getVehicleTime().isEmpty()) {
+                continue;
+            }
+            
+            try {
+                Date date = parseRfidTime(code.getVehicleTime());
+                long timestamp = date.getTime();
+                
+                if (timestamp < minTimestamp) {
+                    minTimestamp = timestamp;
+                    minTime = code.getVehicleTime();
+                }
+                if (timestamp > maxTimestamp) {
+                    maxTimestamp = timestamp;
+                    maxTime = code.getVehicleTime();
+                }
+            } catch (Exception e) {
+                log.warn("解析vehicleTime失败，跳过：{}", code.getVehicleTime(), e);
+            }
+        }
+        
+        if (minTime == null || maxTime == null) {
+            return null;
+        }
+        
+        // 转换格式：从 yyyy-MM-dd HH:mm:ss:SSS 转换为 yyyy-MM-dd HH:mm:ss 000
+        String[] result = new String[2];
+        result[0] = convertVehicleTimeToRfidTime(minTime);
+        result[1] = convertVehicleTimeToRfidTime(maxTime);
+        
+        return result;
+    }
+    
+    /**
+     * 将vehicleTime格式转换为rfidTime格式
+     * 从 yyyy-MM-dd HH:mm:ss:SSS 转换为 yyyy-MM-dd HH:mm:ss 000
+     * 
+     * @param vehicleTime 车辆时间字符串（格式：yyyy-MM-dd HH:mm:ss:SSS）
+     * @return RFID时间字符串（格式：yyyy-MM-dd HH:mm:ss 000）
+     */
+    private String convertVehicleTimeToRfidTime(String vehicleTime) {
+        if (vehicleTime == null || vehicleTime.isEmpty()) {
+            return null;
+        }
+        
+        // 如果格式是 yyyy-MM-dd HH:mm:ss:SSS，转换为 yyyy-MM-dd HH:mm:ss 000
+        int lastColonIndex = vehicleTime.lastIndexOf(':');
+        if (lastColonIndex > 18) {
+            // 找到最后一个冒号，替换为空格+000
+            return vehicleTime.substring(0, lastColonIndex) + " 000";
+        }
+        
+        // 如果已经是 yyyy-MM-dd HH:mm:ss 格式，直接添加 " 000"
+        if (vehicleTime.length() == 19) {
+            return vehicleTime + " 000";
+        }
+        
+        // 其他情况，尝试截取前19个字符
+        if (vehicleTime.length() >= 19) {
+            return vehicleTime.substring(0, 19) + " 000";
+        }
+        
+        return vehicleTime + " 000";
     }
 }
