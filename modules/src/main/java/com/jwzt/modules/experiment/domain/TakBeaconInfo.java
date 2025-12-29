@@ -58,12 +58,31 @@ public class TakBeaconInfo extends BaseEntity
     @Excel(name = "感应距离(m)")
     private Double distance;
 
+    /** 楼层数 */
+    @Excel(name = "楼层数")
+    private Integer floor;
+
+    /** 经度 */
+    @Excel(name = "经度")
+    private Double longitude;
+
+    /** 维度 */
+    @Excel(name = "维度")
+    private Double latitude;
+
     public TakBeaconInfo(String buildId, String type, String location, String area) {
         super();
     }
 
     public TakBeaconInfo() {
 
+    }
+
+    public TakBeaconInfo(String s, double v, double v1) {
+        super();
+        this.beaconId = s;
+        this.longitude = v;
+        this.latitude = v1;
     }
 
     public void setId(String id) 
@@ -148,6 +167,15 @@ public class TakBeaconInfo extends BaseEntity
     public void setDistance(Double distance) { this.distance = distance; }
     public Double getDistance() { return distance; }
 
+    public void setFloor(Integer floor) { this.floor = floor; }
+    public Integer getFloor() { return floor; }
+
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public Double getLongitude() { return longitude; }
+
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLatitude() { return latitude; }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -162,6 +190,9 @@ public class TakBeaconInfo extends BaseEntity
             .append("status", getStatus())
             .append("rfidName", getRfidName())
             .append("distance", getDistance())
+            .append("floor", getFloor())
+            .append("longitude", getLongitude())
+            .append("latitude", getLatitude())
             .append("createTime", getCreateTime())
             .append("updateTime", getUpdateTime())
             .toString();

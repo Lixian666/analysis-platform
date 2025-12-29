@@ -1,5 +1,6 @@
 package com.jwzt.modules.experiment.strategy;
 
+import com.jwzt.modules.experiment.RealTimeDriverTracker;
 import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.BoardingDetector;
@@ -78,8 +79,9 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 baseConfig.getJoysuch().getBuildingId(),
                 "板车作业区",
                 null,
-                null
-        );
+                null,
+                null,
+                true);
         
         // 判断是否靠近作业台RFID附近
         boolean isRFIDWithin = tagBeacon.theTagIsCloseToTheBeacon(
@@ -87,8 +89,8 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 baseConfig.getJoysuch().getBuildingId(),
                 "板车作业区",
                 null,
-                null
-        );
+                null,
+                0);
 
         if (currentPoint.getAcceptTime().equals("2025-11-05 17:58:16")){
             System.out.println("rfid数（板车）" + theUWBRecordsTruck.theUWBSendDropsRFID);
@@ -241,10 +243,10 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
         }
     }
 
-    public void resetSendSessionState() {
+    public void resetSendSessionState(RealTimeDriverTracker.EventKind kind) {
         resetInternalState();
         lastEvent = BoardingDetector.Event.NONE;
-        currentEvent = BoardingDetector.Event.CAR_SEND_BOARDING;
+        currentEvent = BoardingDetector.Event.TRUCK_SEND_BOARDING;
         lastEventState = new EventState(currentEvent, curPoint.getTimestamp(), curPoint.getAcceptTime());
         sendOutLastEventState = null;
         carSendOutLastEventState = null;
