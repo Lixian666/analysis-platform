@@ -17,6 +17,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 视觉识别与定位数据匹配定时任务
@@ -56,13 +61,15 @@ public class VisionLocationMatchTask {
             Date startTime = new Date(now.getTime() - 60 * 1000L); // 当前时间前1分钟
             String startTimeStr = sdf.format(startTime);
             String endTimeStr = sdf.format(now);
-            if (startStr != null || startStr.equals("")){
+            if (startStr != null && !startStr.isEmpty() && endStr != null && !endStr.isEmpty()) {
                 startTimeStr = startStr;
                 endTimeStr = endStr;
                 log.info("指定查询时间范围：{} - {}", startTimeStr, endTimeStr);
-            }else {
+            } else {
                 log.info("查询时间范围：{} - {}", startTimeStr, endTimeStr);
             }
+            final String startTimeStrFinal = startTimeStr;
+            final String endTimeStrFinal = endTimeStr;
             // 2. 获取所有卡ID列表（type=1）
             DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
             List<String> cardIdList = dataAcquisition.getCardIdList(1);
@@ -88,41 +95,45 @@ public class VisionLocationMatchTask {
             log.info("获取到摄像机ID列表，共 {} 个摄像机", cameraIds.size());
             
             // 5. 获取新的定位数据（所有卡）
-            List<LocationPoint> allNewLocationPoints = new ArrayList<>();
+            // 5. 并行获取新的定位数据（参考历史任务多线程策略）
+            int cpuCores = Runtime.getRuntime().availableProcessors();
+            int threadPoolSize = Math.max(2, Math.min(Math.min(cardIdList.size(), cpuCores * 2), 20));
+            ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
+            Map<String, List<LocationPoint>> cardLocationMap = new ConcurrentHashMap<>();
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+            log.info("并行获取定位数据：卡数={}, 线程数={}", cardIdList.size(), threadPoolSize);
             for (String cardId : cardIdList) {
-                try {
-                    List<LocationPoint> locationPoints = dataAcquisition.getLocationAndUWBData(
-                            cardId, buildId, startTimeStr, endTimeStr);
-                    if (locationPoints != null && !locationPoints.isEmpty()) {
-                        allNewLocationPoints.addAll(locationPoints);
-                        log.debug("卡ID: {}, 获取到定位数据 {} 条", cardId, locationPoints.size());
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    try {
+                        List<LocationPoint> locationPoints = dataAcquisition.getLocationAndUWBData(
+                                cardId, buildId, startTimeStrFinal, endTimeStrFinal);
+                        if (locationPoints != null && !locationPoints.isEmpty()) {
+                            cardLocationMap.put(cardId, locationPoints);
+                            log.debug("卡ID: {}, 获取到定位数据 {} 条", cardId, locationPoints.size());
+                        }
+                    } catch (Exception e) {
+                        log.error("获取定位数据失败，卡ID: {}", cardId, e);
                     }
-                } catch (Exception e) {
-                    log.error("获取定位数据失败，卡ID: {}", cardId, e);
-                }
+                }, executorService);
+                futures.add(future);
             }
-            log.info("获取到新的定位数据，共 {} 条", allNewLocationPoints.size());
+
+            // 等待所有任务完成
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            executorService.shutdown();
+
+            int totalLocationCount = cardLocationMap.values().stream().mapToInt(List::size).sum();
+            log.info("获取到新的定位数据，共 {} 条", totalLocationCount);
             
             // 6. 获取新的视觉识别数据
-            List<VisionEvent> newVisionEvents = jobData.getVisionList(startTimeStr, endTimeStr, cameraIds);
+            List<VisionEvent> newVisionEvents = jobData.getVisionList(startTimeStrFinal, endTimeStrFinal, cameraIds);
             log.info("获取到新的视觉识别数据，共 {} 条", newVisionEvents != null ? newVisionEvents.size() : 0);
             
             // 7. 追加到历史数据
-            if (!allNewLocationPoints.isEmpty()) {
-                // 按卡ID分组追加
-                for (String cardId : cardIdList) {
-                    List<LocationPoint> cardLocationPoints = new ArrayList<>();
-                    for (LocationPoint point : allNewLocationPoints) {
-                        String pointCardId = point.getCardUUID() != null ? point.getCardUUID() : 
-                                (point.getCardId() != null ? String.valueOf(point.getCardId()) : null);
-                        if (cardId.equals(pointCardId)) {
-                            cardLocationPoints.add(point);
-                        }
-                    }
-                    if (!cardLocationPoints.isEmpty()) {
-                        visionLocationMatcher.appendLocationData(cardId, cardLocationPoints);
-                    }
-                }
+            if (!cardLocationMap.isEmpty()) {
+                // 按卡ID追加
+                cardLocationMap.forEach(visionLocationMatcher::appendLocationData);
             }
             
             if (newVisionEvents != null && !newVisionEvents.isEmpty()) {
