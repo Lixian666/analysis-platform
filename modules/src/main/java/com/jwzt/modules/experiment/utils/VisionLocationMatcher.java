@@ -26,6 +26,11 @@ public class VisionLocationMatcher {
      * 默认时间间隔阈值（毫秒）：30秒
      */
     private static final long DEFAULT_TIME_INTERVAL_MS = 30 * 1000L;
+
+    /**
+     * 两数据相邻时间间隔：10秒
+     */
+    private static final long DEFAULT_TIME_INTERVAL_MS_SHORT = 40 * 1000L;
     
     /**
      * 匹配距离阈值（米）：5米
@@ -219,48 +224,58 @@ public class VisionLocationMatcher {
         VisionLocationMatchResult result = new VisionLocationMatchResult();
         result.setVisionEventGroup(visionGroup);
         
-        // 遍历所有视觉事件
+        // 遍历所有视觉事件，每个事件只取最优的一个定位点（距离最近，其次时间差最小，完全相同取时间戳更早的定位点）
         for (VisionEvent visionEvent : visionGroup) {
             long visionTimestamp = getVisionEventTimestamp(visionEvent);
-            
             if (visionEvent.getLongitude() == null || visionEvent.getLatitude() == null) {
                 log.warn("视觉事件缺少经纬度信息，跳过匹配。事件ID: {}", visionEvent.getId());
                 continue;
             }
-            
+
+            VisionLocationMatchResult.MatchedLocationPoint bestMatch = null;
+
             // 遍历所有卡的定位数据
             for (Map.Entry<String, List<LocationPoint>> entry : historyLocationData.entrySet()) {
                 List<LocationPoint> locationPoints = entry.getValue();
-                
-                // 在定位数据中查找匹配的点
+
                 for (LocationPoint locationPoint : locationPoints) {
-                    if (locationPoint.getTimestamp() == null || 
-                        locationPoint.getLongitude() == null || 
-                        locationPoint.getLatitude() == null) {
+                    if (locationPoint.getTimestamp() == null ||
+                            locationPoint.getLongitude() == null ||
+                            locationPoint.getLatitude() == null) {
                         continue;
                     }
-                    
+
                     // 时间匹配：允许一定的时间误差（±10秒）
                     long timeDiff = Math.abs(visionTimestamp - locationPoint.getTimestamp());
                     if (timeDiff > 10 * 1000L) {
                         continue;
                     }
-                    
+
                     // 距离匹配：计算两点间距离
                     double distance = calculateDistance(
                             visionEvent.getLongitude(), visionEvent.getLatitude(),
                             locationPoint.getLongitude(), locationPoint.getLatitude()
                     );
-                    
-                    if (distance <= MATCH_DISTANCE_THRESHOLD) {
-                        // 匹配成功
-                        VisionLocationMatchResult.MatchedLocationPoint matched = 
-                                new VisionLocationMatchResult.MatchedLocationPoint(
-                                        visionEvent, locationPoint, timeDiff, distance
-                                );
-                        result.getMatchedLocationPoints().add(matched);
+
+                    if (distance > MATCH_DISTANCE_THRESHOLD) {
+                        continue;
+                    }
+
+                    // 选择最优：先比距离，再比时间差，完全相同取定位时间更早的点
+                    if (bestMatch == null
+                            || distance < bestMatch.getDistance()
+                            || (distance == bestMatch.getDistance() && timeDiff < bestMatch.getTimeDiff())
+                            || (distance == bestMatch.getDistance() && timeDiff == bestMatch.getTimeDiff()
+                                && locationPoint.getTimestamp() < bestMatch.getLocationPoint().getTimestamp())) {
+                        bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
+                                visionEvent, locationPoint, timeDiff, distance
+                        );
                     }
                 }
+            }
+
+            if (bestMatch != null) {
+                result.getMatchedLocationPoints().add(bestMatch);
             }
         }
         
