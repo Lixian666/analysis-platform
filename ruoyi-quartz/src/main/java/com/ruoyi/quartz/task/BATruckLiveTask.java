@@ -95,7 +95,7 @@ public class BATruckLiveTask {
     public void realDriverTrackerZQRealtimeTruckWithNowTimeV2() {
         // 板车装卸的卡号列表
         DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
-        List<String> truckCards = dataAcquisition.getCardIdList(1);
+        List<String> truckCards = dataAcquisition.getCardIdList(0);
 //        List<String> truckCards = new ArrayList<>(
 //                Arrays.asList(
 //                        "1918B3000561",
