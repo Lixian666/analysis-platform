@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 /**
@@ -204,7 +205,29 @@ public class VisionLocationMatchTask {
                     stats.get("totalLocationPoints"),
                     stats.get("visionGroupCount"));
 
+            // 11. 对结果中的数据进行处理
+            // 按 cardId 分组，每组内按 timestamp 升序排序
+            Map<String, List<VisionLocationMatchResult.MatchedLocationPoint>> groupedResults = matchResults.stream()
+                    .flatMap(result -> result.getMatchedLocationPoints().stream())
+                    .filter(mp -> mp.getCardId() != null && mp.getLocationPoint() != null && mp.getLocationPoint().getTimestamp() != null)
+                    .collect(Collectors.groupingBy(
+                            VisionLocationMatchResult.MatchedLocationPoint::getCardId,
+                            Collectors.collectingAndThen(
+                                    Collectors.toList(),
+                                    list -> {
+                                        list.sort(Comparator.comparing(mp -> mp.getLocationPoint().getTimestamp()));
+                                        return list;
+                                    }
+                            )
+                    ));
             
+            log.info("按 cardId 分组完成，共 {} 个不同的卡", groupedResults.size());
+            groupedResults.forEach((cardId, points) -> 
+                    log.info("卡ID: {}, 匹配点数: {}", cardId, points.size())
+            );
+            // 12、对识别数据按卡进行处理，采用异步方式处理，以卡id异步处理
+
+
         } catch (Exception e) {
             log.error("视觉识别与定位数据匹配任务执行异常", e);
         }
