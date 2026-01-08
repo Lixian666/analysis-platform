@@ -7,6 +7,8 @@ import com.jwzt.modules.experiment.utils.DataAcquisition;
 import com.jwzt.modules.experiment.utils.VisionLocationMatcher;
 import com.jwzt.modules.experiment.utils.third.manage.JobData;
 import com.jwzt.modules.experiment.utils.third.manage.domain.VisionEvent;
+import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer;
+import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * 视觉识别与定位数据匹配定时任务
@@ -37,9 +40,15 @@ public class VisionLocationMatchTask {
     
     @Autowired
     private ApplicationContext applicationContext;
-    
+
+    @Autowired
+    private ZQOpenApi zqOpenApi;
+
     @Autowired
     private BaseConfig baseConfig;
+
+    @Autowired
+    private TagAndBeaconDistanceDeterminer tagBeacon;
     
     @Autowired
     private VisionLocationMatcher visionLocationMatcher;
@@ -95,7 +104,21 @@ public class VisionLocationMatchTask {
             log.info("获取到摄像机ID列表，共 {} 个摄像机", cameraIds.size());
             
             // 5. 获取新的定位数据（所有卡）
-            // 5. 并行获取新的定位数据（参考历史任务多线程策略）
+            // 5. 并行获取新的定位数据
+
+            if (baseConfig.getLocateDataSources().equals("zq")){
+                // 预热：提前获取一次token，避免并发冲突
+                try {
+                    System.out.println("正在预热，获取AccessToken...");
+                    zqOpenApi.getHeaders();
+                    System.out.println("✓ AccessToken预热成功");
+                    // 等待200ms确保token已缓存
+                    Thread.sleep(200);
+                } catch (Exception e) {
+                    System.err.println("⚠️ AccessToken预热失败，但会继续尝试: " + e.getMessage());
+                }
+            }
+
             int cpuCores = Runtime.getRuntime().availableProcessors();
             int threadPoolSize = Math.max(2, Math.min(Math.min(cardIdList.size(), cpuCores * 2), 20));
             ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
@@ -106,8 +129,22 @@ public class VisionLocationMatchTask {
             for (String cardId : cardIdList) {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     try {
-                        List<LocationPoint> locationPoints = dataAcquisition.getLocationAndUWBData(
+                        List<LocationPoint> locationPointList = dataAcquisition.getLocationAndUWBData(
                                 cardId, buildId, startTimeStrFinal, endTimeStrFinal);
+                        List<LocationPoint> locationPoints = new ArrayList<>();
+                        for (LocationPoint currentPoint : locationPointList){
+                            // 判断是否靠近交通车附近
+                            boolean isTrafficCarWithin = tagBeacon.theTagIsCloseToTheBeacon(
+                                    currentPoint,
+                                    baseConfig.getJoysuch().getBuildingId(),
+                                    "交通车",
+                                    null,
+                                    null,
+                                    null);
+                            if (!isTrafficCarWithin) {
+                                locationPoints.add(currentPoint);
+                            }
+                        }
                         if (locationPoints != null && !locationPoints.isEmpty()) {
                             cardLocationMap.put(cardId, locationPoints);
                             log.debug("卡ID: {}, 获取到定位数据 {} 条", cardId, locationPoints.size());
@@ -127,7 +164,12 @@ public class VisionLocationMatchTask {
             log.info("获取到新的定位数据，共 {} 条", totalLocationCount);
             
             // 6. 获取新的视觉识别数据
-            List<VisionEvent> newVisionEvents = jobData.getVisionList(startTimeStrFinal, endTimeStrFinal, cameraIds);
+            List<VisionEvent> newVisionEventList = jobData.getVisionList(startTimeStrFinal, endTimeStrFinal, cameraIds);
+
+            // 过滤出装卸车数据,只取eventType=load的数据
+            List<VisionEvent> newVisionEvents = newVisionEventList.stream()
+                    .filter(event -> "load".equals(event.getEventType()))
+                    .collect(Collectors.toList());
             log.info("获取到新的视觉识别数据，共 {} 条", newVisionEvents != null ? newVisionEvents.size() : 0);
             
             // 7. 追加到历史数据
@@ -161,6 +203,7 @@ public class VisionLocationMatchTask {
                     stats.get("locationCardCount"),
                     stats.get("totalLocationPoints"),
                     stats.get("visionGroupCount"));
+
             
         } catch (Exception e) {
             log.error("视觉识别与定位数据匹配任务执行异常", e);

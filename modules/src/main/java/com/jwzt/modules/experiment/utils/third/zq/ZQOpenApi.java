@@ -301,6 +301,9 @@ public class ZQOpenApi {
     public String getLicence(String username, String password) {
         UserReq userReq = UserReq.builder().username(username).password(password).build();
         licence = AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), "null").getLicence(userReq).getData();
+        if (licence == null){
+            licence = baseConfig.getJoysuch().getLicence();
+        }
         return licence;
     }
 
