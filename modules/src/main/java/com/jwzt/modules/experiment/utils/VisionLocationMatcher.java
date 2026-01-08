@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 视觉识别与定位数据匹配服务
@@ -70,9 +71,16 @@ public class VisionLocationMatcher {
                 existingList = new ArrayList<>();
             }
             existingList.addAll(newLocationPoints);
+            // 组合键去重：cardUUID + longitude + latitude + timestamp + tagScanUwbData
+            Map<String, LocationPoint> dedup = new LinkedHashMap<>();
+            for (LocationPoint lp : existingList) {
+                String dedupKey = buildLocationDedupKey(lp);
+                dedup.putIfAbsent(dedupKey, lp);
+            }
+            List<LocationPoint> result = new ArrayList<>(dedup.values());
             // 按时间戳排序
-            existingList.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
-            return existingList;
+            result.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
+            return result;
         });
         
         log.debug("追加定位数据，卡ID: {}, 新增: {} 条, 历史总数: {}", 
@@ -89,8 +97,18 @@ public class VisionLocationMatcher {
         if (newVisionEvents == null || newVisionEvents.isEmpty()) {
             return;
         }
-        
+
         historyVisionData.addAll(newVisionEvents);
+        // 创建去重后的列表
+        List<VisionEvent> uniqueVisionEvents = historyVisionData.stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toCollection(() -> new TreeSet<>(Comparator.comparing(VisionEvent::getId))),
+                        ArrayList::new
+                ));
+        // 清空原列表并添加去重数据
+        historyVisionData.clear();
+        historyVisionData.addAll(uniqueVisionEvents);
+
         // 按时间排序
         historyVisionData.sort(Comparator.comparingLong(this::getVisionEventTimestamp));
         
@@ -173,6 +191,23 @@ public class VisionLocationMatcher {
         log.debug("视觉数据分组完成，总组数: {}", groups.size());
         return groups;
     }
+
+    /**
+     * 构造定位点唯一键，用于去重
+     */
+    private String buildLocationDedupKey(LocationPoint lp) {
+        String card = lp.getCardUUID();
+        Double lon = lp.getLongitude();
+        Double lat = lp.getLatitude();
+        Long ts = lp.getTimestamp();
+        Object tag = lp.getTagScanUwbData();
+        return String.format("%s|%s|%s|%s|%s",
+                card == null ? "null" : card,
+                lon == null ? "null" : lon,
+                lat == null ? "null" : lat,
+                ts == null ? "null" : ts,
+                tag == null ? "null" : tag.toString());
+    }
     
     /**
      * 动态计算时间间隔阈值
@@ -223,7 +258,11 @@ public class VisionLocationMatcher {
     private VisionLocationMatchResult matchGroupWithLocation(List<VisionEvent> visionGroup) {
         VisionLocationMatchResult result = new VisionLocationMatchResult();
         result.setVisionEventGroup(visionGroup);
-        
+        // 将visionGroup中的eventTime取出最大值和最小值，然后输出字符串 最小值-最大值
+        long minTime = visionGroup.stream().mapToLong(v -> getVisionEventTimestamp(v)).min().orElse(0L);
+        long maxTime = visionGroup.stream().mapToLong(v -> getVisionEventTimestamp(v)).max().orElse(0L);
+        String timeRange = DateTimeUtils.timestampToDateTimeStr(minTime) + "-" + DateTimeUtils.timestampToDateTimeStr(maxTime);
+        Map<String, List<LocationPoint>> locationData = new HashMap<>(historyLocationData);
         // 遍历所有视觉事件，每个事件只取最优的一个定位点（距离最近，其次时间差最小，完全相同取时间戳更早的定位点）
         for (VisionEvent visionEvent : visionGroup) {
             long visionTimestamp = getVisionEventTimestamp(visionEvent);
@@ -235,9 +274,8 @@ public class VisionLocationMatcher {
             VisionLocationMatchResult.MatchedLocationPoint bestMatch = null;
 
             // 遍历所有卡的定位数据
-            for (Map.Entry<String, List<LocationPoint>> entry : historyLocationData.entrySet()) {
+            for (Map.Entry<String, List<LocationPoint>> entry : locationData.entrySet()) {
                 List<LocationPoint> locationPoints = entry.getValue();
-
                 for (LocationPoint locationPoint : locationPoints) {
                     if (locationPoint.getTimestamp() == null ||
                             locationPoint.getLongitude() == null ||
@@ -247,7 +285,8 @@ public class VisionLocationMatcher {
 
                     // 时间匹配：允许一定的时间误差（±10秒）
                     long timeDiff = Math.abs(visionTimestamp - locationPoint.getTimestamp());
-                    if (timeDiff > 10 * 1000L) {
+                    if (timeDiff > DEFAULT_TIME_INTERVAL_MS_SHORT) {
+//                        log.warn("视觉事件【{}】时间匹配失败。事件ID: {}，定位时间：{},事件时间：{}", timeRange, visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime());
                         continue;
                     }
 
@@ -258,6 +297,7 @@ public class VisionLocationMatcher {
                     );
 
                     if (distance > MATCH_DISTANCE_THRESHOLD) {
+//                        log.warn("视觉事件【{}】距离匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
                         continue;
                     }
 
@@ -268,14 +308,16 @@ public class VisionLocationMatcher {
                             || (distance == bestMatch.getDistance() && timeDiff == bestMatch.getTimeDiff()
                                 && locationPoint.getTimestamp() < bestMatch.getLocationPoint().getTimestamp())) {
                         bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
-                                visionEvent, locationPoint, timeDiff, distance
+                                locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
                         );
                     }
                 }
             }
 
             if (bestMatch != null) {
+                log.warn("视觉事件【{}】匹配成功。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, bestMatch.getCardId(), visionEvent.getId(), bestMatch.getLocationPoint().getAcceptTime(), visionEvent.getEventTime(), bestMatch.getDistance());
                 result.getMatchedLocationPoints().add(bestMatch);
+                locationData.remove(bestMatch.getCardId());
             }
         }
         

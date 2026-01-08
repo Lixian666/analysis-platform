@@ -32,6 +32,10 @@ public class VisionLocationMatchResult {
     @Data
     public static class MatchedLocationPoint {
         /**
+         * 卡片ID
+         */
+        private String cardId;
+        /**
          * 视觉事件
          */
         private VisionEvent visionEvent;
@@ -51,7 +55,8 @@ public class VisionLocationMatchResult {
          */
         private double distance;
         
-        public MatchedLocationPoint(VisionEvent visionEvent, LocationPoint locationPoint, long timeDiff, double distance) {
+        public MatchedLocationPoint(String cardID, VisionEvent visionEvent, LocationPoint locationPoint, long timeDiff, double distance) {
+            this.cardId = cardID;
             this.visionEvent = visionEvent;
             this.locationPoint = locationPoint;
             this.timeDiff = timeDiff;
