@@ -347,12 +347,12 @@ public class DataAcquisition {
                                 log.append(" - 移除: ").append(String.join(", ", removedBeacons));
                             }
 
-                            System.out.println(log.toString());
+//                            System.out.println(log.toString());
                         }
                     }
                 }
             } catch (Exception e){
-                System.out.println(point.getAcceptTime() + "信标距离计算处理异常: " + e.getMessage() );
+//                System.out.println(point.getAcceptTime() + "信标距离计算处理异常: " + e.getMessage() );
             }
             // 计算位置经纬度
 //            LocationSolver locationSolver = new LocationSolver();

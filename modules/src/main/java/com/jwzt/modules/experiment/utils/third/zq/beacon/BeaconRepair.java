@@ -96,7 +96,6 @@ public class BeaconRepair {
     	BeaconFaultDetector beaconFaultDetector = new BeaconFaultDetector();
 
         List<String> errorbeacon = beaconFaultDetector.detect(deviceReport, tolerance);
-        System.out.println("检测到的故障信标 ID: " + errorbeacon);
         for(String beacon : errorbeacon) {
         	deviceReport.remove(beacon);
         }

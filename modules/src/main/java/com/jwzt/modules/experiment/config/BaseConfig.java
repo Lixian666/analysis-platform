@@ -4,6 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 @ConfigurationProperties(prefix = "experiment.base")
 @Data
@@ -30,6 +33,7 @@ public class BaseConfig {
     private Joysuch joysuch = new Joysuch();
     private swCenter swCenter = new swCenter();
     private DataMatch dataMatch = new DataMatch();
+    private CardAnalysis cardAnalysis = new CardAnalysis();
 
     @Data
     public static class DataMatch {
@@ -44,6 +48,7 @@ public class BaseConfig {
     public class Joysuch {
         private String username;
         private String password;
+        private String licence;
         private String baseUrl;
         private Api api = new Api();
         private String buildingName;
@@ -64,6 +69,23 @@ public class BaseConfig {
     @Data
     public class swCenter {
         private long tenantId;
+    }
+
+    @Data
+    public class CardAnalysis {
+        private String pushIp;
+        private String vehicxleEntryExit;
+        private String assignmentRecord;
+        private String vehicleTrack;
+        private String beaconPush;
+        private String removeVehicle;
+        private VisualIdentify visualIdentify = new VisualIdentify();
+
+        @Data
+        public class VisualIdentify {
+            private String baseUrl;
+            private List<String> cameraIds = new ArrayList<>();
+        }
     }
 
     // 真趣定位服务

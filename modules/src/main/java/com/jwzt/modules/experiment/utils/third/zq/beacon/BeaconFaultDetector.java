@@ -95,9 +95,6 @@ public class BeaconFaultDetector {
         Map<String, Double> deviceReport = beaconFaultDetector.getRightPront();
 
         List<String> results = beaconFaultDetector.detect(deviceReport, 2.0);
-        if (!results.isEmpty()){
-            System.out.println("检测到的故障信标 ID: " + results);
-        }
     }
     
     /**
