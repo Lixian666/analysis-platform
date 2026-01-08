@@ -121,6 +121,7 @@ experiment:
       building-id: 210327
       username: client
       password: JoySuch@client10
+      licence: ld63a6557aa5fe703cefc5cc50f846895
 #      base-url: http://172.30.17.116/zqapi
       base-url: http://61.50.136.180:46000
       api:
@@ -139,7 +140,7 @@ experiment:
         # 获取标签和uwb扫描历史（测距）
         tag-scan-uwb-history: ${experiment.base.joysuch.base-url}/api/v1/device/tagScanUwbHistory
     sw-center:
-      tenant-id: 10003
+      tenant-id: 10001
       # 中心服务地址
       status: 1
       center-ip: http://172.30.17.116:8001/sw-centralOpen-api
@@ -157,6 +158,14 @@ experiment:
       beacon-push: /api/cardAnalysis/beaconPush
       # 车辆删除
       remove-vehicle: /api/cardAnalysis/removeAssignmentRecord
+      # 影像分析
+      visual-identify:
+        base-url: http://192.168.9.100:8030/vision-api
+        camera-ids:
+          - "62"
+          - "63"
+          - "6512"
+          - "6534"
   file-path:
     yard-name: ${experiment.base.yard-name}
     base-path: ${experiment.platform-dir}/PlatformData/shp
