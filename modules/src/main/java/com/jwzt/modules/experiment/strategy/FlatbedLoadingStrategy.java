@@ -58,7 +58,13 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
     private static class TheUWBRecordsTruck {
         int theUWBSendDropsRFID = 0;
     }
-    
+
+    @Override
+    public EventState detectEventAlready(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints, Integer status) {
+        return detectEvent(recordPoints, historyPoints, status);
+    }
+
+
     @Override
     public EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints, Integer status) {
         if (recordPoints.size() < FilterConfig.RECORD_POINTS_SIZE) {

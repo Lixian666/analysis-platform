@@ -1,11 +1,15 @@
 package com.jwzt.modules.experiment.utils;
 
+import com.jwzt.modules.experiment.config.BaseConfig;
+import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.Coordinate;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.domain.vo.VisionLocationMatchResult;
 import com.jwzt.modules.experiment.utils.third.manage.domain.VisionEvent;
+import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -22,7 +26,13 @@ import java.util.stream.Collectors;
 public class VisionLocationMatcher {
     
     private static final Logger log = LoggerFactory.getLogger(VisionLocationMatcher.class);
-    
+
+    @Autowired
+    private BaseConfig baseConfig;
+
+    @Autowired
+    private TagAndBeaconDistanceDeterminer tagBeacon;
+
     /**
      * 默认时间间隔阈值（毫秒）：30秒
      */
@@ -276,12 +286,18 @@ public class VisionLocationMatcher {
             // 遍历所有卡的定位数据
             for (Map.Entry<String, List<LocationPoint>> entry : locationData.entrySet()) {
                 List<LocationPoint> locationPoints = entry.getValue();
+                List<LocationPoint> beforePoints = new LinkedList<>();
                 for (LocationPoint locationPoint : locationPoints) {
                     if (locationPoint.getTimestamp() == null ||
                             locationPoint.getLongitude() == null ||
                             locationPoint.getLatitude() == null) {
                         continue;
                     }
+                    // 创建一个集合类型是List<LocationPoint>，其中只能有3个元素，进一个新的元素就删除第一个元素
+                    if (beforePoints.size() >= 3) {
+                        beforePoints.remove(0);
+                    }
+                    beforePoints.add(locationPoint);
 
                     // 时间匹配：允许一定的时间误差（±10秒）
                     long timeDiff = Math.abs(visionTimestamp - locationPoint.getTimestamp());
@@ -301,6 +317,12 @@ public class VisionLocationMatcher {
                         continue;
                     }
 
+                    boolean inTheTrafficCar = isInTheTrafficCar(beforePoints);
+                    if (inTheTrafficCar) {
+                        log.warn("视觉事件【{}】交通车匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
+                        continue;
+                    }
+
                     // 选择最优：先比距离，再比时间差，完全相同取定位时间更早的点
                     if (bestMatch == null
                             || distance < bestMatch.getDistance()
@@ -312,6 +334,7 @@ public class VisionLocationMatcher {
                         );
                     }
                 }
+                beforePoints.clear();
             }
 
             if (bestMatch != null) {
@@ -337,6 +360,26 @@ public class VisionLocationMatcher {
         Coordinate coord1 = new Coordinate(lon1, lat1);
         Coordinate coord2 = new Coordinate(lon2, lat2);
         return GeoUtils.distanceM(coord1, coord2);
+    }
+
+    private boolean isInTheTrafficCar(List<LocationPoint> points) {
+        boolean inTheTrafficCar = false;
+        int theLastTenPointsNotInTOJTCCount = tagBeacon.countTagsCloseToBeacons(
+                points,
+                baseConfig.getJoysuch().getBuildingId(),
+                "交通车",
+                null,
+                null,
+                null,
+                true);
+        // 获取交通车数
+        // 判断是否在交通车上
+        if (theLastTenPointsNotInTOJTCCount >= 2) {
+            inTheTrafficCar = true;
+        } else {
+            inTheTrafficCar = false;
+        }
+        return inTheTrafficCar;
     }
     
     /**
@@ -384,6 +427,25 @@ public class VisionLocationMatcher {
         stats.put("totalLocationPoints", totalLocationPoints);
         
         return stats;
+    }
+    
+    /**
+     * 获取指定卡的历史定位数据
+     * 返回数据的副本，保证线程安全
+     * 
+     * @param cardId 卡ID
+     * @return 历史定位数据列表（按时间排序），如果卡不存在则返回空列表
+     */
+    public List<LocationPoint> getHistoryLocationDataForCard(String cardId) {
+        if (cardId == null || cardId.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<LocationPoint> data = historyLocationData.get(cardId);
+        if (data == null) {
+            return new ArrayList<>();
+        }
+        // 返回副本，保证线程安全
+        return new ArrayList<>(data);
     }
 }
 

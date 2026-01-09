@@ -1,30 +1,40 @@
 package com.ruoyi.quartz.task;
 
 import com.jwzt.modules.experiment.config.BaseConfig;
+import com.jwzt.modules.experiment.config.FilterConfig;
+import com.jwzt.modules.experiment.domain.BoardingDetector;
 import com.jwzt.modules.experiment.domain.LocationPoint;
+import com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail;
+import com.jwzt.modules.experiment.domain.TakBehaviorRecords;
+import com.jwzt.modules.experiment.domain.TakBeaconInfo;
+import com.jwzt.modules.experiment.vo.EventState;
 import com.jwzt.modules.experiment.domain.vo.VisionLocationMatchResult;
+import com.jwzt.modules.experiment.filter.OutlierFilter;
+import com.jwzt.modules.experiment.service.ITakBehaviorRecordDetailService;
+import com.jwzt.modules.experiment.service.ITakBehaviorRecordsService;
+import com.jwzt.modules.experiment.strategy.LoadingStrategyFactory;
+import com.jwzt.modules.experiment.strategy.LoadingUnloadingStrategy;
 import com.jwzt.modules.experiment.utils.DataAcquisition;
+import com.jwzt.modules.experiment.utils.DateTimeUtils;
 import com.jwzt.modules.experiment.utils.VisionLocationMatcher;
 import com.jwzt.modules.experiment.utils.third.manage.JobData;
 import com.jwzt.modules.experiment.utils.third.manage.domain.VisionEvent;
 import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
+import com.ruoyi.common.utils.uuid.IdUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 /**
@@ -56,6 +66,18 @@ public class VisionLocationMatchTask {
     
     @Autowired
     private JobData jobData;
+    
+    @Autowired
+    private OutlierFilter outlierFilter;
+    
+    @Autowired
+    private LoadingStrategyFactory loadingStrategyFactory;
+    
+    @Resource
+    private ITakBehaviorRecordsService iTakBehaviorRecordsService;
+    
+    @Resource
+    private ITakBehaviorRecordDetailService iTakBehaviorRecordDetailService;
     
     /**
      * 执行匹配任务
@@ -130,22 +152,22 @@ public class VisionLocationMatchTask {
             for (String cardId : cardIdList) {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     try {
-                        List<LocationPoint> locationPointList = dataAcquisition.getLocationAndUWBData(
+                        List<LocationPoint> locationPoints = dataAcquisition.getLocationAndUWBData(
                                 cardId, buildId, startTimeStrFinal, endTimeStrFinal);
-                        List<LocationPoint> locationPoints = new ArrayList<>();
-                        for (LocationPoint currentPoint : locationPointList){
-                            // 判断是否靠近交通车附近
-                            boolean isTrafficCarWithin = tagBeacon.theTagIsCloseToTheBeacon(
-                                    currentPoint,
-                                    baseConfig.getJoysuch().getBuildingId(),
-                                    "交通车",
-                                    null,
-                                    null,
-                                    null);
-                            if (!isTrafficCarWithin) {
-                                locationPoints.add(currentPoint);
-                            }
-                        }
+//                        List<LocationPoint> locationPoints = new ArrayList<>();
+//                        for (LocationPoint currentPoint : locationPointList){
+//                            // 判断是否靠近交通车附近
+//                            boolean isTrafficCarWithin = tagBeacon.theTagIsCloseToTheBeacon(
+//                                    currentPoint,
+//                                    baseConfig.getJoysuch().getBuildingId(),
+//                                    "交通车",
+//                                    null,
+//                                    null,
+//                                    null);
+//                            if (!isTrafficCarWithin) {
+//                                locationPoints.add(currentPoint);
+//                            }
+//                        }
                         if (locationPoints != null && !locationPoints.isEmpty()) {
                             cardLocationMap.put(cardId, locationPoints);
                             log.debug("卡ID: {}, 获取到定位数据 {} 条", cardId, locationPoints.size());
@@ -225,12 +247,486 @@ public class VisionLocationMatchTask {
             groupedResults.forEach((cardId, points) -> 
                     log.info("卡ID: {}, 匹配点数: {}", cardId, points.size())
             );
+            
             // 12、对识别数据按卡进行处理，采用异步方式处理，以卡id异步处理
-
+            if (!groupedResults.isEmpty()) {
+                processMatchedPointsByCard(groupedResults);
+            }
 
         } catch (Exception e) {
             log.error("视觉识别与定位数据匹配任务执行异常", e);
         }
+    }
+    
+    /**
+     * 对每个卡的匹配数据进行处理
+     * 采用异步方式处理，以卡id异步处理
+     */
+    private void processMatchedPointsByCard(Map<String, List<VisionLocationMatchResult.MatchedLocationPoint>> groupedResults) {
+        int cpuCores = Runtime.getRuntime().availableProcessors();
+        int threadPoolSize = Math.max(2, Math.min(Math.min(groupedResults.size(), cpuCores * 2), 20));
+        ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        
+//        log.info("开始异步处理匹配数据：卡数={}, 线程数={}", groupedResults.size(), threadPoolSize);
+//
+//        for (Map.Entry<String, List<VisionLocationMatchResult.MatchedLocationPoint>> entry : groupedResults.entrySet()) {
+//            String cardId = entry.getKey();
+//            List<VisionLocationMatchResult.MatchedLocationPoint> matchedPoints = entry.getValue();
+//
+//            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+//                try {
+//                    processCardMatchedPoints(cardId, matchedPoints);
+//                } catch (Exception e) {
+//                    log.error("处理卡 {} 的匹配数据失败", cardId, e);
+//                }
+//            }, executorService);
+//            futures.add(future);
+//        }
+//
+//        // 等待所有任务完成
+//        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+//        executorService.shutdown();
+        for (Map.Entry<String, List<VisionLocationMatchResult.MatchedLocationPoint>> entry : groupedResults.entrySet()) {
+            String cardId = entry.getKey();
+            List<VisionLocationMatchResult.MatchedLocationPoint> matchedPoints = entry.getValue();
+            try {
+                processCardMatchedPoints(cardId, matchedPoints);
+            } catch (Exception e) {
+                log.error("处理卡 {} 的匹配数据失败", cardId, e);
+            }
+        }
+        log.info("所有卡的匹配数据处理完成");
+    }
+    
+    /**
+     * 处理单个卡的匹配数据
+     * 对每个 MatchedLocationPoint，查找其对应的上车点并入库
+     */
+    private void processCardMatchedPoints(String cardId, List<VisionLocationMatchResult.MatchedLocationPoint> matchedPoints) {
+        if (matchedPoints == null || matchedPoints.isEmpty()) {
+            return;
+        }
+        
+        // 获取该卡的历史定位数据
+        List<LocationPoint> points = visionLocationMatcher.getHistoryLocationDataForCard(cardId);
+        List<LocationPoint> historyPoints = preprocessBatch(points);
+        if (historyPoints == null || historyPoints.isEmpty()) {
+            log.warn("卡ID: {} 的历史定位数据为空，跳过处理", cardId);
+            return;
+        }
+        
+        // 默认使用火车策略（可根据需要扩展业务类型判断逻辑）
+        LoadingStrategyFactory.VehicleType vehicleType = LoadingStrategyFactory.VehicleType.TRAIN;
+        LoadingUnloadingStrategy strategy = loadingStrategyFactory.getStrategy(vehicleType);
+        
+        // 遍历每个匹配点，查找对应的上车点
+        for (int i = 0; i < matchedPoints.size(); i++) {
+            VisionLocationMatchResult.MatchedLocationPoint matchedPoint = matchedPoints.get(i);
+            LocationPoint dropOffPoint = matchedPoint.getLocationPoint();
+            
+            if (dropOffPoint == null || dropOffPoint.getTimestamp() == null) {
+                log.warn("卡ID: {} 的第 {} 个匹配点数据无效，跳过", cardId, i + 1);
+                continue;
+            }
+            
+            try {
+                // 计算数据区间
+                long endTimestamp = dropOffPoint.getTimestamp();
+                long startTimestamp;
+                
+                if (i == 0) {
+                    // 第一个数据：向前取5分钟的点作为起点
+                    startTimestamp = Math.max(0, endTimestamp - 5 * 60 * 1000L);
+                } else {
+                    // 找到上一个匹配点的下一个点作为起点
+                    LocationPoint prevDropOffPoint = matchedPoints.get(i - 1).getLocationPoint();
+                    long prevTimestamp = prevDropOffPoint.getTimestamp();
+                    // 找到历史数据中时间戳 > prevTimestamp 的第一个点
+                    startTimestamp = findNextPointTimestamp(historyPoints, prevTimestamp);
+                    int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
+                    if (startTimestamp > 0){
+                        startTimestamp = startTimestamp - index * 1000;
+                    }
+                    if (startTimestamp < 0) {
+                        // 如果找不到，使用上一个时间戳 + 1秒
+                        startTimestamp = prevTimestamp + 1000 - index * 1000;
+                    }
+                }
+                
+                // 提取区间内的定位点
+                List<LocationPoint> intervalPoints = extractIntervalPoints(historyPoints, startTimestamp, endTimestamp);
+                if (intervalPoints.isEmpty()) {
+                    log.warn("卡ID: {} 的第 {} 个匹配点，区间内无定位点，跳过", cardId, i + 1);
+                    continue;
+                }
+                // 正向查找上车点
+                LocationPoint boardingPoint = findBoardingPoint(intervalPoints, historyPoints, strategy, cardId);
+                if (boardingPoint == null) {
+                    log.warn("卡ID: {} 的第 {} 个匹配点，未找到上车点，跳过", cardId, i + 1);
+                    continue;
+                }
+                
+                // 提取从上车点到下车点的轨迹点
+                List<LocationPoint> sessionPoints = extractSessionPoints(intervalPoints, boardingPoint, dropOffPoint);
+                if (sessionPoints.isEmpty()) {
+                    log.warn("卡ID: {} 的第 {} 个匹配点，会话轨迹点为空，跳过", cardId, i + 1);
+                    continue;
+                }
+                
+                // 入库
+                persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType);
+                
+                log.info("卡ID: {} 的第 {} 个匹配点处理完成，上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
+                        cardId, i + 1, 
+                        DateTimeUtils.timestampToDateTimeStr(boardingPoint.getTimestamp()),
+                        DateTimeUtils.timestampToDateTimeStr(dropOffPoint.getTimestamp()),
+                        sessionPoints.size());
+                
+            } catch (Exception e) {
+                log.error("处理卡ID: {} 的第 {} 个匹配点时发生异常", cardId, i + 1, e);
+            }
+        }
+    }
+    
+    /**
+     * 找到历史数据中时间戳大于指定时间戳的第一个点的时间戳
+     */
+    private long findNextPointTimestamp(List<LocationPoint> historyPoints, long timestamp) {
+        for (LocationPoint point : historyPoints) {
+            if (point.getTimestamp() != null && point.getTimestamp() > timestamp) {
+                return point.getTimestamp();
+            }
+        }
+        return -1;
+    }
+    
+    /**
+     * 提取指定时间区间内的定位点
+     */
+    private List<LocationPoint> extractIntervalPoints(List<LocationPoint> historyPoints, long startTimestamp, long endTimestamp) {
+        List<LocationPoint> result = new ArrayList<>();
+        for (LocationPoint point : historyPoints) {
+            if (point.getTimestamp() != null 
+                    && point.getTimestamp() >= startTimestamp 
+                    && point.getTimestamp() <= endTimestamp) {
+                result.add(point);
+            }
+        }
+        // 按时间戳排序
+        result.sort(Comparator.comparingLong(LocationPoint::getTimestamp));
+        return result;
+    }
+    
+    /**
+     * 正向查找上车点
+     * 从区间起点开始，逐点构造窗口，调用策略检测事件
+     */
+    private LocationPoint findBoardingPoint(List<LocationPoint> intervalPoints, 
+                                           List<LocationPoint> historyPoints,
+                                           LoadingUnloadingStrategy strategy,
+                                           String cardId) {
+        if (intervalPoints == null || intervalPoints.isEmpty()) {
+            return null;
+        }
+        
+        int recordPointsSize = FilterConfig.RECORD_POINTS_SIZE;
+        
+        // 从起点开始，逐点构造窗口
+        for (int i = 0; i < intervalPoints.size(); i++) {
+            // 构造窗口：以当前点为中心，前后各取 recordPointsSize/2 个点
+            int windowStart = Math.max(0, i - recordPointsSize / 2);
+            int windowEnd = Math.min(intervalPoints.size(), windowStart + recordPointsSize);
+            
+            // 如果窗口大小不足，调整窗口起始位置
+            if (windowEnd - windowStart < recordPointsSize) {
+                windowStart = Math.max(0, windowEnd - recordPointsSize);
+            }
+            
+            if (windowEnd - windowStart < recordPointsSize) {
+                // 窗口大小仍然不足，跳过
+                continue;
+            }
+            
+            List<LocationPoint> window = new ArrayList<>(intervalPoints.subList(windowStart, windowEnd));
+            
+            // 使用 OutlierFilter 进行异常过滤
+            List<LocationPoint> filteredPoints = outlierFilter.stateAnalysis(window);
+            if (filteredPoints == null || filteredPoints.size() < recordPointsSize) {
+                continue;
+            }
+            
+            // 调用策略检测事件
+            try {
+                EventState eventState = strategy.detectEventAlready(filteredPoints, historyPoints, 0);
+                if (eventState != null && eventState.getEvent() != null) {
+                    BoardingDetector.Event event = eventState.getEvent();
+                    // 检查是否是上车事件
+                    if (event == BoardingDetector.Event.CAR_SEND_BOARDING
+                            || event == BoardingDetector.Event.SEND_BOARDING
+                            || event == BoardingDetector.Event.TRUCK_SEND_BOARDING
+                            || event == BoardingDetector.Event.CAR_ARRIVED_BOARDING
+                            || event == BoardingDetector.Event.ARRIVED_BOARDING
+                            || event == BoardingDetector.Event.TRUCK_ARRIVED_BOARDING) {
+                        // 找到上车点，返回窗口中间的点
+                        int centerIndex = windowStart + recordPointsSize / 2;
+                        if (centerIndex < intervalPoints.size()) {
+                            return intervalPoints.get(centerIndex);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("卡ID: {} 在检测事件时发生异常，跳过该窗口", cardId, e);
+                continue;
+            }
+        }
+        
+        // 如果未找到明确的上车事件，尝试使用策略的 isInParkingArea 方法查找第一个在停车区域的点
+        for (LocationPoint point : intervalPoints) {
+            if (strategy.isInParkingArea(point)) {
+                return point;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 提取从上车点到下车点之间的轨迹点
+     */
+    private List<LocationPoint> extractSessionPoints(List<LocationPoint> intervalPoints, 
+                                                     LocationPoint boardingPoint, 
+                                                     LocationPoint dropOffPoint) {
+        List<LocationPoint> result = new ArrayList<>();
+        long boardingTimestamp = boardingPoint.getTimestamp();
+        long dropOffTimestamp = dropOffPoint.getTimestamp();
+        
+        for (LocationPoint point : intervalPoints) {
+            if (point.getTimestamp() != null 
+                    && point.getTimestamp() >= boardingTimestamp 
+                    && point.getTimestamp() <= dropOffTimestamp) {
+                result.add(point);
+            }
+        }
+        
+        // 去重并按时间排序
+        return result.stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(LocationPoint::getTimestamp, x -> x, (a, b) -> a, TreeMap::new),
+                        m -> new ArrayList<>(m.values())));
+    }
+    
+    /**
+     * 入库会话数据
+     */
+    private void persistSession(String cardId, 
+                               LocationPoint boardingPoint, 
+                               LocationPoint dropOffPoint,
+                               List<LocationPoint> sessionPoints,
+                               LoadingStrategyFactory.VehicleType vehicleType) {
+        if (sessionPoints == null || sessionPoints.isEmpty()) {
+            log.warn("卡ID: {} 的会话轨迹点为空，无法入库", cardId);
+            return;
+        }
+        
+        try {
+            // 生成统一的 trackId
+            String trackId = IdUtils.fastSimpleUUID();
+            
+            // 1) 详情表
+            List<TakBehaviorRecordDetail> detailList = new ArrayList<>(sessionPoints.size());
+            for (LocationPoint p : sessionPoints) {
+                if (p == null) {
+                    continue;
+                }
+                TakBehaviorRecordDetail d = new TakBehaviorRecordDetail();
+                d.setCardId(cardId);
+                d.setTrackId(trackId);
+                d.setRecordTime(new Date(p.getTimestamp()));
+                d.setTimestampMs(p.getTimestamp());
+                d.setLongitude(p.getLongitude());
+                d.setLatitude(p.getLatitude());
+                d.setSpeed(p.getSpeed());
+                detailList.add(d);
+            }
+            
+            if (detailList.isEmpty()) {
+                log.warn("卡ID: {} 的详情列表为空，无法入库", cardId);
+                return;
+            }
+            
+            // 2) 主表
+            TakBehaviorRecords rec = new TakBehaviorRecords();
+            rec.setCardId(cardId);
+            rec.setYardId(baseConfig.getYardName());
+            rec.setTrackId(trackId);
+            rec.setStartTime(new Date(boardingPoint.getTimestamp()));
+            rec.setEndTime(new Date(dropOffPoint.getTimestamp()));
+            rec.setPointCount((long) detailList.size());
+            
+            // 根据车辆类型和事件类型确定 type（这里默认使用发运装车类型，可根据实际需求调整）
+            // 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库
+            long type = 1L; // 默认发运装车
+            if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED) {
+                type = 2L; // 轿运车装车
+            } else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE) {
+                type = 4L; // 地跑入库
+            }
+            rec.setType(type);
+            
+            rec.setDuration(DateTimeUtils.calculateTimeDifference(boardingPoint.getTimestamp(), dropOffPoint.getTimestamp()));
+            rec.setState("完成");
+            
+            // 统计信标信息
+            BeaconStatistics beaconStats = getMostFrequentBeaconInSession(sessionPoints, vehicleType);
+            rec.setBeaconName(beaconStats.zoneName);
+            rec.setRfidName(beaconStats.zoneNameRfid);
+            rec.setArea(beaconStats.zone);
+            
+            rec.setTakBehaviorRecordDetailList(detailList);
+            
+            // 3) 入库
+            iTakBehaviorRecordsService.insertTakBehaviorRecords(rec);
+            iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(detailList);
+            
+            log.info("卡ID: {} 的会话数据入库成功，trackId: {}, 点数: {}", cardId, trackId, detailList.size());
+            
+        } catch (Exception e) {
+            log.error("卡ID: {} 的会话数据入库失败", cardId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * 获取会话期间出现次数最多的信标信息
+     */
+    private BeaconStatistics getMostFrequentBeaconInSession(List<LocationPoint> sessionPoints, 
+                                                           LoadingStrategyFactory.VehicleType vehicleType) {
+        BeaconStatistics stats = new BeaconStatistics();
+        
+        if (sessionPoints == null || sessionPoints.isEmpty()) {
+            return stats;
+        }
+        
+        // 根据车辆类型确定信标类型和查询参数
+        String beaconType;
+        String location = null;
+        String area = null;
+        List<TakBeaconInfo> beaconsInRange = new ArrayList<>();
+        
+        if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED) {
+            // 板车作业区
+            beaconType = "板车作业区";
+        } else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE) {
+            // 地跑
+            beaconType = "地跑";
+        } else {
+            // 火车作业区（货运线作业台）
+            beaconType = "货运线作业台";
+            // 获取地跑信标
+            List<TakBeaconInfo> groundBeacons = tagBeacon.getBeaconsInRangeForPoints(
+                    sessionPoints,
+                    baseConfig.getJoysuch().getBuildingId(),
+                    "地跑",
+                    location,
+                    area
+            );
+            if (groundBeacons != null) {
+                beaconsInRange.addAll(groundBeacons);
+            }
+        }
+        
+        // 获取信标列表
+        List<TakBeaconInfo> beacons = tagBeacon.getBeaconsInRangeForPoints(
+                sessionPoints,
+                baseConfig.getJoysuch().getBuildingId(),
+                beaconType,
+                location,
+                area
+        );
+        if (beacons != null) {
+            beaconsInRange.addAll(beacons);
+        }
+        
+        if (beaconsInRange.isEmpty()) {
+            return stats;
+        }
+        
+        // 统计每个信标出现的次数（使用beaconId作为唯一标识）
+        Map<String, BeaconCountInfo> beaconCountMap = new HashMap<>();
+        for (TakBeaconInfo beacon : beaconsInRange) {
+            String beaconId = beacon.getBeaconId();
+            if (beaconId != null) {
+                BeaconCountInfo countInfo = beaconCountMap.get(beaconId);
+                if (countInfo == null) {
+                    countInfo = new BeaconCountInfo();
+                    countInfo.beacon = beacon;
+                    countInfo.count = 0;
+                    beaconCountMap.put(beaconId, countInfo);
+                }
+                countInfo.count++;
+            }
+        }
+        
+        // 找出出现次数最多的信标
+        BeaconCountInfo maxCountInfo = null;
+        for (BeaconCountInfo countInfo : beaconCountMap.values()) {
+            if (maxCountInfo == null || countInfo.count > maxCountInfo.count) {
+                maxCountInfo = countInfo;
+            }
+        }
+        
+        if (maxCountInfo != null && maxCountInfo.count >= 1 && maxCountInfo.beacon != null) {
+            TakBeaconInfo mostFrequentBeacon = maxCountInfo.beacon;
+            stats.zoneName = mostFrequentBeacon.getName();
+            stats.zoneNameRfid = mostFrequentBeacon.getRfidName();
+            stats.zone = mostFrequentBeacon.getArea();
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * 信标统计结果
+     */
+    private static class BeaconStatistics {
+        String zoneName;
+        String zoneNameRfid;
+        String zone;
+    }
+    
+    /**
+     * 信标计数信息
+     */
+    private static class BeaconCountInfo {
+        TakBeaconInfo beacon;
+        int count;
+    }
+
+
+    private List<LocationPoint> preprocessBatch(List<LocationPoint> batch) {
+        List<LocationPoint> normal = new ArrayList<>();
+        batch.sort((p1, p2) -> Long.compare(p1.getTimestamp(), p2.getTimestamp()));
+        for (LocationPoint raw : batch) {
+            if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(raw.getAcceptTime()).equals("2025-11-17 11:07:00")){
+                System.out.println("⚠️ 检测到车辆已进入地跑区域（地跑）");
+            }
+            // 兜底：若 timestamp 未赋值，用 acceptTime 转换
+            if (raw.getTimestamp() == 0 && raw.getAcceptTime() != null) {
+                raw.setTimestamp(DateTimeUtils.convertToTimestamp(raw.getAcceptTime()));
+            }
+            int state = outlierFilter.isValid(raw);
+            if (state == 0) {
+                normal.add(raw);
+            }
+        }
+        if (normal.isEmpty()) return normal;
+
+        // 排序 & 去重（移除 <= cutoffTs）
+        return normal.stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(LocationPoint::getTimestamp, x -> x, (a, b) -> a, TreeMap::new),
+                        m -> new ArrayList<>(m.values())));
     }
 }
 
