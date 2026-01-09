@@ -20,6 +20,17 @@ public interface LoadingUnloadingStrategy {
      * @return 事件状态（上车/下车/无事件）
      */
     EventState detectEvent(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints, Integer status);
+
+
+    /**
+     * 检测装卸事件(已知上下车)
+     *
+     * @param recordPoints 当前窗口的点位记录
+     * @param historyPoints 历史点位记录
+     * @param status 当前点位状态（0-发运，1-到达）
+     * @return 事件状态（上车/下车/无事件）
+     */
+    EventState detectEventAlready(List<LocationPoint> recordPoints, List<LocationPoint> historyPoints, Integer status);
     
     /**
      * 重置策略内部状态
