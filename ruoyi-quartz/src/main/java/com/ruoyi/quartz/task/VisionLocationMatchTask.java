@@ -102,6 +102,12 @@ public class VisionLocationMatchTask {
             }
             final String startTimeStrFinal = startTimeStr;
             final String endTimeStrFinal = endTimeStr;
+
+            // 计算定位数据的时间范围（视觉数据时间范围前后各延展5分钟）
+            Date startTimeTag = sdf.parse(startTimeStr);
+            Date endTimeTag = sdf.parse(endTimeStr);
+            String startTimeStrTag = sdf.format(new Date(startTimeTag.getTime() - 5 * 60 * 1000L)); // 开始时间前推5分钟
+            String endTimeStrTag = sdf.format(new Date(endTimeTag.getTime() + 5 * 60 * 1000L));   // 结束时间后延5分钟
             // 2. 获取所有卡ID列表（type=1）
             DataAcquisition dataAcquisition = applicationContext.getBean(DataAcquisition.class);
             List<String> cardIdList = dataAcquisition.getCardIdList(1);
@@ -153,7 +159,7 @@ public class VisionLocationMatchTask {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     try {
                         List<LocationPoint> locationPoints = dataAcquisition.getLocationAndUWBData(
-                                cardId, buildId, startTimeStrFinal, endTimeStrFinal);
+                                cardId, buildId, startTimeStrTag, endTimeStrTag);
 //                        List<LocationPoint> locationPoints = new ArrayList<>();
 //                        for (LocationPoint currentPoint : locationPointList){
 //                            // 判断是否靠近交通车附近
@@ -191,7 +197,8 @@ public class VisionLocationMatchTask {
 
             // 过滤出装卸车数据,只取eventType=load的数据
             List<VisionEvent> newVisionEvents = newVisionEventList.stream()
-                    .filter(event -> "load".equals(event.getEventType()))
+                    .filter(event -> "load".equals(event.getEventType())
+                            || "unload".equals(event.getEventType()))
                     .collect(Collectors.toList());
             log.info("获取到新的视觉识别数据，共 {} 条", newVisionEvents != null ? newVisionEvents.size() : 0);
             
@@ -324,36 +331,72 @@ public class VisionLocationMatchTask {
         for (int i = 0; i < matchedPoints.size(); i++) {
             VisionLocationMatchResult.MatchedLocationPoint matchedPoint = matchedPoints.get(i);
             LocationPoint dropOffPoint = matchedPoint.getLocationPoint();
+            VisionEvent visionEvent = matchedPoint.getVisionEvent();
             
             if (dropOffPoint == null || dropOffPoint.getTimestamp() == null) {
                 log.warn("卡ID: {} 的第 {} 个匹配点数据无效，跳过", cardId, i + 1);
                 continue;
             }
-            
+
+            if (visionEvent == null || visionEvent.getEventTime() == null) {
+                log.warn("卡ID: {} 的第 {} 个匹配点数据无效，跳过", cardId, i + 1);
+                continue;
+            }
             try {
-                // 计算数据区间
                 long endTimestamp = dropOffPoint.getTimestamp();
-                long startTimestamp;
-                
-                if (i == 0) {
-                    // 第一个数据：向前取5分钟的点作为起点
-                    startTimestamp = Math.max(0, endTimestamp - 5 * 60 * 1000L);
-                } else {
-                    // 找到上一个匹配点的下一个点作为起点
-                    LocationPoint prevDropOffPoint = matchedPoints.get(i - 1).getLocationPoint();
-                    long prevTimestamp = prevDropOffPoint.getTimestamp();
-                    // 找到历史数据中时间戳 > prevTimestamp 的第一个点
-                    startTimestamp = findNextPointTimestamp(historyPoints, prevTimestamp);
-                    int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
-                    if (startTimestamp > 0){
-                        startTimestamp = startTimestamp - index * 1000;
+                long startTimestamp = 0l;
+                // 装卸类型 0 装车 1 卸车
+                int eventType = 0;
+                if (visionEvent.getEventType().equals("load")){
+                    log.info("开始处理卡ID: {} 的第 {} 个卸车数据", cardId, i + 1);
+                    // 计算数据区间
+                    endTimestamp = dropOffPoint.getTimestamp();
+
+                    if (i == 0) {
+                        // 第一个数据：向前取5分钟的点作为起点
+                        startTimestamp = Math.max(0, endTimestamp - 5 * 60 * 1000L);
+                    } else {
+                        // 找到上一个匹配点的下一个点作为起点
+                        LocationPoint prevDropOffPoint = matchedPoints.get(i - 1).getLocationPoint();
+                        long prevTimestamp = prevDropOffPoint.getTimestamp();
+                        // 找到历史数据中时间戳 > prevTimestamp 的第一个点
+                        startTimestamp = findNextPointTimestamp(historyPoints, prevTimestamp);
+                        int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
+                        if (startTimestamp > 0){
+                            startTimestamp = startTimestamp - index * 1000;
+                        }
+                        if (startTimestamp < 0) {
+                            // 如果找不到，使用上一个时间戳 + 1秒
+                            startTimestamp = prevTimestamp + 1000 - index * 1000;
+                        }
                     }
-                    if (startTimestamp < 0) {
-                        // 如果找不到，使用上一个时间戳 + 1秒
-                        startTimestamp = prevTimestamp + 1000 - index * 1000;
+                } else if (visionEvent.getEventType().equals("unload")) {
+                    log.info("开始处理卡ID: {} 的第 {} 个卸车数据", cardId, i + 1);
+                    eventType = 1;
+                    // startTimestamp 使用当前卸车点的时间戳
+                    startTimestamp = dropOffPoint.getTimestamp();
+                    
+                    // 判断是否为最后一个点
+                    if (i == matchedPoints.size() - 1) {
+                        // 最后一个点：向后取5分钟
+                        endTimestamp = dropOffPoint.getTimestamp() + 5 * 60 * 1000L;
+                    } else {
+                        // 不是最后一个点：找到下一个匹配点的前一个点
+                        LocationPoint nextDropOffPoint = matchedPoints.get(i + 1).getLocationPoint();
+                        long nextTimestamp = nextDropOffPoint.getTimestamp();
+                        // 找到历史数据中时间戳 < nextTimestamp 的最后一个点
+                        long prevTimestamp = findPreviousPointTimestamp(historyPoints, nextTimestamp);
+                        int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
+                        if (prevTimestamp > 0) {
+                            endTimestamp = prevTimestamp - index * 1000;
+                        } else {
+                            // 如果找不到，使用下一个时间戳 - 1秒作为兜底
+                            endTimestamp = nextTimestamp - 1000 + index * 1000;
+                        }
                     }
                 }
-                
+                String start = DateTimeUtils.timestampToDateTimeStr(startTimestamp);
+                String end = DateTimeUtils.timestampToDateTimeStr(endTimestamp);
                 // 提取区间内的定位点
                 List<LocationPoint> intervalPoints = extractIntervalPoints(historyPoints, startTimestamp, endTimestamp);
                 if (intervalPoints.isEmpty()) {
@@ -361,21 +404,25 @@ public class VisionLocationMatchTask {
                     continue;
                 }
                 // 正向查找上车点
-                LocationPoint boardingPoint = findBoardingPoint(intervalPoints, historyPoints, strategy, cardId);
+                LocationPoint boardingPoint = findBoardingPoint(intervalPoints, historyPoints, strategy, cardId, eventType);
                 if (boardingPoint == null) {
                     log.warn("卡ID: {} 的第 {} 个匹配点，未找到上车点，跳过", cardId, i + 1);
                     continue;
                 }
-                
+                List<LocationPoint> sessionPoints = new ArrayList<>();
                 // 提取从上车点到下车点的轨迹点
-                List<LocationPoint> sessionPoints = extractSessionPoints(intervalPoints, boardingPoint, dropOffPoint);
+                if (eventType == 0){
+                    sessionPoints = extractSessionPoints(intervalPoints, boardingPoint, dropOffPoint);
+                }else if (eventType == 1){
+                    sessionPoints = extractSessionPoints(intervalPoints, dropOffPoint, boardingPoint);
+                }
                 if (sessionPoints.isEmpty()) {
                     log.warn("卡ID: {} 的第 {} 个匹配点，会话轨迹点为空，跳过", cardId, i + 1);
                     continue;
                 }
                 
                 // 入库
-                persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType);
+                persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType, eventType);
                 
                 log.info("卡ID: {} 的第 {} 个匹配点处理完成，上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
                         cardId, i + 1, 
@@ -388,7 +435,7 @@ public class VisionLocationMatchTask {
             }
         }
     }
-    
+
     /**
      * 找到历史数据中时间戳大于指定时间戳的第一个点的时间戳
      */
@@ -399,6 +446,21 @@ public class VisionLocationMatchTask {
             }
         }
         return -1;
+    }
+    
+    /**
+     * 找到历史数据中时间戳小于指定时间戳的最后一个点的时间戳
+     */
+    private long findPreviousPointTimestamp(List<LocationPoint> historyPoints, long timestamp) {
+        long result = -1;
+        for (LocationPoint point : historyPoints) {
+            if (point.getTimestamp() != null && point.getTimestamp() < timestamp) {
+                result = point.getTimestamp();
+            } else {
+                break; // 由于历史数据已按时间戳排序，找到第一个 >= timestamp 的点即可停止
+            }
+        }
+        return result;
     }
     
     /**
@@ -422,10 +484,11 @@ public class VisionLocationMatchTask {
      * 正向查找上车点
      * 从区间起点开始，逐点构造窗口，调用策略检测事件
      */
-    private LocationPoint findBoardingPoint(List<LocationPoint> intervalPoints, 
-                                           List<LocationPoint> historyPoints,
-                                           LoadingUnloadingStrategy strategy,
-                                           String cardId) {
+    private LocationPoint findBoardingPoint(List<LocationPoint> intervalPoints,
+                                            List<LocationPoint> historyPoints,
+                                            LoadingUnloadingStrategy strategy,
+                                            String cardId,
+                                            int eventType) {
         if (intervalPoints == null || intervalPoints.isEmpty()) {
             return null;
         }
@@ -458,16 +521,16 @@ public class VisionLocationMatchTask {
             
             // 调用策略检测事件
             try {
-                EventState eventState = strategy.detectEventAlready(filteredPoints, historyPoints, 0);
+                EventState eventState = strategy.detectEventAlready(filteredPoints, historyPoints, eventType);
                 if (eventState != null && eventState.getEvent() != null) {
                     BoardingDetector.Event event = eventState.getEvent();
                     // 检查是否是上车事件
-                    if (event == BoardingDetector.Event.CAR_SEND_BOARDING
-                            || event == BoardingDetector.Event.SEND_BOARDING
+                    if (event == BoardingDetector.Event.SEND_BOARDING
+                            || event == BoardingDetector.Event.ARRIVED_DROPPING
+                            || event == BoardingDetector.Event.CAR_SEND_BOARDING
+                            || event == BoardingDetector.Event.CAR_SEND_DROPPING
                             || event == BoardingDetector.Event.TRUCK_SEND_BOARDING
-                            || event == BoardingDetector.Event.CAR_ARRIVED_BOARDING
-                            || event == BoardingDetector.Event.ARRIVED_BOARDING
-                            || event == BoardingDetector.Event.TRUCK_ARRIVED_BOARDING) {
+                            || event == BoardingDetector.Event.TRUCK_ARRIVED_DROPPING) {
                         // 找到上车点，返回窗口中间的点
                         int centerIndex = windowStart + recordPointsSize / 2;
                         if (centerIndex < intervalPoints.size()) {
@@ -519,11 +582,12 @@ public class VisionLocationMatchTask {
     /**
      * 入库会话数据
      */
-    private void persistSession(String cardId, 
-                               LocationPoint boardingPoint, 
-                               LocationPoint dropOffPoint,
-                               List<LocationPoint> sessionPoints,
-                               LoadingStrategyFactory.VehicleType vehicleType) {
+    private void persistSession(String cardId,
+                                LocationPoint boardingPoint,
+                                LocationPoint dropOffPoint,
+                                List<LocationPoint> sessionPoints,
+                                LoadingStrategyFactory.VehicleType vehicleType,
+                                int eventType) {
         if (sessionPoints == null || sessionPoints.isEmpty()) {
             log.warn("卡ID: {} 的会话轨迹点为空，无法入库", cardId);
             return;
@@ -567,10 +631,24 @@ public class VisionLocationMatchTask {
             // 根据车辆类型和事件类型确定 type（这里默认使用发运装车类型，可根据实际需求调整）
             // 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库
             long type = 1L; // 默认发运装车
-            if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED) {
-                type = 2L; // 轿运车装车
+            if (vehicleType == LoadingStrategyFactory.VehicleType.TRAIN){
+                if (eventType == 0){
+                    type = 1L;
+                }else{
+                    type = 0L;
+                }
+            } else if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED) {
+                if (eventType == 0){
+                    type = 3L;
+                }else{
+                    type = 2L;
+                }
             } else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE) {
-                type = 4L; // 地跑入库
+                if (eventType == 0){
+                    type = 5L;
+                }else{
+                    type = 4L;
+                }
             }
             rec.setType(type);
             
