@@ -422,7 +422,7 @@ public class VisionLocationMatchTask {
                 }
                 
                 // 入库
-                persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType, eventType);
+                persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType, eventType, visionEvent);
                 
                 log.info("卡ID: {} 的第 {} 个匹配点处理完成，上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
                         cardId, i + 1, 
@@ -587,7 +587,8 @@ public class VisionLocationMatchTask {
                                 LocationPoint dropOffPoint,
                                 List<LocationPoint> sessionPoints,
                                 LoadingStrategyFactory.VehicleType vehicleType,
-                                int eventType) {
+                                int eventType,
+                                VisionEvent visionEvent) {
         if (sessionPoints == null || sessionPoints.isEmpty()) {
             log.warn("卡ID: {} 的会话轨迹点为空，无法入库", cardId);
             return;
@@ -627,7 +628,8 @@ public class VisionLocationMatchTask {
             rec.setStartTime(new Date(boardingPoint.getTimestamp()));
             rec.setEndTime(new Date(dropOffPoint.getTimestamp()));
             rec.setPointCount((long) detailList.size());
-            
+            rec.setVisionId(visionEvent.getId());
+            rec.setVehicleCode(visionEvent.getCarId());
             // 根据车辆类型和事件类型确定 type（这里默认使用发运装车类型，可根据实际需求调整）
             // 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库
             long type = 1L; // 默认发运装车

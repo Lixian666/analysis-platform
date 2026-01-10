@@ -12,7 +12,7 @@ public class VisionEvent implements Serializable {
     /**
      * 事件ID
      */
-    private Integer id;
+    private Long id;
 
     /**
      * 事件名称
@@ -83,11 +83,11 @@ public class VisionEvent implements Serializable {
         super();
     }
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
