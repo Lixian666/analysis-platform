@@ -23,6 +23,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="beaconName" column="beacon_name" />
         <result property="rfidName" column="rfid_name" />
         <result property="area" column="area" />
+        <result property="visionId" column="vision_id" />
+        <result property="vehicleCode" column="vehicle_code" />
     </resultMap>
 
     <resultMap type="com.jwzt.modules.experiment.domain.TakBehaviorRecords" id="TakBehaviorRecordsUserResult">
@@ -50,7 +52,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectTakBehaviorRecordsVo">
-        select id, card_id, yard_id, track_id, start_time, end_time, point_count, create_time, update_time, type, duration, state, beacon_name, rfid_name, area, match_status, matched_rfid_id, match_time from tak_behavior_records
+        select id, card_id, yard_id, track_id, start_time, end_time, point_count, create_time, update_time, type, duration, state, beacon_name, rfid_name, area, match_status, matched_rfid_id, match_time,  beacon_name, rfid_name, area, vision_id, vehicle_code from tak_behavior_records
     </sql>
     <sql id="selectTakBehaviorRecordsUserVo">
         SELECT
@@ -117,7 +119,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
     
     <select id="selectTakBehaviorRecordsById" parameterType="Long" resultMap="TakBehaviorRecordsTakBehaviorRecordDetailResult">
-        select id, card_id, yard_id, track_id, start_time, end_time, point_count, create_time, update_time, type, duration, state, match_status, matched_rfid_id, match_time
+        select id, card_id, yard_id, track_id, start_time, end_time, point_count, create_time, update_time, type, duration, state, match_status, matched_rfid_id, match_time, beacon_name, rfid_name, area, vision_id, vehicle_code
         from tak_behavior_records
         where id = #{id}
     </select>
@@ -156,6 +158,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="beaconName != null">beacon_name,</if>
             <if test="rfidName != null">rfid_name,</if>
             <if test="area != null">area,</if>
+            <if test="visionId != null">vision_id,</if>
+            <if test="vehicleCode != null">vehicle_code,</if>
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="id != null and cardId != ''">#{id},</if>
@@ -176,6 +180,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="beaconName != null">#{beaconName},</if>
             <if test="rfidName != null">#{rfidName},</if>
             <if test="area != null">#{area},</if>
+            <if test="visionId != null">#{visionId},</if>
+            <if test="vehicleCode != null">#{vehicleCode},</if>
          </trim>
     </insert>
 
@@ -199,6 +205,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="beaconName != null">beacon_name = #{beaconName},</if>
             <if test="rfidName != null">beacon_rfid_name = #{rfidName},</if>
             <if test="area != null">beacon_area = #{area},</if>
+            <if test="visionId != null">beacon_vision_id = #{visionId},</if>
+            <if test="vehicleCode != null">vehicle_code = #{vehicleCode},</if>
         </trim>
         where id = #{id}
     </update>

@@ -140,6 +140,11 @@ public class TakBehaviorRecords extends BaseEntity {
     /** 会话最常命中的信标区域 */
     private String area;
 
+    /** 视觉匹配ID */
+    private Long visionId;
+    /** VIN码 */
+    private String vehicleCode;
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -302,6 +307,12 @@ public class TakBehaviorRecords extends BaseEntity {
     public void setRfidName(String rfidName) { this.rfidName = rfidName; }
     public String getArea() { return area; }
     public void setArea(String area) { this.area = area; }
+
+    public Long getVisionId() { return visionId; }
+    public void setVisionId(Long visionId) { this.visionId = visionId; }
+
+    public String getVehicleCode() { return vehicleCode; }
+    public void setVehicleCode(String vehicleCode) { this.vehicleCode = vehicleCode; }
 
     @Override
     public String toString() {
