@@ -70,6 +70,11 @@ public class VisionEvent implements Serializable {
     private String carNumber;
 
     /**
+     * vin码
+     */
+    private String vin;
+
+    /**
      * 创建时间
      */
     private String createDate;
@@ -170,6 +175,9 @@ public class VisionEvent implements Serializable {
     public void setCarNumber(String carNumber) {
         this.carNumber = carNumber;
     }
+
+    public String getVin() { return vin; }
+    public void setVin(String vin) { this.vin = vin; }
 
     public String getCreateDate() {
         return createDate;
