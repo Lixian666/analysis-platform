@@ -629,7 +629,7 @@ public class VisionLocationMatchTask {
             rec.setEndTime(new Date(dropOffPoint.getTimestamp()));
             rec.setPointCount((long) detailList.size());
             rec.setVisionId(visionEvent.getId());
-            rec.setVehicleCode(visionEvent.getCarId());
+            rec.setVehicleCode(visionEvent.getVin());
             // 根据车辆类型和事件类型确定 type（这里默认使用发运装车类型，可根据实际需求调整）
             // 0 到达卸车 1 发运装车 2 轿运车装车 3 轿运车卸车 4地跑入库 5 地跑出库
             long type = 1L; // 默认发运装车
