@@ -41,12 +41,12 @@ public class VisionLocationMatcher {
     /**
      * 两数据相邻时间间隔：10秒
      */
-    private static final long DEFAULT_TIME_INTERVAL_MS_SHORT = 40 * 1000L;
+    private static final long DEFAULT_TIME_INTERVAL_MS_SHORT = 10 * 1000L;
     
     /**
      * 匹配距离阈值（米）：5米
      */
-    private static final double MATCH_DISTANCE_THRESHOLD = 8.0;
+    private static final double MATCH_DISTANCE_THRESHOLD = 15.0;
     
     /**
      * 历史定位数据存储（线程安全）
@@ -319,22 +319,32 @@ public class VisionLocationMatcher {
 
                     boolean inTheTrafficCar = isInTheTrafficCar(beforePoints);
                     if (inTheTrafficCar) {
-                        log.warn("视觉事件【{}】交通车匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
+//                        log.warn("视觉事件【{}】交通车匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
                         continue;
                     }
 
                     // 选择最优：先比距离，再比时间差，完全相同取定位时间更早的点
-                    if (bestMatch == null
-                            || distance < bestMatch.getDistance()
-                            || (distance == bestMatch.getDistance() && timeDiff < bestMatch.getTimeDiff())
-                            || (distance == bestMatch.getDistance() && timeDiff == bestMatch.getTimeDiff()
-                                && locationPoint.getTimestamp() < bestMatch.getLocationPoint().getTimestamp())) {
+//                    if (bestMatch == null || timeDiff < bestMatch.getTimeDiff()) {
+//                        bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
+//                                locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
+//                        );
+//                    }
+                    if (bestMatch == null || distance < bestMatch.getDistance()) {
                         bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
                                 locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
                         );
                     }
                 }
+                bestMatchedPoints.add(bestMatch);
+                bestMatch = null;
                 beforePoints.clear();
+            }
+
+            if (bestMatchedPoints.size() > 1) {
+                bestMatch = bestMatchedPoints.stream()
+                    .filter(Objects::nonNull)
+                    .min(Comparator.comparingLong(m -> m.getLocationPoint().getTimestamp()))
+                    .orElse(null);
             }
 
             if (bestMatch != null) {
