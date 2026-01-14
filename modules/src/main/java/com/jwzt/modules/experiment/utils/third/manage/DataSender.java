@@ -57,6 +57,7 @@ public class DataSender {
             request.setWeft(String.valueOf(sess.startLatitude));
             request.setRegionType(2);
             request.setCarType("car");
+            request.setVehicleCode(sess.vin);
         }
         JSONObject result = centerWorkHttpUtils.vehicleEntryAndExit(request);
         System.out.println("推送车辆进场信息：" + result);
@@ -88,6 +89,7 @@ public class DataSender {
             request.setWeft(String.valueOf(sess.endLatitude));
             request.setRegionType(2);
             request.setCarType("car");
+            request.setVehicleCode(sess.vin);
         }
         JSONObject result = centerWorkHttpUtils.vehicleEntryAndExit(request);
         System.out.println("推送车辆出场信息：" + result);
@@ -119,6 +121,7 @@ public class DataSender {
             request.setWeft(String.valueOf(sess.endLatitude));
             request.setRegionType(4);
             request.setCarType("car");
+            request.setVehicleCode(sess.vin);
         }
         if (vehicleType == RealTimeDriverTracker.VehicleType.CAR){
             if (sess.kind == RealTimeDriverTracker.EventKind.CAR_ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.CAR_SEND){
@@ -130,6 +133,7 @@ public class DataSender {
                 request.setWeft(String.valueOf(sess.endLatitude));
                 request.setRegionType(1);
                 request.setCarType("car");
+                request.setVehicleCode(sess.vin);
             }
             if (sess.kind == RealTimeDriverTracker.EventKind.ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.SEND){
                 request.setType(0);
@@ -140,6 +144,7 @@ public class DataSender {
                 request.setWeft(String.valueOf(sess.endLatitude));
                 request.setRegionType(2);
                 request.setCarType("car");
+                request.setVehicleCode(sess.vin);
             }
 
         }
@@ -173,6 +178,7 @@ public class DataSender {
             request.setWeft(String.valueOf(sess.startLatitude));
             request.setRegionType(2);
             request.setCarType("car");
+            request.setVehicleCode(sess.vin);
         }
         JSONObject result = centerWorkHttpUtils.assignmentRecord(request);
         System.out.println("推送车辆出库信息：" + result);

@@ -1,5 +1,6 @@
 package com.ruoyi.quartz.task;
 
+import com.jwzt.modules.experiment.RealTimeDriverTracker;
 import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.BoardingDetector;
@@ -7,6 +8,7 @@ import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail;
 import com.jwzt.modules.experiment.domain.TakBehaviorRecords;
 import com.jwzt.modules.experiment.domain.TakBeaconInfo;
+import com.jwzt.modules.experiment.utils.third.manage.DataSender;
 import com.jwzt.modules.experiment.vo.EventState;
 import com.jwzt.modules.experiment.domain.vo.VisionLocationMatchResult;
 import com.jwzt.modules.experiment.filter.OutlierFilter;
@@ -72,12 +74,50 @@ public class VisionLocationMatchTask {
     
     @Autowired
     private LoadingStrategyFactory loadingStrategyFactory;
+
+    @Autowired
+    private DataSender dataSender;
     
     @Resource
     private ITakBehaviorRecordsService iTakBehaviorRecordsService;
     
     @Resource
     private ITakBehaviorRecordDetailService iTakBehaviorRecordDetailService;
+
+    /**
+     * 获取定位数据（仅异常触发重试，最多3次），指数退避：200ms/400ms/800ms
+     * 不对“返回空数据”做重试，避免改变现有语义。
+     */
+    private List<LocationPoint> fetchLocationWithRetry(DataAcquisition dataAcquisition,
+                                                       String cardId,
+                                                       String buildId,
+                                                       String startTimeStrTag,
+                                                       String endTimeStrTag) {
+        final int maxAttempts = 3;
+        final long baseDelayMs = 200L;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return dataAcquisition.getLocationAndUWBData(cardId, buildId, startTimeStrTag, endTimeStrTag);
+            } catch (Exception e) {
+                if (attempt < maxAttempts) {
+                    long delayMs = baseDelayMs << (attempt - 1); // 200, 400, 800
+                    log.warn("获取定位数据失败，准备重试：cardId={}, attempt={}/{}, delayMs={}, err={}",
+                            cardId, attempt, maxAttempts, delayMs, e.toString());
+                    try {
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.warn("重试等待被中断，停止重试：cardId={}, attempt={}/{}", cardId, attempt, maxAttempts);
+                        return null;
+                    }
+                } else {
+                    log.error("获取定位数据失败（重试耗尽），卡ID: {}", cardId, e);
+                }
+            }
+        }
+        return null;
+    }
     
     /**
      * 执行匹配任务
@@ -90,9 +130,10 @@ public class VisionLocationMatchTask {
             // 1. 获取当前时间范围（最近1分钟）
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
-            Date startTime = new Date(now.getTime() - 60 * 1000L); // 当前时间前1分钟
+            Date startTime = new Date(now.getTime() - 20 * 60 * 1000L); // 当前时间前1分钟
+            Date endTime = new Date(now.getTime() - 10 * 60 * 1000L); // 当前时间前1分钟
             String startTimeStr = sdf.format(startTime);
-            String endTimeStr = sdf.format(now);
+            String endTimeStr = sdf.format(endTime);
             if (startStr != null && !startStr.isEmpty() && endStr != null && !endStr.isEmpty()) {
                 startTimeStr = startStr;
                 endTimeStr = endStr;
@@ -158,8 +199,8 @@ public class VisionLocationMatchTask {
             for (String cardId : cardIdList) {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     try {
-                        List<LocationPoint> locationPoints = dataAcquisition.getLocationAndUWBData(
-                                cardId, buildId, startTimeStrTag, endTimeStrTag);
+                        List<LocationPoint> locationPoints = fetchLocationWithRetry(
+                                dataAcquisition, cardId, buildId, startTimeStrTag, endTimeStrTag);
 //                        List<LocationPoint> locationPoints = new ArrayList<>();
 //                        for (LocationPoint currentPoint : locationPointList){
 //                            // 判断是否靠近交通车附近
@@ -200,6 +241,10 @@ public class VisionLocationMatchTask {
                     .filter(event -> "load".equals(event.getEventType())
                             || "unload".equals(event.getEventType()))
                     .collect(Collectors.toList());
+            // 将新视觉事件的 matched 字段全部置为 1
+            if (newVisionEvents != null && !newVisionEvents.isEmpty()) {
+                newVisionEvents.forEach(event -> event.setMatched(1));
+            }
             log.info("获取到新的视觉识别数据，共 {} 条", newVisionEvents != null ? newVisionEvents.size() : 0);
             
             // 7. 追加到历史数据
@@ -239,6 +284,7 @@ public class VisionLocationMatchTask {
             Map<String, List<VisionLocationMatchResult.MatchedLocationPoint>> groupedResults = matchResults.stream()
                     .flatMap(result -> result.getMatchedLocationPoints().stream())
                     .filter(mp -> mp.getCardId() != null && mp.getLocationPoint() != null && mp.getLocationPoint().getTimestamp() != null)
+                    .filter(mp -> mp.getVisionEvent().getMatched() != 0)
                     .collect(Collectors.groupingBy(
                             VisionLocationMatchResult.MatchedLocationPoint::getCardId,
                             Collectors.collectingAndThen(
@@ -249,15 +295,24 @@ public class VisionLocationMatchTask {
                                     }
                             )
                     ));
-            
+
             log.info("按 cardId 分组完成，共 {} 个不同的卡", groupedResults.size());
-            groupedResults.forEach((cardId, points) -> 
+            groupedResults.forEach((cardId, points) ->
                     log.info("卡ID: {}, 匹配点数: {}", cardId, points.size())
             );
-            
+
             // 12、对识别数据按卡进行处理，采用异步方式处理，以卡id异步处理
             if (!groupedResults.isEmpty()) {
                 processMatchedPointsByCard(groupedResults);
+            }
+
+            // 13、初始化历史数据
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(new Date());
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            if (hour == 3) { // 凌晨3点
+                log.info("开始执行清理历史数据任务");
+                visionLocationMatcher.initHistoryData();
             }
 
         } catch (Exception e) {
@@ -332,6 +387,9 @@ public class VisionLocationMatchTask {
             VisionLocationMatchResult.MatchedLocationPoint matchedPoint = matchedPoints.get(i);
             LocationPoint dropOffPoint = matchedPoint.getLocationPoint();
             VisionEvent visionEvent = matchedPoint.getVisionEvent();
+            if (visionEvent.getId() == 13740L){
+                log.info("开始处理卡ID: {} 的第 {} 个上车数据", cardId, i + 1);
+            }
             
             if (dropOffPoint == null || dropOffPoint.getTimestamp() == null) {
                 log.warn("卡ID: {} 的第 {} 个匹配点数据无效，跳过", cardId, i + 1);
@@ -420,10 +478,49 @@ public class VisionLocationMatchTask {
                     log.warn("卡ID: {} 的第 {} 个匹配点，会话轨迹点为空，跳过", cardId, i + 1);
                     continue;
                 }
-                
+
+                // 生成统一的 trackId
+                String trackId = IdUtils.fastSimpleUUID();
+
                 // 入库
-                persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType, eventType, visionEvent);
-                
+                int inboundStatus = persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType, eventType, visionEvent, trackId);
+                if (inboundStatus == 0){
+                    for (VisionEvent visionEventHistory : visionLocationMatcher.getHistoryVisionData())
+                        if (visionEventHistory.getId().equals(visionEvent.getId())){
+                            visionEventHistory.setMatched(0);
+                        }
+                }
+
+                // 推送数据
+                RealTimeDriverTracker.TrackSession sess = new RealTimeDriverTracker.TrackSession();
+                sess.sessionId = trackId;
+                sess.cardId = cardId;
+                sess.startTime = sessionPoints.get(0).getTimestamp();
+                sess.startLongitude = sessionPoints.get(0).getLongitude();
+                sess.startLatitude = sessionPoints.get(0).getLatitude();
+                sess.endTime = sessionPoints.get(sessionPoints.size() - 1).getTimestamp();
+                sess.endLongitude = sessionPoints.get(sessionPoints.size() - 1).getLongitude();
+                sess.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
+                sess.points.addAll(sessionPoints);
+                sess.vin = visionEvent.getVin();
+                if (visionEvent.getEventType().equals("load")){
+                    sess.kind = RealTimeDriverTracker.EventKind.SEND;
+                    // 发运
+                    dataSender.outParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    for (LocationPoint p : sessionPoints){
+                        dataSender.trackPush(null, p, sess, RealTimeDriverTracker.VehicleType.CAR);
+                    }
+                    dataSender.outYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                } else if (visionEvent.getEventType().equals("unload")){
+                    sess.kind = RealTimeDriverTracker.EventKind.ARRIVED;
+                    // 到达
+                    dataSender.inYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    for (LocationPoint p : sessionPoints){
+                        dataSender.trackPush(null, p, sess, RealTimeDriverTracker.VehicleType.CAR);
+                    }
+                    dataSender.inParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                }
+
                 log.info("卡ID: {} 的第 {} 个匹配点处理完成，上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
                         cardId, i + 1, 
                         DateTimeUtils.timestampToDateTimeStr(boardingPoint.getTimestamp()),
@@ -586,22 +683,20 @@ public class VisionLocationMatchTask {
     /**
      * 入库会话数据
      */
-    private void persistSession(String cardId,
+    private int persistSession(String cardId,
                                 LocationPoint boardingPoint,
                                 LocationPoint dropOffPoint,
                                 List<LocationPoint> sessionPoints,
                                 LoadingStrategyFactory.VehicleType vehicleType,
                                 int eventType,
-                                VisionEvent visionEvent) {
+                                VisionEvent visionEvent,
+                                String trackId) {
         if (sessionPoints == null || sessionPoints.isEmpty()) {
             log.warn("卡ID: {} 的会话轨迹点为空，无法入库", cardId);
-            return;
+            return 1;
         }
         
         try {
-            // 生成统一的 trackId
-            String trackId = IdUtils.fastSimpleUUID();
-            
             // 1) 详情表
             List<TakBehaviorRecordDetail> detailList = new ArrayList<>(sessionPoints.size());
             for (LocationPoint p : sessionPoints) {
@@ -621,7 +716,7 @@ public class VisionLocationMatchTask {
             
             if (detailList.isEmpty()) {
                 log.warn("卡ID: {} 的详情列表为空，无法入库", cardId);
-                return;
+                return 1;
             }
             
             // 2) 主表
@@ -674,10 +769,10 @@ public class VisionLocationMatchTask {
             iTakBehaviorRecordDetailService.insertTakBehaviorRecordDetailAll(detailList);
             
             log.info("卡ID: {} 的会话数据入库成功，trackId: {}, 点数: {}", cardId, trackId, detailList.size());
-            
+            return 0;
         } catch (Exception e) {
             log.error("卡ID: {} 的会话数据入库失败", cardId, e);
-            throw e;
+            return 2;
         }
     }
     

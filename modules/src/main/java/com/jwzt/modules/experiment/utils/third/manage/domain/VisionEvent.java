@@ -84,6 +84,12 @@ public class VisionEvent implements Serializable {
      */
     private String updateDate;
 
+    /**
+     * 匹配标识
+     * 0：已匹配 1：未匹配
+     */
+    private Integer matched;
+
     public VisionEvent() {
         super();
     }
@@ -194,5 +200,8 @@ public class VisionEvent implements Serializable {
     public void setUpdateDate(String updateDate) {
         this.updateDate = updateDate;
     }
+
+    public Integer getMatched() { return matched; }
+    public void setMatched(Integer matched) { this.matched = matched; }
 }
 

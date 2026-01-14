@@ -14,7 +14,7 @@ JAR_PATH="${DEPLOY_DIR}/${JAR_NAME}"
 PID_FILE="${DEPLOY_DIR}/${APP_NAME}.pid"
 
 # JVM参数配置
-JVM_OPTS="-Xms512m -Xmx2048m"
+JVM_OPTS="-Xms512m -Xmx8192m"
 JVM_OPTS="${JVM_OPTS} -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=512m"
 JVM_OPTS="${JVM_OPTS} -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 JVM_OPTS="${JVM_OPTS} -XX:+HeapDumpOnOutOfMemoryError"
