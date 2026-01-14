@@ -550,8 +550,12 @@ public class VisionLocationMatchTask {
                 return point;
             }
         }
-        
-        return null;
+
+        // 如果还是没有上下车点，则取intervalPoints的第一个点
+        if (intervalPoints.size() > (recordPointsSize / 2)){
+            return intervalPoints.get(recordPointsSize / 2);
+        }
+        return intervalPoints.get(0);
     }
     
     /**
