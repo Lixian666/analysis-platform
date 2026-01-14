@@ -40,7 +40,7 @@
        >批量删除</el-button>
      </div>
 
-    <div v-loading="dataTable_loading" class="main main_novw">
+    <div v-loading="dataTable_loading" class="main main_novw table-container">
       <el-table :data="TaskList" border style="width: 100%" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column align="center" label="卡ID" class="mainCell1">
@@ -128,7 +128,7 @@
         </el-table-column>
       </el-table>
     </div>
-    <div class="paging" style="padding: 10px 19px; background: #fff;">
+    <div class="paging">
       <pagination
         v-show="listQuery.total > 0"
         :total="listQuery.total"
@@ -289,8 +289,14 @@ function handleQuery() {
 }
 
 // 查询功能 - 后端查询
-function search() {
+function search(params) {
   dataTable_loading.value = true
+  
+  // 如果分页组件传递了参数，更新分页信息
+  if (params) {
+    listQuery.value.pageNum = params.page
+    listQuery.value.pageSize = params.limit
+  }
   
   // 构建查询参数
   const queryParams = {
@@ -476,6 +482,9 @@ function formatTimeLong(num) {
   // background-color: #04262b;
   height: calc(100vh - 84px);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
   .title {
     border-width: 0px;
@@ -557,14 +566,6 @@ function formatTimeLong(num) {
     .el-tabs__content {
       padding: 0;
       // height: calc(100% - 55px); // 移除固定高度，让内容自适应
-
-      .el-tab-pane {
-        // height: 100%; // 移除固定高度
-
-        .main_novw {
-          // height: calc(100% - 60px); // 移除固定高度，让表格自适应内容
-        }
-      }
     }
   }
 }
@@ -774,6 +775,18 @@ function formatTimeLong(num) {
 //任务列表开始
 .main {
   margin: 0 19px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .main .el-table {
@@ -819,7 +832,9 @@ function formatTimeLong(num) {
 }
 
 .main_novw .el-table {
-  // height: 100%; // 移除固定高度，让表格自适应内容
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 
   ::v-deep {
 
@@ -854,6 +869,7 @@ function formatTimeLong(num) {
         display: -webkit-box;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         /* 表示最多显示两行文本 */
         overflow: hidden;
         text-overflow: ellipsis;
@@ -862,6 +878,7 @@ function formatTimeLong(num) {
     }
 
     .el-table__header-wrapper {
+      flex-shrink: 0;
       .el-table__header {
         background-color: blue;
 
@@ -875,9 +892,9 @@ function formatTimeLong(num) {
     }
 
     .el-table__body-wrapper {
-
-      // height: calc(100% - 45px);
-      // overflow-y: auto;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
       .el-table__body {
         td {
           padding: 4.098px 0;
@@ -897,6 +914,12 @@ function formatTimeLong(num) {
 
 //任务列表结束
 //翻页开始
+.paging {
+  flex-shrink: 0;
+  padding: 10px 19px;
+  background: #fff;
+  border-top: 1px solid #e4e4e4;
+}
 
 .pagination-container ::v-deep .el-pagination {
   display: flex;

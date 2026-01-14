@@ -40,7 +40,7 @@ public class TakBehaviorRecordsController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(TakBehaviorRecords takBehaviorRecords)
     {
-//        startPage();
+        startPage();
         List<TakBehaviorRecords> list = takBehaviorRecordsService.selectTakBehaviorRecordsList(takBehaviorRecords);
         return getDataTable(list);
     }
@@ -52,7 +52,7 @@ public class TakBehaviorRecordsController extends BaseController
     @GetMapping("/userList")
     public TableDataInfo userList(TakBehaviorRecords takBehaviorRecords)
     {
-//        startPage();
+        startPage();
         List<TakBehaviorRecords> list = takBehaviorRecordsService.selectTakBehaviorRecordsUserList(takBehaviorRecords);
         return getDataTable(list);
     }
