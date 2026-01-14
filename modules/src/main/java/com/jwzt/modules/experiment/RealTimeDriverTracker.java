@@ -102,7 +102,7 @@ public class RealTimeDriverTracker {
         /** 板车装卸 */
         TRUCK, 
         /** 火车装卸 */
-        CAR 
+        CAR
     }
 
     /** 每张卡的运行态 */
@@ -130,6 +130,7 @@ public class RealTimeDriverTracker {
         public String beaconName; // 最常命中的信标名称
         public String rfidName; // 最常命中的信标RFID名称
         public String area; // 最常命中的信标区域
+        public String vin; // 车辆vin码
         public final List<LocationPoint> points = new ArrayList<>();
     }
 

@@ -1,12 +1,12 @@
 package com.jwzt.modules.experiment.utils;
 
 import com.jwzt.modules.experiment.config.BaseConfig;
-import com.jwzt.modules.experiment.config.FilterConfig;
 import com.jwzt.modules.experiment.domain.Coordinate;
 import com.jwzt.modules.experiment.domain.LocationPoint;
 import com.jwzt.modules.experiment.domain.vo.VisionLocationMatchResult;
 import com.jwzt.modules.experiment.utils.third.manage.domain.VisionEvent;
 import com.jwzt.modules.experiment.utils.third.zq.TagAndBeaconDistanceDeterminer;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,11 +53,19 @@ public class VisionLocationMatcher {
      * Key: cardId, Value: 定位点列表（按时间排序）
      */
     private final Map<String, List<LocationPoint>> historyLocationData = new ConcurrentHashMap<>();
-    
+
+    // 返回副本，保证线程安全
     /**
      * 历史视觉识别数据存储（线程安全）
      * 按时间排序
+     * -- GETTER --
+     *  获取的历史视觉事件数据
+     *  返回数据的副本，保证线程安全
+     *
+     * @return 历史视觉事件数据列表（按时间排序），如果卡不存在则返回空列表
+
      */
+    @Getter
     private final List<VisionEvent> historyVisionData = Collections.synchronizedList(new ArrayList<>());
     
     /**
@@ -277,12 +285,15 @@ public class VisionLocationMatcher {
         for (VisionEvent visionEvent : visionGroup) {
             long visionTimestamp = getVisionEventTimestamp(visionEvent);
             if (visionEvent.getLongitude() == null || visionEvent.getLatitude() == null) {
-                log.warn("视觉事件缺少经纬度信息，跳过匹配。事件ID: {}", visionEvent.getId());
+//                log.warn("视觉事件缺少经纬度信息，跳过匹配。事件ID: {}", visionEvent.getId());
                 continue;
             }
 
             VisionLocationMatchResult.MatchedLocationPoint bestMatch = null;
-
+            List<VisionLocationMatchResult.MatchedLocationPoint> bestMatchedPoints = new ArrayList<>();
+            if (visionEvent.getId() == 13740L){
+                System.out.println("aaaa");
+            }
             // 遍历所有卡的定位数据
             for (Map.Entry<String, List<LocationPoint>> entry : locationData.entrySet()) {
                 List<LocationPoint> locationPoints = entry.getValue();
@@ -348,7 +359,7 @@ public class VisionLocationMatcher {
             }
 
             if (bestMatch != null) {
-                log.warn("视觉事件【{}】匹配成功。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, bestMatch.getCardId(), visionEvent.getId(), bestMatch.getLocationPoint().getAcceptTime(), visionEvent.getEventTime(), bestMatch.getDistance());
+//                log.warn("视觉事件【{}】匹配成功。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, bestMatch.getCardId(), visionEvent.getId(), bestMatch.getLocationPoint().getAcceptTime(), visionEvent.getEventTime(), bestMatch.getDistance());
                 result.getMatchedLocationPoints().add(bestMatch);
                 locationData.remove(bestMatch.getCardId());
             }
@@ -456,6 +467,15 @@ public class VisionLocationMatcher {
         }
         // 返回副本，保证线程安全
         return new ArrayList<>(data);
+    }
+
+    /**
+     * 初始化历史数据
+     */
+    public void initHistoryData() {
+        historyLocationData.clear();
+        historyVisionData.clear();
+        visionGroups.clear();
     }
 }
 
