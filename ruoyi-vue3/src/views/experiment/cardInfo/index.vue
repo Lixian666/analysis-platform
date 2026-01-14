@@ -201,7 +201,9 @@ const typeOptions = [
 ];
 const bizTypeOptions = [
   { label: "板车", value: "0" },
-  { label: "火车", value: "1" }
+  { label: "火车", value: "1" },
+  { label: "交通车", value: "2" },
+  { label: "其他", value: "10" }
 ];
 const enabledOptions = [
   { label: "启用", value: 0 },

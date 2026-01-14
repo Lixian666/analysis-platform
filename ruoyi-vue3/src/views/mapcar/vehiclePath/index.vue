@@ -23,7 +23,7 @@
          />
        </div>
        <div class="TopRight TopRight_novw">
-         <el-button type="success" @click="search">查询</el-button>
+         <el-button type="success" @click="handleQuery">查询</el-button>
          <el-button type="info" @click="reset">重置</el-button>
        </div>
      </div>
@@ -41,7 +41,7 @@
      </div>
 
     <div v-loading="dataTable_loading" class="main main_novw">
-      <el-table :data="TaskList" border style="width: 100%" height="100%" @selection-change="handleSelectionChange">
+      <el-table :data="TaskList" border style="width: 100%" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column align="center" label="卡ID" class="mainCell1">
           <template v-slot="scope">
@@ -128,15 +128,15 @@
         </el-table-column>
       </el-table>
     </div>
-    <!-- <div class="paging">
-           <pagination
-             v-show="listQuery.total != 0"
-             :total="listQuery.total"
-             :page="listQuery.page"
-             :limit="listQuery.limit"
-             @pagination="getPagination"
-           />
-         </div> -->
+    <div class="paging" style="padding: 10px 19px; background: #fff;">
+      <pagination
+        v-show="listQuery.total > 0"
+        :total="listQuery.total"
+        v-model:page="listQuery.pageNum"
+        v-model:limit="listQuery.pageSize"
+        @pagination="search"
+      />
+    </div>
 
     <!-- <add-assignment
        v-show="dialogVisible"
@@ -160,8 +160,8 @@ const router = useRouter()
 
 //data return start
 const listQuery = ref({
-  page: 1, // 当前表格显示第几页数据
-  limit: 20, // 表格一页显示几条数据
+  pageNum: 1, // 当前表格显示第几页数据
+  pageSize: 20, // 表格一页显示几条数据
   total: 0,
   searcher: {
     cardId: '',      // 卡ID
@@ -248,10 +248,15 @@ function getcartype(val) {
 async function init() {
   dataTable_loading.value = true
   try {
-    let res = await getexperimentuserlist()
+    const queryParams = {
+      pageNum: listQuery.value.pageNum,
+      pageSize: listQuery.value.pageSize
+    }
+    let res = await getexperimentuserlist(queryParams)
     // console.log('ngsb',res)
     if ((res.code == 200 || res.code == '200') && res.rows) {
       TaskList.value = res.rows
+      listQuery.value.total = res.total || 0
     }
   } finally {
     dataTable_loading.value = false
@@ -277,12 +282,21 @@ function formatDate(date) {
   return `${year}-${month}-${day}`
 }
 
+// 搜索按钮操作
+function handleQuery() {
+  listQuery.value.pageNum = 1
+  search()
+}
+
 // 查询功能 - 后端查询
 function search() {
   dataTable_loading.value = true
   
   // 构建查询参数
-  const queryParams = {}
+  const queryParams = {
+    pageNum: listQuery.value.pageNum,
+    pageSize: listQuery.value.pageSize
+  }
   
   // 卡ID
   if (listQuery.value.searcher.cardId && listQuery.value.searcher.cardId.trim() !== '') {
@@ -312,6 +326,7 @@ function search() {
   getexperimentuserlist(queryParams).then(res => {
     if ((res.code == 200 || res.code == '200') && res.rows) {
       TaskList.value = res.rows
+      listQuery.value.total = res.total || 0
     }
     dataTable_loading.value = false
   }).catch(err => {
@@ -325,6 +340,8 @@ function reset() {
   listQuery.value.searcher.cardId = ''
   listQuery.value.searcher.yardId = ''
   listQuery.value.searcher.taskDate = []
+  listQuery.value.pageNum = 1
+  listQuery.value.pageSize = 20
   init()
 }
 
@@ -539,13 +556,13 @@ function formatTimeLong(num) {
 
     .el-tabs__content {
       padding: 0;
-      height: calc(100% - 55px);
+      // height: calc(100% - 55px); // 移除固定高度，让内容自适应
 
       .el-tab-pane {
-        height: 100%;
+        // height: 100%; // 移除固定高度
 
         .main_novw {
-          height: calc(100% - 60px);
+          // height: calc(100% - 60px); // 移除固定高度，让表格自适应内容
         }
       }
     }
@@ -734,10 +751,7 @@ function formatTimeLong(num) {
     .el-popover__reference-wrapper {
       .littesea {
         width: 20px;
-
       }
-
-      .el-icon-search {}
     }
   }
 }
@@ -805,7 +819,7 @@ function formatTimeLong(num) {
 }
 
 .main_novw .el-table {
-  height: 100%;
+  // height: 100%; // 移除固定高度，让表格自适应内容
 
   ::v-deep {
 
