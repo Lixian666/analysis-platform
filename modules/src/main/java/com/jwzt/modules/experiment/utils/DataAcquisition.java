@@ -354,9 +354,18 @@ public class DataAcquisition {
             } catch (Exception e){
 //                System.out.println(point.getAcceptTime() + "信标距离计算处理异常: " + e.getMessage() );
             }
-            // 计算位置经纬度
-//            LocationSolver locationSolver = new LocationSolver();
-//            DriverLocation results = locationSolver.calculateUserLocation(deviceReport);
+//            try {
+//                // 计算位置经纬度
+//                LocationSolver locationSolver = new LocationSolver();
+//                DriverLocation results = locationSolver.calculateUserLocation(deviceReport);
+//                if (results.getLon() > 0 && results.getLat() > 0){
+//                    point.setLongitude(results.getLon());
+//                    point.setLatitude(results.getLat());
+//                }
+//            } catch (Exception e){
+////                System.out.println(point.getAcceptTime() + "位置经纬度计算处理异常: " + e.getMessage() );
+//            }
+
         }
 
         return LocationPoints;
