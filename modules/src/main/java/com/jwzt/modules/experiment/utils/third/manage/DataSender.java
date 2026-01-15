@@ -30,12 +30,13 @@ public class DataSender {
      */
     public JSONObject inYardPush(RealTimeDriverTracker.TrackSession sess, RealTimeDriverTracker.VehicleType vehicleType) {
         if (!pushData){
-            return JSONObject.parseObject("{\n" +
-                    "code\":20000,\n" +
-                    "message\":\"不推送数据\",\n" +
-                    "data\":{},\n" +
-                    "success\":true\n" +
-                    "}");
+            // 不推送数据时，直接构造返回对象，避免无效 JSON 解析
+            JSONObject result = new JSONObject();
+            result.put("code", 50000);
+            result.put("message", "不推送数据");
+            result.put("data", new JSONObject());
+            result.put("success", true);
+            return result;
         }
         VehicleEntryExitRequest request = new VehicleEntryExitRequest();
         if (vehicleType == RealTimeDriverTracker.VehicleType.TRUCK) {
@@ -72,12 +73,13 @@ public class DataSender {
      */
     public JSONObject outYardPush(RealTimeDriverTracker.TrackSession sess, RealTimeDriverTracker.VehicleType vehicleType) {
         if (!pushData){
-            return JSONObject.parseObject("{\n" +
-                    "code\":20000,\n" +
-                    "message\":\"不推送数据\",\n" +
-                    "data\":{},\n" +
-                    "success\":true\n" +
-                    "}");
+            // 不推送数据时，直接构造返回对象，避免无效 JSON 解析
+            JSONObject result = new JSONObject();
+            result.put("code", 50000);
+            result.put("message", "不推送数据");
+            result.put("data", new JSONObject());
+            result.put("success", true);
+            return result;
         }
         VehicleEntryExitRequest request = new VehicleEntryExitRequest();
         if (vehicleType == RealTimeDriverTracker.VehicleType.CAR) {
@@ -104,12 +106,13 @@ public class DataSender {
      */
     public JSONObject inParkPush(RealTimeDriverTracker.TrackSession sess, RealTimeDriverTracker.VehicleType vehicleType){
         if (!pushData){
-            return JSONObject.parseObject("{\n" +
-                    "code\":20000,\n" +
-                    "message\":\"不推送数据\",\n" +
-                    "data\":{},\n" +
-                    "success\":true\n" +
-                    "}");
+            // 不推送数据时，直接构造返回对象，避免无效 JSON 解析
+            JSONObject result = new JSONObject();
+            result.put("code", 50000);
+            result.put("message", "不推送数据");
+            result.put("data", new JSONObject());
+            result.put("success", true);
+            return result;
         }
         AssignmentRecordRequest request = new AssignmentRecordRequest();
         if (vehicleType == RealTimeDriverTracker.VehicleType.TRUCK) {
@@ -161,12 +164,13 @@ public class DataSender {
      */
     public JSONObject outParkPush(RealTimeDriverTracker.TrackSession sess, RealTimeDriverTracker.VehicleType vehicleType){
         if (!pushData){
-            return JSONObject.parseObject("{\n" +
-                    "code\":20000,\n" +
-                    "message\":\"不推送数据\",\n" +
-                    "data\":{},\n" +
-                    "success\":true\n" +
-                    "}");
+            // 不推送数据时，直接构造返回对象，避免无效 JSON 解析
+            JSONObject result = new JSONObject();
+            result.put("code", 50000);
+            result.put("message", "不推送数据");
+            result.put("data", new JSONObject());
+            result.put("success", true);
+            return result;
         }
         AssignmentRecordRequest request = new AssignmentRecordRequest();
         if (vehicleType == RealTimeDriverTracker.VehicleType.CAR) {
@@ -194,12 +198,13 @@ public class DataSender {
      */
     public JSONObject trackPush(EventState es, LocationPoint point, RealTimeDriverTracker.TrackSession sess, RealTimeDriverTracker.VehicleType vehicleType){
         if (!pushData){
-            return JSONObject.parseObject("{\n" +
-                    "code\":20000,\n" +
-                    "message\":\"不推送数据\",\n" +
-                    "data\":{},\n" +
-                    "success\":true\n" +
-                    "}");
+            // 不推送数据时，直接构造返回对象，避免无效 JSON 解析
+            JSONObject result = new JSONObject();
+            result.put("code", 50000);
+            result.put("message", "不推送数据");
+            result.put("data", new JSONObject());
+            result.put("success", true);
+            return result;
         }
         if (point == null){
             point = new LocationPoint();
