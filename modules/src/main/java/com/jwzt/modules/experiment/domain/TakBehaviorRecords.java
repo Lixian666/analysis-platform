@@ -145,6 +145,9 @@ public class TakBehaviorRecords extends BaseEntity {
     /** VIN码 */
     private String vehicleCode;
 
+    /** 推送状态：0-已推送，1-未推送 */
+    private Integer pushStatus;
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -313,6 +316,9 @@ public class TakBehaviorRecords extends BaseEntity {
 
     public String getVehicleCode() { return vehicleCode; }
     public void setVehicleCode(String vehicleCode) { this.vehicleCode = vehicleCode; }
+
+    public Integer getPushStatus() { return pushStatus; }
+    public void setPushStatus(Integer pushStatus) { this.pushStatus = pushStatus; }
 
     @Override
     public String toString() {

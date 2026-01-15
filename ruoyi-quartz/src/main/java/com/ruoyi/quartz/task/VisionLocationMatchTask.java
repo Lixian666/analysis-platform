@@ -521,6 +521,9 @@ public class VisionLocationMatchTask {
                     dataSender.inParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
                 }
 
+                // 更新推送状态
+                iTakBehaviorRecordsService.updatePushStatus(trackId, 0);
+
                 log.info("卡ID: {} 的第 {} 个匹配点处理完成，上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
                         cardId, i + 1, 
                         DateTimeUtils.timestampToDateTimeStr(boardingPoint.getTimestamp()),
