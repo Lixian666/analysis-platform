@@ -78,4 +78,6 @@ public interface ITakBehaviorRecordsService
      * @return 结果
      */
     public int batchUpdateMatchStatus(List<TakBehaviorRecords> records);
+
+    void updatePushStatus(String trackId, int pushStatus);
 }

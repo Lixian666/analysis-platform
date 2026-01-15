@@ -204,6 +204,11 @@ public class TakBehaviorRecordsServiceImpl implements ITakBehaviorRecordsService
         return takBehaviorRecordsMapper.batchUpdateMatchStatus(records);
     }
 
+    @Override
+    public void updatePushStatus(String trackId, int pushStatus) {
+        takBehaviorRecordsMapper.updatePushStatus(trackId, pushStatus);
+    }
+
     /**
      * 新增行为记录详情信息
      * 

@@ -104,4 +104,6 @@ public interface TakBehaviorRecordsMapper
      * @return 结果
      */
     int batchUpdateMatchStatus(List<TakBehaviorRecords> records);
+
+    void updatePushStatus(String trackId, int pushStatus);
 }
