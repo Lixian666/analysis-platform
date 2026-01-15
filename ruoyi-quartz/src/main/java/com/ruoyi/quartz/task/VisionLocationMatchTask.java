@@ -724,8 +724,13 @@ public class VisionLocationMatchTask {
             rec.setCardId(cardId);
             rec.setYardId(baseConfig.getYardName());
             rec.setTrackId(trackId);
-            rec.setStartTime(new Date(boardingPoint.getTimestamp()));
-            rec.setEndTime(new Date(dropOffPoint.getTimestamp()));
+            if (eventType == 0) {
+                rec.setStartTime(new Date(boardingPoint.getTimestamp()));
+                rec.setEndTime(new Date(dropOffPoint.getTimestamp()));
+            } else if (eventType == 1){
+                rec.setStartTime(new Date(dropOffPoint.getTimestamp()));
+                rec.setEndTime(new Date(boardingPoint.getTimestamp()));
+            }
             rec.setPointCount((long) detailList.size());
             rec.setVisionId(visionEvent.getId());
             rec.setVehicleCode(visionEvent.getVin());
