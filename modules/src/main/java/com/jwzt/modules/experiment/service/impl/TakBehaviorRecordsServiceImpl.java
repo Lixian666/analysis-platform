@@ -206,7 +206,10 @@ public class TakBehaviorRecordsServiceImpl implements ITakBehaviorRecordsService
 
     @Override
     public void updatePushStatus(String trackId, int pushStatus) {
-        takBehaviorRecordsMapper.updatePushStatus(trackId, pushStatus);
+        TakBehaviorRecords record = new TakBehaviorRecords();
+        record.setTrackId(trackId);
+        record.setPushStatus(pushStatus);
+        takBehaviorRecordsMapper.updatePushStatus(record);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.ruoyi.quartz.task;
 
+import com.alibaba.fastjson.JSONObject;
 import com.jwzt.modules.experiment.RealTimeDriverTracker;
 import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
@@ -503,26 +504,37 @@ public class VisionLocationMatchTask {
                 sess.endLatitude = sessionPoints.get(sessionPoints.size() - 1).getLatitude();
                 sess.points.addAll(sessionPoints);
                 sess.vin = visionEvent.getVin();
+
+                int pushStatus = 1;
                 if (visionEvent.getEventType().equals("load")){
                     sess.kind = RealTimeDriverTracker.EventKind.SEND;
                     // 发运
-                    dataSender.outParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    JSONObject outParkPushResult = dataSender.outParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
                     for (LocationPoint p : sessionPoints){
                         dataSender.trackPush(null, p, sess, RealTimeDriverTracker.VehicleType.CAR);
                     }
-                    dataSender.outYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    JSONObject outYardPushResult = dataSender.outYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    if (outParkPushResult.getIntValue("code") == 20000 && outYardPushResult.getIntValue("code") == 20000){
+                        pushStatus = 0;
+                    }
                 } else if (visionEvent.getEventType().equals("unload")){
                     sess.kind = RealTimeDriverTracker.EventKind.ARRIVED;
                     // 到达
-                    dataSender.inYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    JSONObject inYardPushResult = dataSender.inYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
                     for (LocationPoint p : sessionPoints){
                         dataSender.trackPush(null, p, sess, RealTimeDriverTracker.VehicleType.CAR);
                     }
-                    dataSender.inParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    JSONObject inParkPushResult = dataSender.inParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    if (inYardPushResult.getIntValue("code") == 20000 && inParkPushResult.getIntValue("code") == 20000){
+                        pushStatus = 0;
+                    }
                 }
 
                 // 更新推送状态
-                iTakBehaviorRecordsService.updatePushStatus(trackId, 0);
+                if (pushStatus == 0){
+                    iTakBehaviorRecordsService.updatePushStatus(trackId, 0);
+                }
+
 
                 log.info("卡ID: {} 的第 {} 个匹配点处理完成，上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
                         cardId, i + 1, 

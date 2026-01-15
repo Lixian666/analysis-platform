@@ -227,7 +227,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             where id = #{item.id}
         </foreach>
     </update>
-    <update id="updatePushStatus">
+        <update id="updatePushStatus" parameterType="com.jwzt.modules.experiment.domain.TakBehaviorRecords">
         update tak_behavior_records
         <trim prefix="SET" suffixOverrides=",">
             <if test="pushStatus != null">push_status = #{pushStatus},</if>
