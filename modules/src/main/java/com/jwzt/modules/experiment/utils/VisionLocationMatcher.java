@@ -276,6 +276,7 @@ public class VisionLocationMatcher {
     private VisionLocationMatchResult matchGroupWithLocation(List<VisionEvent> visionGroup) {
         VisionLocationMatchResult result = new VisionLocationMatchResult();
         result.setVisionEventGroup(visionGroup);
+        List<VisionEvent> notMatches = new ArrayList<>();
         // 将visionGroup中的eventTime取出最大值和最小值，然后输出字符串 最小值-最大值
         long minTime = visionGroup.stream().mapToLong(v -> getVisionEventTimestamp(v)).min().orElse(0L);
         long maxTime = visionGroup.stream().mapToLong(v -> getVisionEventTimestamp(v)).max().orElse(0L);
@@ -283,91 +284,130 @@ public class VisionLocationMatcher {
         Map<String, List<LocationPoint>> locationData = new HashMap<>(historyLocationData);
         // 遍历所有视觉事件，每个事件只取最优的一个定位点（距离最近，其次时间差最小，完全相同取时间戳更早的定位点）
         for (VisionEvent visionEvent : visionGroup) {
-            long visionTimestamp = getVisionEventTimestamp(visionEvent);
-            if (visionEvent.getLongitude() == null || visionEvent.getLatitude() == null) {
+            getBastMatchedResults(visionEvent, locationData, result, timeRange, notMatches, true);
+        }
+
+        for (VisionEvent visionEvent : notMatches){
+            getBastMatchedResults(visionEvent, locationData, result, timeRange, notMatches, false);
+        }
+        
+        return result;
+    }
+
+
+    /**
+     * 获取视觉事件最匹配的定位点
+     *
+     * @param visionEvent  视觉事件
+     * @param locationData 定位数据
+     * @param result       匹配结果
+     * @param timeRange    时间范围
+     * @param unmatched    未匹配的视觉事件
+     * @param again        是否再次匹配
+     */
+    private void getBastMatchedResults(VisionEvent visionEvent, Map<String, List<LocationPoint>> locationData, VisionLocationMatchResult result, String timeRange, List<VisionEvent> unmatched, boolean again) {
+        long visionTimestamp = getVisionEventTimestamp(visionEvent);
+        if (visionEvent.getLongitude() == null || visionEvent.getLatitude() == null) {
 //                log.warn("视觉事件缺少经纬度信息，跳过匹配。事件ID: {}", visionEvent.getId());
+            return;
+        }
+
+        VisionLocationMatchResult.MatchedLocationPoint bestMatch = null;
+        List<VisionLocationMatchResult.MatchedLocationPoint> bestMatchedPoints = new ArrayList<>();
+        if (visionEvent.getId() == 13740L){
+            System.out.println("aaaa");
+        }
+        // 遍历所有卡的定位数据
+        for (Map.Entry<String, List<LocationPoint>> entry : locationData.entrySet()) {
+            List<LocationPoint> locationPoints = entry.getValue();
+            List<LocationPoint> beforePoints = new LinkedList<>();
+            bestMatch = getMatchedLocationPoint(visionEvent, locationPoints, beforePoints, visionTimestamp, bestMatch);
+            bestMatchedPoints.add(bestMatch);
+            bestMatch = null;
+            beforePoints.clear();
+        }
+
+        if (bestMatchedPoints.size() > 1) {
+            bestMatch = bestMatchedPoints.stream()
+                .filter(Objects::nonNull)
+                .min(Comparator.comparingLong(m -> m.getLocationPoint().getTimestamp()))
+                .orElse(null);
+        }
+
+        if (bestMatch != null) {
+//                log.warn("视觉事件【{}】匹配成功。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, bestMatch.getCardId(), visionEvent.getId(), bestMatch.getLocationPoint().getAcceptTime(), visionEvent.getEventTime(), bestMatch.getDistance());
+            result.getMatchedLocationPoints().add(bestMatch);
+            locationData.remove(bestMatch.getCardId());
+        }
+        if (again && bestMatch == null){
+            log.warn("视觉事件【{}】匹配失败。事件ID: {}", timeRange, visionEvent.getId());
+            unmatched.add(visionEvent);
+        }
+    }
+
+
+    /**
+     * 获取视觉事件与一张卡定位数据之间的匹配结果
+     *
+     * @param visionEvent 视觉事件
+     * @param locationPoints 定位数据
+     * @param beforePoints 前10个定位数据
+     * @param visionTimestamp 视觉事件时间戳
+     * @param bestMatch 最佳匹配结果
+     * @return 匹配结果
+     */
+    private VisionLocationMatchResult.MatchedLocationPoint getMatchedLocationPoint(VisionEvent visionEvent, List<LocationPoint> locationPoints, List<LocationPoint> beforePoints, long visionTimestamp, VisionLocationMatchResult.MatchedLocationPoint bestMatch) {
+        for (LocationPoint locationPoint : locationPoints) {
+            if (locationPoint.getTimestamp() == null ||
+                    locationPoint.getLongitude() == null ||
+                    locationPoint.getLatitude() == null) {
+                continue;
+            }
+            // 创建一个集合类型是List<LocationPoint>，其中只能有3个元素，进一个新的元素就删除第一个元素
+            if (beforePoints.size() >= 10) {
+                beforePoints.remove(0);
+            }
+            beforePoints.add(locationPoint);
+
+            // 时间匹配：允许一定的时间误差（±10秒）
+            long timeDiff = Math.abs(visionTimestamp - locationPoint.getTimestamp());
+            if (timeDiff > DEFAULT_TIME_INTERVAL_MS_SHORT) {
+//                        log.warn("视觉事件【{}】时间匹配失败。事件ID: {}，定位时间：{},事件时间：{}", timeRange, visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime());
                 continue;
             }
 
-            VisionLocationMatchResult.MatchedLocationPoint bestMatch = null;
-            List<VisionLocationMatchResult.MatchedLocationPoint> bestMatchedPoints = new ArrayList<>();
-            if (visionEvent.getId() == 13740L){
-                System.out.println("aaaa");
-            }
-            // 遍历所有卡的定位数据
-            for (Map.Entry<String, List<LocationPoint>> entry : locationData.entrySet()) {
-                List<LocationPoint> locationPoints = entry.getValue();
-                List<LocationPoint> beforePoints = new LinkedList<>();
-                for (LocationPoint locationPoint : locationPoints) {
-                    if (locationPoint.getTimestamp() == null ||
-                            locationPoint.getLongitude() == null ||
-                            locationPoint.getLatitude() == null) {
-                        continue;
-                    }
-                    // 创建一个集合类型是List<LocationPoint>，其中只能有3个元素，进一个新的元素就删除第一个元素
-                    if (beforePoints.size() >= 10) {
-                        beforePoints.remove(0);
-                    }
-                    beforePoints.add(locationPoint);
+            // 距离匹配：计算两点间距离
+            double distance = calculateDistance(
+                    visionEvent.getLongitude(), visionEvent.getLatitude(),
+                    locationPoint.getLongitude(), locationPoint.getLatitude()
+            );
 
-                    // 时间匹配：允许一定的时间误差（±10秒）
-                    long timeDiff = Math.abs(visionTimestamp - locationPoint.getTimestamp());
-                    if (timeDiff > DEFAULT_TIME_INTERVAL_MS_SHORT) {
-//                        log.warn("视觉事件【{}】时间匹配失败。事件ID: {}，定位时间：{},事件时间：{}", timeRange, visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime());
-                        continue;
-                    }
-
-                    // 距离匹配：计算两点间距离
-                    double distance = calculateDistance(
-                            visionEvent.getLongitude(), visionEvent.getLatitude(),
-                            locationPoint.getLongitude(), locationPoint.getLatitude()
-                    );
-
-                    if (distance > MATCH_DISTANCE_THRESHOLD) {
+            if (distance > MATCH_DISTANCE_THRESHOLD) {
 //                        log.warn("视觉事件【{}】距离匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
-                        continue;
-                    }
+                continue;
+            }
 
-                    boolean inTheTrafficCar = isInTheTrafficCar(beforePoints);
-                    if (inTheTrafficCar) {
+            boolean inTheTrafficCar = isInTheTrafficCar(beforePoints);
+            if (inTheTrafficCar) {
 //                        log.warn("视觉事件【{}】交通车匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
-                        continue;
-                    }
+                continue;
+            }
 
-                    // 选择最优：先比距离，再比时间差，完全相同取定位时间更早的点
+            // 选择最优：先比距离，再比时间差，完全相同取定位时间更早的点
 //                    if (bestMatch == null || timeDiff < bestMatch.getTimeDiff()) {
 //                        bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
 //                                locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
 //                        );
 //                    }
-                    if (bestMatch == null || distance < bestMatch.getDistance()) {
-                        bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
-                                locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
-                        );
-                    }
-                }
-                bestMatchedPoints.add(bestMatch);
-                bestMatch = null;
-                beforePoints.clear();
-            }
-
-            if (bestMatchedPoints.size() > 1) {
-                bestMatch = bestMatchedPoints.stream()
-                    .filter(Objects::nonNull)
-                    .min(Comparator.comparingLong(m -> m.getLocationPoint().getTimestamp()))
-                    .orElse(null);
-            }
-
-            if (bestMatch != null) {
-//                log.warn("视觉事件【{}】匹配成功。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, bestMatch.getCardId(), visionEvent.getId(), bestMatch.getLocationPoint().getAcceptTime(), visionEvent.getEventTime(), bestMatch.getDistance());
-                result.getMatchedLocationPoints().add(bestMatch);
-                locationData.remove(bestMatch.getCardId());
+            if (bestMatch == null || distance < bestMatch.getDistance()) {
+                bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
+                        locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
+                );
             }
         }
-        
-        return result;
+        return bestMatch;
     }
-    
+
     /**
      * 计算两点间距离（米）
      * 
