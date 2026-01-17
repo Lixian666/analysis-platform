@@ -16,6 +16,8 @@ import com.jwzt.modules.experiment.utils.third.zq.beacon.BeaconRepair;
 import com.jwzt.modules.experiment.utils.third.zq.beacon.DriverLocation;
 import com.jwzt.modules.experiment.utils.third.zq.beacon.LocationSolver;
 import com.jwzt.modules.experiment.utils.third.zq.domain.TagScanUwbData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -31,6 +33,8 @@ import java.util.*;
  */
 @Component
 public class DataAcquisition {
+
+    private static final Logger log = LoggerFactory.getLogger(DataAcquisition.class);
 
     @Autowired
     private BaseConfig baseConfig;
@@ -111,6 +115,10 @@ public class DataAcquisition {
 
         // 获取位置点数据 - 添加空值检查
         String pointsResponse = zqOpenApi.getListOfPoints(cardId, buildId, startTimeStr, endTimeStr);
+        if (baseConfig.isLogEnabled()){
+            log.info("卡ID: {}, 获取位置点参数：startTimeStr【{}】,endTimeStr【{}】", cardId, startTimeStr, endTimeStr);
+            log.info("卡ID: {}, 获取位置点数据：{}", cardId, pointsResponse);
+        }
         if (pointsResponse == null) {
             throw new RuntimeException("获取位置点数据返回null");
         }
@@ -119,6 +127,10 @@ public class DataAcquisition {
         String tagResponse = zqOpenApi.getTagStateHistoryOfTagID(buildId, cardId,
                 DateTimeUtils.localDateTime2String(startTime.minusSeconds(2)),
                 DateTimeUtils.localDateTime2String(endTime.plusSeconds(2)));
+        if (baseConfig.isLogEnabled()){
+            log.info("卡ID: {}, 获取信标参数：startTimeStr【{}】,endTimeStr【{}】", cardId, startTimeStr, endTimeStr);
+            log.info("卡ID: {}, 获取信标点数据：{}", cardId, tagResponse);
+        }
         if (tagResponse == null) {
             throw new RuntimeException("获取标签状态数据返回null");
         }

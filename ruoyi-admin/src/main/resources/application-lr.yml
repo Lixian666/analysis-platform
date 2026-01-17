@@ -100,6 +100,7 @@ experiment:
   base:
     stay-verify: false
     ranging-verify: true
+    log-enabled: true
     push-data: true
     output-shp: false
     output-shp-path: ${experiment.platform-dir}/PlatformData/output
