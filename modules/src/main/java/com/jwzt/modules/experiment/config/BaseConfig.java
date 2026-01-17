@@ -15,6 +15,7 @@ public class BaseConfig {
     private boolean developEnvironment = true;
     private boolean stayVerify;     // 是否进行停留点验证
     private boolean rangingVerify;  // 行为识别以测距为第一优先级
+    private boolean logEnabled;     // 是否输出日志
     private boolean pushData;       // 是否推送数据
     // 调试使用配置
     private boolean outputShp;      // 是否输出定位点shp文件

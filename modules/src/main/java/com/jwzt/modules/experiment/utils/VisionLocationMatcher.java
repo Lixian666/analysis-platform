@@ -42,9 +42,15 @@ public class VisionLocationMatcher {
      * 两数据相邻时间间隔：10秒
      */
     private static final long DEFAULT_TIME_INTERVAL_MS_SHORT = 10 * 1000L;
+
+    /**
+     * 两相同卡号数据相邻时间间隔：10秒
+     */
+    private static final long DEFAULT_TIME_INTERVAL_MS_SAME_CARD = 20 * 1000L;
+
     
     /**
-     * 匹配距离阈值（米）：5米
+     * 匹配距离阈值（米）：15米
      */
     private static final double MATCH_DISTANCE_THRESHOLD = 15.0;
     
@@ -282,13 +288,14 @@ public class VisionLocationMatcher {
         long maxTime = visionGroup.stream().mapToLong(v -> getVisionEventTimestamp(v)).max().orElse(0L);
         String timeRange = DateTimeUtils.timestampToDateTimeStr(minTime) + "-" + DateTimeUtils.timestampToDateTimeStr(maxTime);
         Map<String, List<LocationPoint>> locationData = new HashMap<>(historyLocationData);
+        Map<String, List<LocationPoint>> locationDataRetry = new HashMap<>(historyLocationData);
         // 遍历所有视觉事件，每个事件只取最优的一个定位点（距离最近，其次时间差最小，完全相同取时间戳更早的定位点）
         for (VisionEvent visionEvent : visionGroup) {
             getBastMatchedResults(visionEvent, locationData, result, timeRange, notMatches, true);
         }
 
         for (VisionEvent visionEvent : notMatches){
-            getBastMatchedResults(visionEvent, locationData, result, timeRange, notMatches, false);
+            getBastMatchedResults(visionEvent, locationDataRetry, result, timeRange, notMatches, false);
         }
         
         return result;
@@ -321,7 +328,7 @@ public class VisionLocationMatcher {
         for (Map.Entry<String, List<LocationPoint>> entry : locationData.entrySet()) {
             List<LocationPoint> locationPoints = entry.getValue();
             List<LocationPoint> beforePoints = new LinkedList<>();
-            bestMatch = getMatchedLocationPoint(visionEvent, locationPoints, beforePoints, visionTimestamp, bestMatch);
+            bestMatch = getMatchedLocationPoint(visionEvent, locationPoints, beforePoints, visionTimestamp, bestMatch, result, again);
             bestMatchedPoints.add(bestMatch);
             bestMatch = null;
             beforePoints.clear();
@@ -356,7 +363,7 @@ public class VisionLocationMatcher {
      * @param bestMatch 最佳匹配结果
      * @return 匹配结果
      */
-    private VisionLocationMatchResult.MatchedLocationPoint getMatchedLocationPoint(VisionEvent visionEvent, List<LocationPoint> locationPoints, List<LocationPoint> beforePoints, long visionTimestamp, VisionLocationMatchResult.MatchedLocationPoint bestMatch) {
+    private VisionLocationMatchResult.MatchedLocationPoint getMatchedLocationPoint(VisionEvent visionEvent, List<LocationPoint> locationPoints, List<LocationPoint> beforePoints, long visionTimestamp, VisionLocationMatchResult.MatchedLocationPoint bestMatch, VisionLocationMatchResult result, boolean again) {
         for (LocationPoint locationPoint : locationPoints) {
             if (locationPoint.getTimestamp() == null ||
                     locationPoint.getLongitude() == null ||
@@ -400,9 +407,22 @@ public class VisionLocationMatcher {
 //                        );
 //                    }
             if (bestMatch == null || distance < bestMatch.getDistance()) {
-                bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
-                        locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
-                );
+                if (again){
+                    bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
+                            locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
+                    );
+                }else {
+                    for (VisionLocationMatchResult.MatchedLocationPoint matchedLocationPoint : result.getMatchedLocationPoints()){
+                        if (matchedLocationPoint.getLocationPoint().getCardUUID().equals(locationPoint.getCardUUID())){
+                            long timeDiffRetry = Math.abs(matchedLocationPoint.getLocationPoint().getTimestamp() - locationPoint.getTimestamp());
+                            if (timeDiffRetry > DEFAULT_TIME_INTERVAL_MS_SAME_CARD) {
+                                bestMatch = new VisionLocationMatchResult.MatchedLocationPoint(
+                                        locationPoint.getCardUUID(), visionEvent, locationPoint, timeDiff, distance
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
         return bestMatch;
