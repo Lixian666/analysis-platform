@@ -11,6 +11,8 @@ import com.jwzt.modules.experiment.domain.TakBeaconInfo;
  */
 public class BeaconRepair {
 
+    public List<TakBeaconInfo> beaconList = new ArrayList<>();
+
     public class Point {
         double x, y;
         public Point(double x, double y) { this.x = x; this.y = y; }
@@ -94,7 +96,7 @@ public class BeaconRepair {
     public  Map<String, Double> repairBeaconDistance(Map<String, Double> deviceReport, double tolerance){
     	
     	BeaconFaultDetector beaconFaultDetector = new BeaconFaultDetector();
-
+        beaconFaultDetector.setBaseLocal(beaconList);
         List<String> errorbeacon = beaconFaultDetector.detect(deviceReport, tolerance);
         for(String beacon : errorbeacon) {
         	deviceReport.remove(beacon);

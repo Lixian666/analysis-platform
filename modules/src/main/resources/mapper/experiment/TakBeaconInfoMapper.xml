@@ -13,6 +13,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="buildId"    column="BUILD_ID"    />
         <result property="beaconId"    column="BEACON_ID"    />
         <result property="location"    column="LOCATION"    />
+        <result property="longitude"    column="LONGITUDE"    />
+        <result property="latitude"    column="LATITUDE"    />
         <result property="status"    column="STATUS"    />
         <result property="createTime"    column="CREATE_TIME"    />
         <result property="updateTime"    column="UPDATE_TIME"    />
@@ -22,7 +24,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectTakBeaconInfoVo">
-        select ID, NAME, RFID_NAME, TYPE, AREA, BUILD_NAME, BUILD_ID, BEACON_ID, LOCATION, STATUS, CREATE_TIME, UPDATE_TIME, DISTANCE, FLOOR from TAK_BEACON_INFO
+        select ID, NAME, RFID_NAME, TYPE, AREA, BUILD_NAME, BUILD_ID, BEACON_ID, LOCATION, LONGITUDE, LATITUDE, STATUS, CREATE_TIME, UPDATE_TIME, DISTANCE, FLOOR from TAK_BEACON_INFO
     </sql>
 
     <select id="selectTakBeaconInfoList" parameterType="com.jwzt.modules.experiment.domain.TakBeaconInfo" resultMap="TakBeaconInfoResult">
@@ -59,6 +61,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="buildId != null and buildId != ''">BUILD_ID,</if>
             <if test="beaconId != null and beaconId != ''">BEACON_ID,</if>
             <if test="location != null and location != ''">LOCATION,</if>
+            <if test="longitude != null">LONGITUDE,</if>
+            <if test="latitude != null">LATITUDE,</if>
             <if test="status != null">STATUS,</if>
             <if test="createTime != null">CREATE_TIME,</if>
             <if test="updateTime != null">UPDATE_TIME,</if>
@@ -74,6 +78,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="buildId != null and buildId != ''">#{buildId},</if>
             <if test="beaconId != null and beaconId != ''">#{beaconId},</if>
             <if test="location != null and location != ''">#{location},</if>
+            <if test="longitude != null">#{longitude},</if>
+            <if test="latitude != null">#{latitude},</if>
             <if test="status != null">#{status},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateTime != null">#{updateTime},</if>
@@ -93,6 +99,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="buildId != null and buildId != ''">BUILD_ID = #{buildId},</if>
             <if test="beaconId != null and beaconId != ''">BEACON_ID = #{beaconId},</if>
             <if test="location != null and location != ''">LOCATION = #{location},</if>
+            <if test="longitude != null">LONGITUDE = #{longitude},</if>
+            <if test="latitude != null">LATITUDE = #{latitude},</if>
             <if test="status != null">STATUS = #{status},</if>
             <if test="createTime != null">CREATE_TIME = #{createTime},</if>
             <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>

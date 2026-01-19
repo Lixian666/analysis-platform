@@ -1,10 +1,14 @@
 package com.jwzt.modules.experiment.utils.third.zq.beacon;
 
 import java.util.*;
+
 import com.jwzt.modules.experiment.domain.TakBeaconInfo;
 
+
 public class BeaconFaultDetector {
-    
+
+    private List<TakBeaconInfo> beaconList = new ArrayList<>();
+
 	// 地球半径（米）
     private final double EARTH_RADIUS = 6371000.0;
 
@@ -41,7 +45,7 @@ public class BeaconFaultDetector {
                 // 几何一致性检验：利用三角不等式
                 // 1. d1 + d2 >= actualDist (距离和不能小于信标间距)
                 // 2. |d1 - d2| <= actualDist (距离差不能超过信标间距)
-                boolean isViolated = (d1 + d2 < actualDist - tolerance) || 
+                boolean isViolated = (d1 + d2 < actualDist - tolerance) ||
                                      (Math.abs(d1 - d2) > actualDist + tolerance);
 
                 if (isViolated) {
@@ -51,8 +55,8 @@ public class BeaconFaultDetector {
             }
         }
 
-        
-        
+
+
         // 筛选出冲突次数最多的信标
         return findMaxConflictIds(conflictScore);
     }
@@ -63,7 +67,7 @@ public class BeaconFaultDetector {
      */
     private double calculateFlatDistance(TakBeaconInfo b1, TakBeaconInfo b2) {
         double latMid = Math.toRadians((b1.getLatitude() + b2.getLatitude()) / 2.0);
-        
+
         // 纬度每度对应的米数
         double dy = Math.toRadians(b1.getLatitude() - b2.getLatitude()) * EARTH_RADIUS;
         // 经度每度对应的米数（随纬度变化）
@@ -90,13 +94,13 @@ public class BeaconFaultDetector {
 
     // --- 测试 ---
     public static void main(String[] args) {
-    	
+
     	BeaconFaultDetector beaconFaultDetector = new BeaconFaultDetector();
         Map<String, Double> deviceReport = beaconFaultDetector.getRightPront();
 
         List<String> results = beaconFaultDetector.detect(deviceReport, 2.0);
     }
-    
+
     /**
      * 检测信标距离是否合法（只检测信标距离过短的问题）
      * @param distances  所有信标的距离至少要给5个信标的距离进行比较
@@ -107,36 +111,21 @@ public class BeaconFaultDetector {
     	List<TakBeaconInfo> beaconList = getBaseLocal();
     	List<String> results = detectFaultyBeacons(beaconList, distances, tolerance);
     	return results;
-    	
+
     }
-    
+
+    public void setBaseLocal(List<TakBeaconInfo> beaconList){
+        this.beaconList = beaconList;
+    }
+
     /*
-     * 
+     *
      	初始化每个信标经纬度
      */
     public List<TakBeaconInfo> getBaseLocal(){
-
-            List<TakBeaconInfo> beaconList = new ArrayList<>();
-
-            beaconList.add(new TakBeaconInfo("1918FD013C29", 109.5832668,24.4052388));
-            beaconList.add(new TakBeaconInfo("1918FD013865", 109.5831927,24.4053638));
-            beaconList.add(new TakBeaconInfo("1918FD01394A", 109.5831898,24.4053731));
-            beaconList.add(new TakBeaconInfo("1918FD013B67", 109.5831640,24.4054317));
-            beaconList.add(new TakBeaconInfo("1918FD0119B6", 109.5831350,24.4055047));
-            beaconList.add(new TakBeaconInfo("1918FD013B17", 109.5831061,24.4053319));
-            beaconList.add(new TakBeaconInfo("1918FD013C52", 109.5830666,24.4054322));
-            beaconList.add(new TakBeaconInfo("1918FD013C35", 109.5830601,24.4054473));
-            
-            beaconList.add(new TakBeaconInfo("1918FD01379F", 109.5828288,24.4054109));
-            beaconList.add(new TakBeaconInfo("1918FD01385B", 109.5828288,24.4054109));
-            beaconList.add(new TakBeaconInfo("1918FD013B82", 109.5828681,24.4053337));
-            beaconList.add(new TakBeaconInfo("1918FD0137D2", 109.5828801,24.4053035));
-            beaconList.add(new TakBeaconInfo("1918FD01397D", 109.5829014,24.4052217));
-            beaconList.add(new TakBeaconInfo("1918FD013937", 109.5829014,24.4052217));
-            
-            return beaconList;
+        return beaconList;
     }
-    
+
     /*
      * 测试用异常数据
      */
@@ -146,18 +135,18 @@ public class BeaconFaultDetector {
         //deviceReport.put("1918FD013B17", 3.190);
         deviceReport.put("1918FD013B17", 1.190);
         deviceReport.put("1918FD013A47", 4.060);
-        deviceReport.put("1918FD01394A", 12.470); 
-        deviceReport.put("1918FD013865", 12.610); 
-        
-        deviceReport.put("1918FD013C52", 13.760); 
-        deviceReport.put("1918FD013B67", 14.970); 
-        deviceReport.put("1918FD013C35", 15.540); 
-        deviceReport.put("1918FD01397D", 22.390); 
+        deviceReport.put("1918FD01394A", 12.470);
+        deviceReport.put("1918FD013865", 12.610);
+
+        deviceReport.put("1918FD013C52", 13.760);
+        deviceReport.put("1918FD013B67", 14.970);
+        deviceReport.put("1918FD013C35", 15.540);
+        deviceReport.put("1918FD01397D", 22.390);
         //deviceReport.put("1918FD01397D", 20.390);
-        deviceReport.put("1918FD0137D2", 22.890); 
+        deviceReport.put("1918FD0137D2", 22.890);
         return deviceReport;
     }
-    
+
     /*
      * 测试用正常数据
      */
@@ -165,9 +154,9 @@ public class BeaconFaultDetector {
         Map<String, Double> deviceReport = new HashMap<>();
         deviceReport.put("1918FD013C35", 13.38);
         deviceReport.put("1918FD01394A", 20.34);
-        deviceReport.put("1918FD0119B6", 3.93); 
-        deviceReport.put("1918FD0119BA", 2.79); 
-        deviceReport.put("1918FD013B67", 13.5); 
+        deviceReport.put("1918FD0119B6", 3.93);
+        deviceReport.put("1918FD0119BA", 2.79);
+        deviceReport.put("1918FD013B67", 13.5);
 
         return deviceReport;
     }
