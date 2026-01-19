@@ -9,6 +9,14 @@
             @keyup.enter="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="信标ID" prop="beaconId">
+        <el-input
+            v-model="queryParams.beaconId"
+            placeholder="请输入信标ID"
+            clearable
+            @keyup.enter="handleQuery"
+        />
+      </el-form-item>
       <el-form-item label="RFID名称" prop="rfidName" label-width="80px">
         <el-input
             v-model="queryParams.rfidName"
@@ -145,6 +153,8 @@
       <el-table-column label="建筑ID" align="center" prop="buildId" />
       <el-table-column label="信标ID" align="center" prop="beaconId" />
       <el-table-column label="位置" align="center" prop="location" />
+      <el-table-column label="经度" align="center" prop="longitude" />
+      <el-table-column label="纬度" align="center" prop="latitude" />
       <el-table-column label="感应距离(m)" align="center" prop="distance" />
       <el-table-column label="状态" align="center" prop="status" width="120">
         <template #default="scope">
@@ -229,6 +239,12 @@
         </el-form-item>
         <el-form-item label="位置" prop="location">
           <el-input v-model="form.location" placeholder="请输入位置" />
+        </el-form-item>
+        <el-form-item label="经度" prop="longitude">
+          <el-input v-model="form.longitude" placeholder="请输入经度" />
+        </el-form-item>
+        <el-form-item label="纬度" prop="latitude">
+          <el-input v-model="form.latitude" placeholder="请输入纬度" />
         </el-form-item>
         <el-form-item label="感应距离(m)" prop="distance">
           <el-input-number v-model="form.distance" :precision="2" :step="0.1" :min="0" placeholder="请输入感应距离" style="width: 100%" />
@@ -328,6 +344,8 @@ const data = reactive({
     buildId: null,
     beaconId: null,
     location: null,
+    longitude: null,
+    latitude: null,
     status: null,
     distance: null,
   },
@@ -367,6 +385,12 @@ const data = reactive({
     ],
     location: [
       { required: true, message: "位置不能为空", trigger: "blur" }
+    ],
+    longitude: [
+      { required: true, message: "经度不能为空", trigger: "blur" }
+    ],
+    latitude: [
+      { required: true, message: "纬度不能为空", trigger: "blur" }
     ],
     status: [
       { required: true, message: "状态，0-启用，1-禁用不能为空", trigger: "change" }

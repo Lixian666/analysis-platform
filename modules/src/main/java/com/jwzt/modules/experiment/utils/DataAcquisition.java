@@ -3,11 +3,9 @@ package com.jwzt.modules.experiment.utils;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.jwzt.modules.experiment.config.BaseConfig;
-import com.jwzt.modules.experiment.domain.LocTrackRecord;
-import com.jwzt.modules.experiment.domain.LocationPoint;
-import com.jwzt.modules.experiment.domain.LocationPoint2;
-import com.jwzt.modules.experiment.domain.TakCardInfo;
+import com.jwzt.modules.experiment.domain.*;
 import com.jwzt.modules.experiment.service.ILocTrackRecordService;
+import com.jwzt.modules.experiment.service.ITakBeaconInfoService;
 import com.jwzt.modules.experiment.service.ITakCardInfoService;
 import com.jwzt.modules.experiment.utils.third.zq.FusionData;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
@@ -47,6 +45,9 @@ public class DataAcquisition {
 
     @Autowired
     private ITakCardInfoService takCardInfoService;
+
+    @Autowired
+    private ITakBeaconInfoService takBeaconInfoService;
 
     /**
      * 获取卡列表
@@ -269,6 +270,11 @@ public class DataAcquisition {
             ));
         }
 
+        TakBeaconInfo query = new TakBeaconInfo();
+        query.setBuildId(buildId);
+        query.setStatus(0);
+        List<TakBeaconInfo> beaconList = takBeaconInfoService.selectTakBeaconInfoList(query);
+
         for (LocationPoint point : LocationPoints){
             // 空值保护：检查 tagScanUwbData 和 uwbBeaconList
             if (point.getTagScanUwbData() == null || point.getTagScanUwbData().getUwbBeaconList() == null) {
@@ -282,6 +288,8 @@ public class DataAcquisition {
             try {
                 if (deviceReport.size() > 3){
                     BeaconRepair beaconRepair = new BeaconRepair();
+                    // 直接给 beaconRepair 的公共 beaconList 赋值
+                    beaconRepair.beaconList = beaconList;
                     deviceReport = beaconRepair.repairBeaconDistance(deviceReport, 2.0);
                     if (deviceReport != null && !deviceReport.isEmpty()){
                         List<TagScanUwbData.BltScanUwbBeacon> uwbBeaconList = point.getTagScanUwbData().getUwbBeaconList();
