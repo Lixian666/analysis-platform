@@ -274,6 +274,16 @@ public class DataAcquisition {
         query.setBuildId(buildId);
         query.setStatus(0);
         List<TakBeaconInfo> beaconList = takBeaconInfoService.selectTakBeaconInfoList(query);
+        query.setType("交通车");
+        List<TakBeaconInfo> trafficCarBeaconList = takBeaconInfoService.selectTakBeaconInfoList(query);
+        
+        // 提取交通车信标的ID集合
+        Set<String> trafficCarBeaconIds = new HashSet<>();
+        for (TakBeaconInfo trafficBeacon : trafficCarBeaconList) {
+            trafficCarBeaconIds.add(trafficBeacon.getBeaconId());
+        }
+        // 从beaconList中移除交通车信标
+        beaconList.removeIf(beacon -> trafficCarBeaconIds.contains(beacon.getBeaconId()));
 
         for (LocationPoint point : LocationPoints){
             // 空值保护：检查 tagScanUwbData 和 uwbBeaconList
