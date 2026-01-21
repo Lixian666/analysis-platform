@@ -642,9 +642,6 @@ public class RealTimeDriverTracker {
         List<LocationPoint> normal = new ArrayList<>();
         batch.sort((p1, p2) -> Long.compare(p1.getTimestamp(), p2.getTimestamp()));
         for (LocationPoint raw : batch) {
-            if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(raw.getAcceptTime()).equals("2025-11-17 11:07:00")){
-                System.out.println("⚠️ 检测到车辆已进入地跑区域（地跑）");
-            }
             // 兜底：若 timestamp 未赋值，用 acceptTime 转换
             if (raw.getTimestamp() == 0 && raw.getAcceptTime() != null) {
                 raw.setTimestamp(DateTimeUtils.convertToTimestamp(raw.getAcceptTime()));

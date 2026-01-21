@@ -46,7 +46,7 @@ public class DataSender {
             request.setCameraId(sess.cardId);
             request.setThrough(String.valueOf(sess.startLongitude));
             request.setWeft(String.valueOf(sess.startLatitude));
-            request.setRegionType(4);
+            request.setRegionType(getBusinessType(sess));
             request.setCarType("car");
         }
         if (vehicleType == RealTimeDriverTracker.VehicleType.CAR) {
@@ -56,7 +56,7 @@ public class DataSender {
             request.setCameraId(sess.cardId);
             request.setThrough(String.valueOf(sess.startLongitude));
             request.setWeft(String.valueOf(sess.startLatitude));
-            request.setRegionType(2);
+            request.setRegionType(getBusinessType(sess));
             request.setCarType("car");
             request.setVehicleCode(sess.vin);
         }
@@ -89,7 +89,7 @@ public class DataSender {
             request.setCameraId(sess.cardId);
             request.setThrough(String.valueOf(sess.endLongitude));
             request.setWeft(String.valueOf(sess.endLatitude));
-            request.setRegionType(2);
+            request.setRegionType(getBusinessType(sess));
             request.setCarType("car");
             request.setVehicleCode(sess.vin);
         }
@@ -122,7 +122,7 @@ public class DataSender {
             request.setCameraId(sess.cardId);
             request.setThrough(String.valueOf(sess.endLongitude));
             request.setWeft(String.valueOf(sess.endLatitude));
-            request.setRegionType(4);
+            request.setRegionType(getBusinessType(sess));
             request.setCarType("car");
             request.setVehicleCode(sess.vin);
         }
@@ -180,7 +180,7 @@ public class DataSender {
             request.setCameraId(sess.cardId);
             request.setThrough(String.valueOf(sess.startLongitude));
             request.setWeft(String.valueOf(sess.startLatitude));
-            request.setRegionType(2);
+            request.setRegionType(getBusinessType(sess));
             request.setCarType("car");
             request.setVehicleCode(sess.vin);
         }
@@ -233,6 +233,23 @@ public class DataSender {
     public JSONObject removeVehicle(String vehicleThirdId){
         JSONObject result = centerWorkHttpUtils.removeVehicle(vehicleThirdId);
         return result;
+    }
+
+    /**
+     * 获取车辆业务类型
+     * @param sess
+     * @return
+     */
+    private static int getBusinessType(RealTimeDriverTracker.TrackSession sess) {
+        int businessType = 2;
+        if (sess.kind == RealTimeDriverTracker.EventKind.CAR_ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.CAR_SEND){
+            businessType = 1;
+        }else if (sess.kind == RealTimeDriverTracker.EventKind.ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.SEND){
+            businessType = 2;
+        }else if (sess.kind == RealTimeDriverTracker.EventKind.TRUCK_ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.TRUCK_SEND){
+            businessType = 4;
+        }
+        return businessType;
     }
 
 }
