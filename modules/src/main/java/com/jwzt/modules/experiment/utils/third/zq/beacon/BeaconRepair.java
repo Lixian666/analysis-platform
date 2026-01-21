@@ -129,7 +129,7 @@ public class BeaconRepair {
         }
         
         for(TakBeaconInfo beacon : noMessageBeanconList) {
-        	Double repairDistance = estimateCorrectDistance(rightBeacon, rightBeaconDistance, beacon);
+        	Double repairDistance = Math.round(estimateCorrectDistance(rightBeacon, rightBeaconDistance, beacon) * 100.0) / 100.0;
         	repairBeaconDistance.put(beacon.getBeaconId(), repairDistance);
         }
         
