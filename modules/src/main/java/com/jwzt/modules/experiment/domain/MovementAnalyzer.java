@@ -18,7 +18,15 @@ public class MovementAnalyzer {
     }
     // 判断状态（传入最近N个点）
     public static MovementState analyzeState(List<LocationPoint> window) {
-        if (window.size() < 2) return MovementState.STOPPED;
+        if (window.size() < 2){
+            if (window.size() == 1){Double avgSpeed =window.get(0).getSpeed();
+                if (FilterConfig.MIN_SPEED_MPS <= avgSpeed && avgSpeed <= FilterConfig.MIN_WALKING_SPEED) return MovementState.STOPPED;
+                else if (FilterConfig.MIN_WALKING_SPEED < avgSpeed && avgSpeed <= FilterConfig.MAX_WALKING_SPEED) return MovementState.WALKING;
+                else if (FilterConfig.MAX_WALKING_SPEED < avgSpeed && avgSpeed <= FilterConfig.MAX_RUNING_SPEED) return MovementState.RUNNING;
+                else if (FilterConfig.MAX_RUNING_SPEED < avgSpeed && avgSpeed <= FilterConfig.MAX_LOW_DRIVING_SPEED) return MovementState.LOW_DRIVING;
+                else return MovementState.DRIVING;
+            }else return MovementState.STOPPED;
+        }
 
         double totalDist = 0;
         long totalTime = 0;

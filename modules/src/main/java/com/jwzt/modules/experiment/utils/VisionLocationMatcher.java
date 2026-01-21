@@ -60,24 +60,19 @@ public class VisionLocationMatcher {
      */
     private final Map<String, List<LocationPoint>> historyLocationData = new ConcurrentHashMap<>();
 
-    // 返回副本，保证线程安全
     /**
      * 历史视觉识别数据存储（线程安全）
-     * 按时间排序
-     * -- GETTER --
-     *  获取的历史视觉事件数据
-     *  返回数据的副本，保证线程安全
-     *
-     * @return 历史视觉事件数据列表（按时间排序），如果卡不存在则返回空列表
-
+     * 按车辆类型分开存储：train/car/truck
+     * Key: 车辆类型（train/car/truck）, Value: 视觉事件列表（按时间排序）
      */
-    @Getter
-    private final List<VisionEvent> historyVisionData = Collections.synchronizedList(new ArrayList<>());
+    private final Map<String, List<VisionEvent>> historyVisionDataByType = new ConcurrentHashMap<>();
     
     /**
      * 视觉数据分组结果缓存（用于动态时间间隔计算）
+     * 按车辆类型分开存储：train/car/truck
+     * Key: 车辆类型（train/car/truck）, Value: 分组列表
      */
-    private final List<List<VisionEvent>> visionGroups = Collections.synchronizedList(new ArrayList<>());
+    private final Map<String, List<List<VisionEvent>>> visionGroupsByType = new ConcurrentHashMap<>();
     
     /**
      * 追加新的定位数据到历史数据
@@ -114,6 +109,7 @@ public class VisionLocationMatcher {
     
     /**
      * 追加新的视觉识别数据到历史数据
+     * 根据event字段自动分类到不同车辆类型
      * 
      * @param newVisionEvents 新的视觉识别事件列表
      */
@@ -122,66 +118,121 @@ public class VisionLocationMatcher {
             return;
         }
 
-        historyVisionData.addAll(newVisionEvents);
-        // 创建去重后的列表
-        List<VisionEvent> uniqueVisionEvents = historyVisionData.stream()
-                .collect(Collectors.collectingAndThen(
-                        Collectors.toCollection(() -> new TreeSet<>(Comparator.comparing(VisionEvent::getId))),
-                        ArrayList::new
-                ));
-        // 清空原列表并添加去重数据
-        historyVisionData.clear();
-        historyVisionData.addAll(uniqueVisionEvents);
+        // 按车辆类型分组
+        Map<String, List<VisionEvent>> groupedByType = new HashMap<>();
+        for (VisionEvent event : newVisionEvents) {
+            String vehicleType = getVehicleTypeFromEvent(event);
+            groupedByType.computeIfAbsent(vehicleType, k -> new ArrayList<>()).add(event);
+        }
 
-        // 按时间排序
-        historyVisionData.sort(Comparator.comparingLong(this::getVisionEventTimestamp));
+        // 分别追加到对应类型的历史数据中
+        for (Map.Entry<String, List<VisionEvent>> entry : groupedByType.entrySet()) {
+            String vehicleType = entry.getKey();
+            List<VisionEvent> events = entry.getValue();
+            
+            historyVisionDataByType.compute(vehicleType, (key, existingList) -> {
+                if (existingList == null) {
+                    existingList = Collections.synchronizedList(new ArrayList<>());
+                }
+                existingList.addAll(events);
+                
+                // 去重（按ID）
+                List<VisionEvent> uniqueEvents = existingList.stream()
+                        .collect(Collectors.collectingAndThen(
+                                Collectors.toCollection(() -> new TreeSet<>(Comparator.comparing(VisionEvent::getId))),
+                                ArrayList::new
+                        ));
+                
+                // 按时间排序
+                uniqueEvents.sort(Comparator.comparingLong(this::getVisionEventTimestamp));
+                
+                return Collections.synchronizedList(uniqueEvents);
+            });
+            
+            log.debug("追加视觉识别数据，车辆类型: {}, 新增: {} 条, 历史总数: {}", 
+                    vehicleType, events.size(), 
+                    historyVisionDataByType.get(vehicleType).size());
+        }
+    }
+    
+    /**
+     * 根据VisionEvent的event字段判断车辆类型
+     * 
+     * @param event 视觉事件
+     * @return 车辆类型：train/car/truck
+     */
+    private String getVehicleTypeFromEvent(VisionEvent event) {
+        if (event == null || event.getEventType() == null) {
+            return "train"; // 默认火车
+        }
         
-        log.debug("追加视觉识别数据，新增: {} 条, 历史总数: {}", 
-                newVisionEvents.size(), historyVisionData.size());
+        String eventType = event.getEventType();
+        if ("load".equals(eventType) || "unload".equals(eventType)) {
+            return "train";
+        } else if ("gateCommodityVehicleInput".equals(eventType) || "gateCommodityVehicleOutput".equals(eventType)) {
+            return "car";
+        } else if ("gateBancheInput".equals(eventType) || "gateBancheOutput".equals(eventType)) {
+            return "truck";
+        }
+        
+        return "train"; // 默认火车
     }
     
     /**
      * 执行匹配：将视觉识别数据与定位数据进行匹配
+     * 按车辆类型分别匹配
      * 
      * @return 匹配结果列表
      */
     public List<VisionLocationMatchResult> matchVisionWithLocation() {
-        if (historyVisionData.isEmpty()) {
-            log.debug("历史视觉识别数据为空，跳过匹配");
-            return new ArrayList<>();
-        }
+        List<VisionLocationMatchResult> allResults = new ArrayList<>();
         
-        // 1. 对视觉识别数据进行分组
-        List<List<VisionEvent>> groups = groupVisionEventsByTime();
-        
-        // 2. 对每个分组进行匹配
-        List<VisionLocationMatchResult> results = new ArrayList<>();
-        for (List<VisionEvent> group : groups) {
-            VisionLocationMatchResult result = matchGroupWithLocation(group);
-            if (result != null && !result.getMatchedLocationPoints().isEmpty()) {
-                results.add(result);
+        // 遍历所有车辆类型，分别进行匹配
+        for (Map.Entry<String, List<VisionEvent>> entry : historyVisionDataByType.entrySet()) {
+            String vehicleType = entry.getKey();
+            List<VisionEvent> visionData = entry.getValue();
+            
+            if (visionData == null || visionData.isEmpty()) {
+                log.debug("车辆类型 {} 的历史视觉识别数据为空，跳过匹配", vehicleType);
+                continue;
             }
+            
+            // 1. 对该类型的视觉识别数据进行分组
+            List<List<VisionEvent>> groups = groupVisionEventsByTime(vehicleType, visionData);
+            
+            // 2. 对每个分组进行匹配
+            for (List<VisionEvent> group : groups) {
+                VisionLocationMatchResult result = matchGroupWithLocation(group);
+                if (result != null && !result.getMatchedLocationPoints().isEmpty()) {
+                    allResults.add(result);
+                }
+            }
+            
+            log.info("车辆类型 {} 匹配完成，视觉数据组数: {}, 匹配成功组数: {}", 
+                    vehicleType, groups.size(), 
+                    allResults.stream().filter(r -> getVehicleTypeFromEvent(r.getVisionEventGroup().get(0)).equals(vehicleType)).count());
         }
         
-        log.info("匹配完成，视觉数据组数: {}, 匹配成功组数: {}", groups.size(), results.size());
-        return results;
+        return allResults;
     }
     
     /**
      * 将视觉识别数据按时间分组（动态时间间隔）
      * 
+     * @param vehicleType 车辆类型
+     * @param visionData 该类型的视觉数据
      * @return 分组后的视觉事件列表
      */
-    private List<List<VisionEvent>> groupVisionEventsByTime() {
-        if (historyVisionData.isEmpty()) {
+    private List<List<VisionEvent>> groupVisionEventsByTime(String vehicleType, List<VisionEvent> visionData) {
+        if (visionData == null || visionData.isEmpty()) {
             return new ArrayList<>();
         }
         
         List<List<VisionEvent>> groups = new ArrayList<>();
         List<VisionEvent> currentGroup = new ArrayList<>();
         
-        for (int i = 0; i < historyVisionData.size(); i++) {
-            VisionEvent current = historyVisionData.get(i);
+        for (int i = 0; i < visionData.size(); i++) {
+            VisionEvent current = visionData.get(i);
             
             if (currentGroup.isEmpty()) {
                 // 第一组，直接添加
@@ -192,7 +243,7 @@ public class VisionLocationMatcher {
                 long timeDiff = getVisionEventTimestamp(current) - getVisionEventTimestamp(lastInGroup);
                 
                 // 动态计算时间间隔阈值
-                long threshold = calculateDynamicTimeInterval(currentGroup, i);
+                long threshold = calculateDynamicTimeInterval(currentGroup, i, visionData);
                 
                 if (timeDiff > threshold) {
                     // 时间间隔足够大，开始新的一组
@@ -209,10 +260,9 @@ public class VisionLocationMatcher {
         }
         
         // 更新缓存
-        visionGroups.clear();
-        visionGroups.addAll(groups);
+        visionGroupsByType.put(vehicleType, Collections.synchronizedList(new ArrayList<>(groups)));
         
-        log.debug("视觉数据分组完成，总组数: {}", groups.size());
+        log.debug("车辆类型 {} 视觉数据分组完成，总组数: {}", vehicleType, groups.size());
         return groups;
     }
 
@@ -238,9 +288,10 @@ public class VisionLocationMatcher {
      * 
      * @param currentGroup 当前组的数据
      * @param nextIndex 下一个数据的索引
+     * @param visionData 完整的视觉数据列表
      * @return 时间间隔阈值（毫秒）
      */
-    private long calculateDynamicTimeInterval(List<VisionEvent> currentGroup, int nextIndex) {
+    private long calculateDynamicTimeInterval(List<VisionEvent> currentGroup, int nextIndex, List<VisionEvent> visionData) {
         // 默认阈值
         long threshold = DEFAULT_TIME_INTERVAL_MS;
         
@@ -250,18 +301,18 @@ public class VisionLocationMatcher {
             VisionEvent last = currentGroup.get(currentGroup.size() - 1);
             VisionEvent secondLast = currentGroup.get(currentGroup.size() - 2);
             groupInternalInterval = getVisionEventTimestamp(last) - getVisionEventTimestamp(secondLast);
-        } else if (currentGroup.size() == 1 && historyVisionData.size() > nextIndex) {
+        } else if (currentGroup.size() == 1 && visionData.size() > nextIndex) {
             // 如果当前组只有一个数据，且还有下一个数据，计算与下一个数据的间隔
             VisionEvent current = currentGroup.get(0);
-            VisionEvent next = historyVisionData.get(nextIndex);
+            VisionEvent next = visionData.get(nextIndex);
             groupInternalInterval = getVisionEventTimestamp(next) - getVisionEventTimestamp(current);
         }
         
         // 计算下一组前1-2个数据的时间间隔
         long nextGroupInternalInterval = 0;
-        if (historyVisionData.size() > nextIndex + 1) {
-            VisionEvent next = historyVisionData.get(nextIndex);
-            VisionEvent nextNext = historyVisionData.get(nextIndex + 1);
+        if (visionData.size() > nextIndex + 1) {
+            VisionEvent next = visionData.get(nextIndex);
+            VisionEvent nextNext = visionData.get(nextIndex + 1);
             nextGroupInternalInterval = getVisionEventTimestamp(nextNext) - getVisionEventTimestamp(next);
         }
         
@@ -291,10 +342,16 @@ public class VisionLocationMatcher {
         Map<String, List<LocationPoint>> locationDataRetry = new HashMap<>(historyLocationData);
         // 遍历所有视觉事件，每个事件只取最优的一个定位点（距离最近，其次时间差最小，完全相同取时间戳更早的定位点）
         for (VisionEvent visionEvent : visionGroup) {
+            if (visionEvent.getId() == 27011L){
+                log.info("开始处理视觉数据: {}", visionEvent);
+            }
             getBastMatchedResults(visionEvent, locationData, result, timeRange, notMatches, true);
         }
 
         for (VisionEvent visionEvent : notMatches){
+            if (visionEvent.getId() == 27011L){
+                log.info("开始处理视觉数据: {}", visionEvent);
+            }
             getBastMatchedResults(visionEvent, locationDataRetry, result, timeRange, notMatches, false);
         }
         
@@ -317,6 +374,9 @@ public class VisionLocationMatcher {
         if (visionEvent.getLongitude() == null || visionEvent.getLatitude() == null) {
 //                log.warn("视觉事件缺少经纬度信息，跳过匹配。事件ID: {}", visionEvent.getId());
             return;
+        }
+        if (visionEvent.getId() == 27011L){
+            System.out.println("aaaa");
         }
 
         VisionLocationMatchResult.MatchedLocationPoint bestMatch = null;
@@ -486,8 +546,8 @@ public class VisionLocationMatcher {
      */
     public void clearHistoryData() {
         historyLocationData.clear();
-        historyVisionData.clear();
-        visionGroups.clear();
+        historyVisionDataByType.clear();
+        visionGroupsByType.clear();
         log.info("历史数据已清空");
     }
     
@@ -498,14 +558,29 @@ public class VisionLocationMatcher {
      */
     public Map<String, Object> getStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("visionEventCount", historyVisionData.size());
+        
+        int totalVisionEvents = historyVisionDataByType.values().stream()
+                .mapToInt(List::size)
+                .sum();
+        stats.put("visionEventCount", totalVisionEvents);
         stats.put("locationCardCount", historyLocationData.size());
-        stats.put("visionGroupCount", visionGroups.size());
+        
+        int totalVisionGroups = visionGroupsByType.values().stream()
+                .mapToInt(List::size)
+                .sum();
+        stats.put("visionGroupCount", totalVisionGroups);
         
         int totalLocationPoints = historyLocationData.values().stream()
                 .mapToInt(List::size)
                 .sum();
         stats.put("totalLocationPoints", totalLocationPoints);
+        
+        // 按车辆类型统计
+        Map<String, Integer> visionEventsByType = new HashMap<>();
+        for (Map.Entry<String, List<VisionEvent>> entry : historyVisionDataByType.entrySet()) {
+            visionEventsByType.put(entry.getKey(), entry.getValue().size());
+        }
+        stats.put("visionEventsByType", visionEventsByType);
         
         return stats;
     }
@@ -534,8 +609,26 @@ public class VisionLocationMatcher {
      */
     public void initHistoryData() {
         historyLocationData.clear();
-        historyVisionData.clear();
-        visionGroups.clear();
+        historyVisionDataByType.clear();
+        visionGroupsByType.clear();
+    }
+    
+    /**
+     * 获取指定车辆类型的历史视觉数据
+     * 返回数据的副本，保证线程安全
+     * 
+     * @param vehicleType 车辆类型（train/car/truck）
+     * @return 历史视觉事件数据列表（按时间排序），如果类型不存在则返回空列表
+     */
+    public List<VisionEvent> getHistoryVisionDataByType(String vehicleType) {
+        if (vehicleType == null || vehicleType.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<VisionEvent> data = historyVisionDataByType.get(vehicleType);
+        if (data == null) {
+            return new ArrayList<>();
+        }
+        return data;
     }
 }
 

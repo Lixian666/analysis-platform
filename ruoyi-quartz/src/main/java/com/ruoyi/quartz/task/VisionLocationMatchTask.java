@@ -4,11 +4,8 @@ import com.alibaba.fastjson.JSONObject;
 import com.jwzt.modules.experiment.RealTimeDriverTracker;
 import com.jwzt.modules.experiment.config.BaseConfig;
 import com.jwzt.modules.experiment.config.FilterConfig;
-import com.jwzt.modules.experiment.domain.BoardingDetector;
-import com.jwzt.modules.experiment.domain.LocationPoint;
-import com.jwzt.modules.experiment.domain.TakBehaviorRecordDetail;
-import com.jwzt.modules.experiment.domain.TakBehaviorRecords;
-import com.jwzt.modules.experiment.domain.TakBeaconInfo;
+import com.jwzt.modules.experiment.domain.*;
+import com.jwzt.modules.experiment.utils.GeoUtils;
 import com.jwzt.modules.experiment.utils.third.manage.DataSender;
 import com.jwzt.modules.experiment.vo.EventState;
 import com.jwzt.modules.experiment.domain.vo.VisionLocationMatchResult;
@@ -84,41 +81,6 @@ public class VisionLocationMatchTask {
     
     @Resource
     private ITakBehaviorRecordDetailService iTakBehaviorRecordDetailService;
-
-    /**
-     * 获取定位数据（仅异常触发重试，最多3次），指数退避：200ms/400ms/800ms
-     * 不对“返回空数据”做重试，避免改变现有语义。
-     */
-    private List<LocationPoint> fetchLocationWithRetry(DataAcquisition dataAcquisition,
-                                                       String cardId,
-                                                       String buildId,
-                                                       String startTimeStrTag,
-                                                       String endTimeStrTag) {
-        final int maxAttempts = 3;
-        final long baseDelayMs = 200L;
-
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                return dataAcquisition.getLocationAndUWBData(cardId, buildId, startTimeStrTag, endTimeStrTag);
-            } catch (Exception e) {
-                if (attempt < maxAttempts) {
-                    long delayMs = baseDelayMs << (attempt - 1); // 200, 400, 800
-                    log.warn("获取定位数据失败，准备重试：cardId={}, attempt={}/{}, delayMs={}, err={}",
-                            cardId, attempt, maxAttempts, delayMs, e.toString());
-                    try {
-                        Thread.sleep(delayMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        log.warn("重试等待被中断，停止重试：cardId={}, attempt={}/{}", cardId, attempt, maxAttempts);
-                        return null;
-                    }
-                } else {
-                    log.error("获取定位数据失败（重试耗尽），卡ID: {}", cardId, e);
-                }
-            }
-        }
-        return null;
-    }
     
     /**
      * 执行匹配任务
@@ -217,6 +179,7 @@ public class VisionLocationMatchTask {
 //                            }
 //                        }
                         if (locationPoints != null && !locationPoints.isEmpty()) {
+                            locationPoints = preprocessBatch(locationPoints);
                             cardLocationMap.put(cardId, locationPoints);
                             log.debug("卡ID: {}, 获取到定位数据 {} 条", cardId, locationPoints.size());
                         }
@@ -237,10 +200,20 @@ public class VisionLocationMatchTask {
             // 6. 获取新的视觉识别数据
             List<VisionEvent> newVisionEventList = jobData.getVisionList(startTimeStrFinal, endTimeStrFinal, cameraIds);
 
-            // 过滤出装卸车数据,只取eventType=load的数据
+            // 过滤出装卸车数据
+            // 火车：load/unload
+            // 地跑：gateCommodityVehicleInput/gateCommodityVehicleOutput
+            // 板车：gateBancheInput/gateBancheOutput
             List<VisionEvent> newVisionEvents = newVisionEventList.stream()
-                    .filter(event -> "load".equals(event.getEventType())
-                            || "unload".equals(event.getEventType()))
+                    .filter(event -> {
+                        String eventType = event.getEventType();
+                        return "load".equals(eventType) 
+                                || "unload".equals(eventType)
+                                || "gateCommodityVehicleInput".equals(eventType)
+                                || "gateCommodityVehicleOutput".equals(eventType)
+                                || "gateBancheInput".equals(eventType)
+                                || "gateBancheOutput".equals(eventType);
+                    })
                     .collect(Collectors.toList());
             // 将新视觉事件的 matched 字段全部置为 1
             if (newVisionEvents != null && !newVisionEvents.isEmpty()) {
@@ -257,7 +230,6 @@ public class VisionLocationMatchTask {
             if (newVisionEvents != null && !newVisionEvents.isEmpty()) {
                 visionLocationMatcher.appendVisionData(newVisionEvents);
             }
-            
             // 8. 执行匹配算法
             List<VisionLocationMatchResult> matchResults = visionLocationMatcher.matchVisionWithLocation();
             
@@ -279,6 +251,14 @@ public class VisionLocationMatchTask {
                     stats.get("locationCardCount"),
                     stats.get("totalLocationPoints"),
                     stats.get("visionGroupCount"));
+            
+            // 输出各车辆类型的视觉事件统计
+            @SuppressWarnings("unchecked")
+            Map<String, Integer> visionEventsByType = (Map<String, Integer>) stats.get("visionEventsByType");
+            if (visionEventsByType != null && !visionEventsByType.isEmpty()) {
+                visionEventsByType.forEach((type, count) -> 
+                    log.info("车辆类型 {} 的视觉事件数: {}", type, count));
+            }
 
             // 11. 对结果中的数据进行处理
             // 按 cardId 分组，每组内按 timestamp 升序排序
@@ -319,6 +299,50 @@ public class VisionLocationMatchTask {
         } catch (Exception e) {
             log.error("视觉识别与定位数据匹配任务执行异常", e);
         }
+    }
+
+
+    /**
+     * 清理历史数据
+     */
+    public void executeClean() {
+        log.info("开始执行清理历史数据任务");
+        visionLocationMatcher.initHistoryData();
+    }
+
+    /**
+     * 获取定位数据（仅异常触发重试，最多3次），指数退避：200ms/400ms/800ms
+     * 不对“返回空数据”做重试，避免改变现有语义。
+     */
+    private List<LocationPoint> fetchLocationWithRetry(DataAcquisition dataAcquisition,
+                                                       String cardId,
+                                                       String buildId,
+                                                       String startTimeStrTag,
+                                                       String endTimeStrTag) {
+        final int maxAttempts = 3;
+        final long baseDelayMs = 200L;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return dataAcquisition.getLocationAndUWBData(cardId, buildId, startTimeStrTag, endTimeStrTag);
+            } catch (Exception e) {
+                if (attempt < maxAttempts) {
+                    long delayMs = baseDelayMs << (attempt - 1); // 200, 400, 800
+                    log.warn("获取定位数据失败，准备重试：cardId={}, attempt={}/{}, delayMs={}, err={}",
+                            cardId, attempt, maxAttempts, delayMs, e.toString());
+                    try {
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.warn("重试等待被中断，停止重试：cardId={}, attempt={}/{}", cardId, attempt, maxAttempts);
+                        return null;
+                    }
+                } else {
+                    log.error("获取定位数据失败（重试耗尽），卡ID: {}", cardId, e);
+                }
+            }
+        }
+        return null;
     }
     
     /**
@@ -379,10 +403,6 @@ public class VisionLocationMatchTask {
             return;
         }
         
-        // 默认使用火车策略（可根据需要扩展业务类型判断逻辑）
-        LoadingStrategyFactory.VehicleType vehicleType = LoadingStrategyFactory.VehicleType.TRAIN;
-        LoadingUnloadingStrategy strategy = loadingStrategyFactory.getStrategy(vehicleType);
-        
         // 遍历每个匹配点，查找对应的上车点
         for (int i = 0; i < matchedPoints.size(); i++) {
             VisionLocationMatchResult.MatchedLocationPoint matchedPoint = matchedPoints.get(i);
@@ -391,23 +411,60 @@ public class VisionLocationMatchTask {
             if (visionEvent.getId() == 20344L){
                 log.info("开始处理卡ID: {} 的第 {} 个上车数据", cardId, i + 1);
             }
-            
+
             if (dropOffPoint == null || dropOffPoint.getTimestamp() == null) {
                 log.warn("卡ID: {} 的第 {} 个匹配点数据无效，跳过", cardId, i + 1);
                 continue;
             }
 
-            if (visionEvent == null || visionEvent.getEventTime() == null) {
+            if (visionEvent == null || visionEvent.getEventType() == null) {
                 log.warn("卡ID: {} 的第 {} 个匹配点数据无效，跳过", cardId, i + 1);
                 continue;
             }
+            
             try {
+                // 根据 event 字段判断车辆类型和装卸类型
+                String eventType = visionEvent.getEventType();
+                LoadingStrategyFactory.VehicleType vehicleType;
+                int loadUnloadType; // 0 装车 1 卸车
+                
+                if ("load".equals(eventType)) {
+                    // 火车装车
+                    vehicleType = LoadingStrategyFactory.VehicleType.TRAIN;
+                    loadUnloadType = 0;
+                } else if ("unload".equals(eventType)) {
+                    // 火车卸车
+                    vehicleType = LoadingStrategyFactory.VehicleType.TRAIN;
+                    loadUnloadType = 1;
+                } else if ("gateCommodityVehicleInput".equals(eventType)) {
+                    // 地跑进（卸车）
+                    vehicleType = LoadingStrategyFactory.VehicleType.GROUND_VEHICLE;
+                    loadUnloadType = 1;
+                } else if ("gateCommodityVehicleOutput".equals(eventType)) {
+                    // 地跑出（装车）
+                    vehicleType = LoadingStrategyFactory.VehicleType.GROUND_VEHICLE;
+                    loadUnloadType = 0;
+                } else if ("gateBancheInput".equals(eventType)) {
+                    // 板车进（卸车）
+                    vehicleType = LoadingStrategyFactory.VehicleType.FLATBED;
+                    loadUnloadType = 1;
+                } else if ("gateBancheOutput".equals(eventType)) {
+                    // 板车出（装车）
+                    vehicleType = LoadingStrategyFactory.VehicleType.FLATBED;
+                    loadUnloadType = 0;
+                } else {
+                    log.warn("卡ID: {} 的第 {} 个匹配点，未知的事件类型: {}，跳过", cardId, i + 1, eventType);
+                    continue;
+                }
+                
+                LoadingUnloadingStrategy strategy = loadingStrategyFactory.getStrategy(vehicleType);
+                
                 long endTimestamp = dropOffPoint.getTimestamp();
                 long startTimestamp = 0l;
-                // 装卸类型 0 装车 1 卸车
-                int eventType = 0;
-                if (visionEvent.getEventType().equals("load")){
-                    log.info("开始处理卡ID: {} 的第 {} 个卸车数据", cardId, i + 1);
+                
+                if (loadUnloadType == 0) {
+                    // 装车逻辑
+                    log.info("开始处理卡ID: {} 的第 {} 个装车数据，车辆类型: {}", cardId, i + 1, vehicleType);
                     // 计算数据区间
                     endTimestamp = dropOffPoint.getTimestamp();
 
@@ -429,9 +486,9 @@ public class VisionLocationMatchTask {
                             startTimestamp = prevTimestamp + 1000 - index * 1000;
                         }
                     }
-                } else if (visionEvent.getEventType().equals("unload")) {
-                    log.info("开始处理卡ID: {} 的第 {} 个卸车数据", cardId, i + 1);
-                    eventType = 1;
+                } else {
+                    // 卸车逻辑
+                    log.info("开始处理卡ID: {} 的第 {} 个卸车数据，车辆类型: {}", cardId, i + 1, vehicleType);
                     // startTimestamp 使用当前卸车点的时间戳
                     startTimestamp = dropOffPoint.getTimestamp();
                     
@@ -454,6 +511,7 @@ public class VisionLocationMatchTask {
                         }
                     }
                 }
+                
                 String start = DateTimeUtils.timestampToDateTimeStr(startTimestamp);
                 String end = DateTimeUtils.timestampToDateTimeStr(endTimestamp);
                 // 提取区间内的定位点
@@ -463,16 +521,16 @@ public class VisionLocationMatchTask {
                     continue;
                 }
                 // 正向查找上车点
-                LocationPoint boardingPoint = findBoardingPoint(intervalPoints, historyPoints, strategy, cardId, eventType);
+                LocationPoint boardingPoint = findBoardingPoint(intervalPoints, historyPoints, strategy, cardId, loadUnloadType);
                 if (boardingPoint == null) {
                     log.warn("卡ID: {} 的第 {} 个匹配点，未找到上车点，跳过", cardId, i + 1);
                     continue;
                 }
                 List<LocationPoint> sessionPoints = new ArrayList<>();
                 // 提取从上车点到下车点的轨迹点
-                if (eventType == 0){
+                if (loadUnloadType == 0){
                     sessionPoints = extractSessionPoints(intervalPoints, boardingPoint, dropOffPoint);
-                }else if (eventType == 1){
+                }else if (loadUnloadType == 1){
                     sessionPoints = extractSessionPoints(intervalPoints, dropOffPoint, boardingPoint);
                 }
                 if (sessionPoints.isEmpty()) {
@@ -484,14 +542,17 @@ public class VisionLocationMatchTask {
                 String trackId = IdUtils.fastSimpleUUID();
 
                 // 入库
-                int inboundStatus = persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType, eventType, visionEvent, trackId);
+                int inboundStatus = persistSession(cardId, boardingPoint, dropOffPoint, sessionPoints, vehicleType, loadUnloadType, visionEvent, trackId);
                 if (inboundStatus == 0){
-                    for (VisionEvent visionEventHistory : visionLocationMatcher.getHistoryVisionData())
+                    // 更新视觉事件的匹配状态
+                    String vehicleTypeStr = getVehicleTypeString(vehicleType);
+                    List<VisionEvent> historyVisionData = visionLocationMatcher.getHistoryVisionDataByType(vehicleTypeStr);
+                    for (VisionEvent visionEventHistory : historyVisionData) {
                         if (visionEventHistory.getId().equals(visionEvent.getId())){
                             visionEventHistory.setMatched(0);
                         }
+                    }
                 }
-
                 // 推送数据
                 RealTimeDriverTracker.TrackSession sess = new RealTimeDriverTracker.TrackSession();
                 sess.sessionId = trackId;
@@ -506,25 +567,39 @@ public class VisionLocationMatchTask {
                 sess.vin = visionEvent.getVin();
 
                 int pushStatus = 1;
-                if (visionEvent.getEventType().equals("load")){
-                    sess.kind = RealTimeDriverTracker.EventKind.SEND;
-                    // 发运
-                    JSONObject outParkPushResult = dataSender.outParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
-                    for (LocationPoint p : sessionPoints){
-                        dataSender.trackPush(null, p, sess, RealTimeDriverTracker.VehicleType.CAR);
+                RealTimeDriverTracker.VehicleType pushVehicleType = convertToPushVehicleType(vehicleType);
+                
+                if (loadUnloadType == 0){
+                    // 装车（发运）
+                    if (vehicleType == LoadingStrategyFactory.VehicleType.TRAIN){
+                        sess.kind = RealTimeDriverTracker.EventKind.SEND;
+                    }else if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED){
+                        sess.kind = RealTimeDriverTracker.EventKind.TRUCK_SEND;
+                    }else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE){
+                        sess.kind = RealTimeDriverTracker.EventKind.CAR_SEND;
                     }
-                    JSONObject outYardPushResult = dataSender.outYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    JSONObject outParkPushResult = dataSender.outParkPush(sess, pushVehicleType);
+                    for (LocationPoint p : sessionPoints){
+                        dataSender.trackPush(null, p, sess, pushVehicleType);
+                    }
+                    JSONObject outYardPushResult = dataSender.outYardPush(sess, pushVehicleType);
                     if (outParkPushResult.getIntValue("code") == 20000 && outYardPushResult.getIntValue("code") == 20000){
                         pushStatus = 0;
                     }
-                } else if (visionEvent.getEventType().equals("unload")){
-                    sess.kind = RealTimeDriverTracker.EventKind.ARRIVED;
-                    // 到达
-                    JSONObject inYardPushResult = dataSender.inYardPush(sess, RealTimeDriverTracker.VehicleType.CAR);
-                    for (LocationPoint p : sessionPoints){
-                        dataSender.trackPush(null, p, sess, RealTimeDriverTracker.VehicleType.CAR);
+                } else {
+                    // 卸车（到达）
+                    if (vehicleType == LoadingStrategyFactory.VehicleType.TRAIN){
+                        sess.kind = RealTimeDriverTracker.EventKind.ARRIVED;;
+                    }else if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED){
+                        sess.kind = RealTimeDriverTracker.EventKind.TRUCK_ARRIVED;
+                    }else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE){
+                        sess.kind = RealTimeDriverTracker.EventKind.CAR_ARRIVED;
                     }
-                    JSONObject inParkPushResult = dataSender.inParkPush(sess, RealTimeDriverTracker.VehicleType.CAR);
+                    JSONObject inYardPushResult = dataSender.inYardPush(sess, pushVehicleType);
+                    for (LocationPoint p : sessionPoints){
+                        dataSender.trackPush(null, p, sess, pushVehicleType);
+                    }
+                    JSONObject inParkPushResult = dataSender.inParkPush(sess, pushVehicleType);
                     if (inYardPushResult.getIntValue("code") == 20000 && inParkPushResult.getIntValue("code") == 20000){
                         pushStatus = 0;
                     }
@@ -535,9 +610,9 @@ public class VisionLocationMatchTask {
                     iTakBehaviorRecordsService.updatePushStatus(trackId, 0);
                 }
 
-
-                log.info("卡ID: {} 的第 {} 个匹配点处理完成，上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
-                        cardId, i + 1, 
+                log.info("卡ID: {} 的第 {} 个匹配点处理完成，车辆类型: {}, 装卸类型: {}, 上车点时间: {}, 下车点时间: {}, 轨迹点数: {}", 
+                        cardId, i + 1, vehicleType,
+                        loadUnloadType == 0 ? "装车" : "卸车",
                         DateTimeUtils.timestampToDateTimeStr(boardingPoint.getTimestamp()),
                         DateTimeUtils.timestampToDateTimeStr(dropOffPoint.getTimestamp()),
                         sessionPoints.size());
@@ -546,6 +621,36 @@ public class VisionLocationMatchTask {
                 log.error("处理卡ID: {} 的第 {} 个匹配点时发生异常", cardId, i + 1, e);
             }
         }
+    }
+    
+    /**
+     * 将车辆类型转换为字符串
+     */
+    private String getVehicleTypeString(LoadingStrategyFactory.VehicleType vehicleType) {
+        if (vehicleType == LoadingStrategyFactory.VehicleType.TRAIN) {
+            return "train";
+        } else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE) {
+            return "car";
+        } else if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED) {
+            return "truck";
+        }
+        return "train";
+    }
+
+
+    
+    /**
+     * 转换为推送接口使用的车辆类型
+     */
+    private RealTimeDriverTracker.VehicleType convertToPushVehicleType(LoadingStrategyFactory.VehicleType vehicleType) {
+        if (vehicleType == LoadingStrategyFactory.VehicleType.TRAIN) {
+            return RealTimeDriverTracker.VehicleType.CAR;
+        } else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE) {
+            return RealTimeDriverTracker.VehicleType.CAR;
+        } else if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED) {
+            return RealTimeDriverTracker.VehicleType.CAR;
+        }
+        return RealTimeDriverTracker.VehicleType.CAR;
     }
 
     /**
@@ -604,14 +709,18 @@ public class VisionLocationMatchTask {
         if (intervalPoints == null || intervalPoints.isEmpty()) {
             return null;
         }
+        // 进行异常过滤
+        List<LocationPoint> filteredPoints = stateAnalysis(intervalPoints);
         
         int recordPointsSize = FilterConfig.RECORD_POINTS_SIZE;
-        
         // 从起点开始，逐点构造窗口
-        for (int i = 0; i < intervalPoints.size(); i++) {
+        for (int i = 0; i < filteredPoints.size(); i++) {
+            if (i == 0){
+                i = recordPointsSize / 2;
+            }
             // 构造窗口：以当前点为中心，前后各取 recordPointsSize/2 个点
             int windowStart = Math.max(0, i - recordPointsSize / 2);
-            int windowEnd = Math.min(intervalPoints.size(), windowStart + recordPointsSize);
+            int windowEnd = Math.min(filteredPoints.size(), windowStart + recordPointsSize);
             
             // 如果窗口大小不足，调整窗口起始位置
             if (windowEnd - windowStart < recordPointsSize) {
@@ -623,30 +732,24 @@ public class VisionLocationMatchTask {
                 continue;
             }
             
-            List<LocationPoint> window = new ArrayList<>(intervalPoints.subList(windowStart, windowEnd));
-            
-            // 使用 OutlierFilter 进行异常过滤
-            List<LocationPoint> filteredPoints = outlierFilter.stateAnalysis(window);
-            if (filteredPoints == null || filteredPoints.size() < recordPointsSize) {
-                continue;
-            }
+            List<LocationPoint> window = new ArrayList<>(filteredPoints.subList(windowStart, windowEnd));
             
             // 调用策略检测事件
             try {
-                EventState eventState = strategy.detectEventAlready(filteredPoints, historyPoints, eventType);
+                EventState eventState = strategy.detectEventAlready(window, historyPoints, eventType);
                 if (eventState != null && eventState.getEvent() != null) {
                     BoardingDetector.Event event = eventState.getEvent();
                     // 检查是否是上车事件
                     if (event == BoardingDetector.Event.SEND_BOARDING
                             || event == BoardingDetector.Event.ARRIVED_DROPPING
                             || event == BoardingDetector.Event.CAR_SEND_BOARDING
-                            || event == BoardingDetector.Event.CAR_SEND_DROPPING
+                            || event == BoardingDetector.Event.CAR_ARRIVED_DROPPING
                             || event == BoardingDetector.Event.TRUCK_SEND_BOARDING
                             || event == BoardingDetector.Event.TRUCK_ARRIVED_DROPPING) {
                         // 找到上车点，返回窗口中间的点
                         int centerIndex = windowStart + recordPointsSize / 2;
-                        if (centerIndex < intervalPoints.size()) {
-                            return intervalPoints.get(centerIndex);
+                        if (centerIndex < filteredPoints.size()) {
+                            return filteredPoints.get(centerIndex);
                         }
                     }
                 }
@@ -657,17 +760,17 @@ public class VisionLocationMatchTask {
         }
         
         // 如果未找到明确的上车事件，尝试使用策略的 isInParkingArea 方法查找第一个在停车区域的点
-        for (LocationPoint point : intervalPoints) {
+        for (LocationPoint point : filteredPoints) {
             if (strategy.isInParkingArea(point)) {
                 return point;
             }
         }
 
         // 如果还是没有上下车点，则取intervalPoints的第一个点
-        if (intervalPoints.size() > (recordPointsSize / 2)){
-            return intervalPoints.get(recordPointsSize / 2);
+        if (filteredPoints.size() > (recordPointsSize / 2)){
+            return filteredPoints.get(recordPointsSize / 2);
         }
-        return intervalPoints.get(0);
+        return filteredPoints.get(0);
     }
     
     /**
@@ -906,6 +1009,7 @@ public class VisionLocationMatchTask {
     private List<LocationPoint> preprocessBatch(List<LocationPoint> batch) {
         List<LocationPoint> normal = new ArrayList<>();
         batch.sort((p1, p2) -> Long.compare(p1.getTimestamp(), p2.getTimestamp()));
+        LocationPoint lastPoint = null;
         for (LocationPoint raw : batch) {
             if (DateTimeUtils.dateTimeSSSStrToDateTimeStr(raw.getAcceptTime()).equals("2025-11-17 11:07:00")){
                 System.out.println("⚠️ 检测到车辆已进入地跑区域（地跑）");
@@ -914,7 +1018,8 @@ public class VisionLocationMatchTask {
             if (raw.getTimestamp() == 0 && raw.getAcceptTime() != null) {
                 raw.setTimestamp(DateTimeUtils.convertToTimestamp(raw.getAcceptTime()));
             }
-            int state = outlierFilter.isValid(raw);
+            int state = isValid(raw, lastPoint);
+            lastPoint = raw;
             if (state == 0) {
                 normal.add(raw);
             }
@@ -926,6 +1031,57 @@ public class VisionLocationMatchTask {
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(LocationPoint::getTimestamp, x -> x, (a, b) -> a, TreeMap::new),
                         m -> new ArrayList<>(m.values())));
+    }
+
+    public int isValid(LocationPoint newPoint, LocationPoint lastPoint) {
+        if (lastPoint == null) {
+            lastPoint = newPoint;
+            return 0; // 第一个点不处理
+        }
+        Coordinate newCoordinate = new Coordinate(newPoint.getLongitude(), newPoint.getLatitude());
+        Coordinate lastCoordinate = new Coordinate(lastPoint.getLongitude(), lastPoint.getLatitude());
+
+        double distance = GeoUtils.distanceM(newCoordinate, lastCoordinate);
+        long timeDiff = newPoint.getTimestamp() - lastPoint.getTimestamp();
+
+//         时间间隔太小
+        if (timeDiff < FilterConfig.MIN_TIME_INTERVAL_MS) {
+            lastPoint = newPoint;
+            return 1;
+        }
+//         在不在货场区域
+//        if (!zoneChecker.isInDrivingZone(newPoint)){
+//            lastPoint = newPoint;
+//            return 3;
+//        }
+        double speed = distance / (timeDiff / 1000.0); // m/s
+        newPoint.setSpeed(speed);
+        // 速度过大 or 跳跃距离过远
+        if (speed > FilterConfig.MAX_SPEED_MPS || (distance > FilterConfig.MAX_JUMP_DISTANCE & timeDiff <= 1000)) {
+            lastPoint = newPoint;
+            return 2;
+        }
+        lastPoint = newPoint;
+        return 0;
+    }
+
+    /**
+     * 状态分析方法
+     */
+    public List<LocationPoint> stateAnalysis(List<LocationPoint> points) {
+        List<LocationPoint> result = new ArrayList<>();
+        Deque<LocationPoint> window = new ArrayDeque<>();
+        for (LocationPoint point : points){
+            window.addLast(point);
+            if (window.size() > 2) {
+                window.removeFirst();
+            }
+            // 通过windowSize个点判断当前运动状态
+            MovementAnalyzer.MovementState state = MovementAnalyzer.analyzeState(new ArrayList<>(window));
+            point.setState(state);
+            result.add(point);
+        }
+        return result;
     }
 }
 
