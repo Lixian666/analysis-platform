@@ -125,6 +125,7 @@
     if(graphicLayer_carlines.value['draw' + item.id]){
       graphicLayer_carlines.value['draw' + item.id].remove()
       graphicLayer_carlines.value['draw' + item.id] = null
+      triggerRender()  // 手动触发渲染
     }
   }
   function drawyellowsload(item){
@@ -143,6 +144,7 @@
 
     // console.log(item)
     moveCarDirection(grap, listsetmor(item.takBehaviorRecordDetailList),true,item.color,1,true, item.takBehaviorRecordDetailList, 'yellow_' + item.id)
+    triggerRender()  // 手动触发渲染
   }
 
 
@@ -151,6 +153,7 @@
     if(graphicYellow.value){
       graphicYellow.value.remove()
       graphicYellow.value = null
+      triggerRender()  // 手动触发渲染
     }
   }
 
@@ -160,9 +163,20 @@
     map.value.addLayer(grap)
     graphicLayer_carlines.value['draw' + item.id] = grap
     moveCarDirection(grap, listsetmor(item.takBehaviorRecordDetailList),true,item.color,arrayList.value.length,true, item.takBehaviorRecordDetailList, 'track_' + item.id)
+    triggerRender()  // 手动触发渲染
   }
   //生命周期 end
   //methods start
+  
+  // === 性能优化：手动触发渲染的辅助函数 ===
+  function triggerRender() {
+    if (map.value && map.value.scene && map.value.scene.requestRenderMode) {
+      map.value.scene.requestRender()
+      // 连续触发几次，确保图形显示
+      setTimeout(() => map.value.scene.requestRender(), 16)  // 下一帧
+      setTimeout(() => map.value.scene.requestRender(), 32)  // 再下一帧
+    }
+  }
   
   // 键盘事件处理
   function handleKeyDown(event) {
