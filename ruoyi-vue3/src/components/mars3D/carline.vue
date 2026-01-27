@@ -274,6 +274,11 @@
       currentPoint.openPopup()
     }
     
+    // === 性能优化：手动触发渲染 ===
+    if (map.value && map.value.scene && map.value.scene.requestRenderMode) {
+      map.value.scene.requestRender()
+    }
+    
     // 如果是固定位置模式，应用保存的位置
     if (popupFixedMode.value && savedPopupPosition.value) {
       console.log('固定位置模式，应用保存的位置:', savedPopupPosition.value)
@@ -324,89 +329,72 @@
     // mars3d初始化
     // 第一步：先创建 Map 实例（不立即设置 msaaSamples）
 // 第一步：创建地图实例
-map.value = new mars3d.Map('mars3dContainer', {
-  center: proxy.$center,
+    // === GPU性能优化：创建地图实例 ===
+    map.value = new mars3d.Map('mars3dContainer', {
+      center: proxy.$center,
 
-  scene: {
-    showSun: true,
-    showMoon: true,
-    showSkyBox: true,
-    showSkyAtmosphere: false,
-    fog: true,
-    fxaa: true, // 开启 FXAA 抗锯齿
-    globe: {
-      showGroundAtmosphere: false,
-      depthTestAgainstTerrain: false,
-      baseColor: '#546a53'
-    },
-    mapProjection: mars3d.CRS.EPSG3857,
-    mapMode2D: Cesium.MapMode2D.INFINITE_SCROLL
-  },
+      scene: {
+        // === 关闭所有不必要的视觉效果 ===
+        showSun: false,              // ❌ 关闭太阳
+        showMoon: false,             // ❌ 关闭月亮
+        showSkyBox: false,           // ❌ 关闭天空盒
+        showSkyAtmosphere: false,    // ❌ 关闭大气层
+        fog: false,                  // ❌ 关闭雾效
+        fxaa: false,                 // ❌ 关闭抗锯齿（GPU杀手）
+        
+        // === 按需渲染模式（最关键！）===
+        requestRenderMode: true,     // ✅ 只在场景变化时渲染
+        maximumRenderTimeChange: Infinity, // ✅ 最大化渲染间隔
+        
+        globe: {
+          showGroundAtmosphere: false,
+          depthTestAgainstTerrain: false,
+          baseColor: '#546a53',
+          enableLighting: false      // ❌ 关闭光照
+        },
+        mapProjection: mars3d.CRS.EPSG3857,
+        mapMode2D: Cesium.MapMode2D.INFINITE_SCROLL
+      },
 
-  contextOptions: {
-    webgl: {
-      antialias: false // 由我们控制抗锯齿
-    }
-  },
+      contextOptions: {
+        webgl: {
+          antialias: false,
+          alpha: false,              // 关闭透明度
+          depth: true,
+          stencil: false,
+          powerPreference: 'high-performance'
+        }
+      },
 
-  resolutionScale: 0.8
-  // msaaSamples 先不设置，动态检测后再赋值
-});
+      resolutionScale: 0.6           // 降低分辨率
+    });
 
 // 第二步：获取 viewer 实例（map.value 就是 viewer）
-const viewer = map.value;
-map.value.setCameraView(proxy.$center, { duration: 0.1 })
-// 使用 viewer.scene 的 postRender 事件（确保 scene 已初始化）
-// 使用 once = true，只执行一次
-const removeListener = viewer.scene.postRender.addEventListener(() => {
-  try {
-    const context = viewer.scene.context;
-    const gl = context?._gl;
-
-    if (!gl) {
-      console.warn('WebGL context 未就绪');
-      setMsaaSamples(1);
-      removeListener(); // 移除监听
-      return;
+    // === 设置相机视角 ===
+    const viewer = map.value;
+    map.value.setCameraView(proxy.$center, { duration: 0.1 })
+    
+    // === 性能优化日志 ===
+    console.log('🚀 GPU性能优化已启用：')
+    console.log('  ✅ 已禁用 MSAA 抗锯齿')
+    console.log('  ✅ 已关闭太阳、月亮、天空盒、雾效')
+    console.log('  ✅ 已启用按需渲染模式 - GPU将只在场景变化时工作')
+    
+    // === 监听相机变化，手动触发渲染 ===
+    if (viewer.scene.requestRenderMode) {
+      viewer.camera.changed.addEventListener(() => {
+        viewer.scene.requestRender()
+      })
+      
+      viewer.scene.morphComplete.addEventListener(() => {
+        viewer.scene.requestRender()
+      })
+      
+      console.log('  ✅ 已绑定相机事件监听')
+    } else {
+      console.warn('⚠️ 按需渲染模式未启用，GPU将持续工作')
     }
-
-    // 检查是否支持多采样渲染缓冲
-    const ext = gl.getExtension('WEBGL_multisampled_renderbuffer');
-    if (!ext) {
-      console.warn('当前环境不支持 WEBGL_multisampled_renderbuffer');
-      setMsaaSamples(1);
-      removeListener();
-      return;
-    }
-
-    // 获取最大支持的采样数
-    const maxSamples = gl.getParameter(ext.MAX_SAMPLES_WEBGL);
-    console.log('设备最大支持的 MSAA 采样数:', maxSamples);
-
-    // 安全设置：取 min(4, maxSamples)
-    const safeSamples = Math.min(4, maxSamples > 0 ? maxSamples : 1);
-
-    // 设置 MSAA 采样数
-    setMsaaSamples(safeSamples);
-
-  } catch (error) {
-    console.error('检测 MSAA 支持失败:', error);
-    setMsaaSamples(1);
-  }
-
-  // 执行完成后移除监听
-  removeListener();
-});
-
-// 封装设置 msaaSamples 的函数，避免重复代码
-function setMsaaSamples(samples) {
-  try {
-    viewer.scene.msaaSamples = samples;
-    console.log(`✅ 已设置 MSAA 采样数: ${samples}`);
-  } catch (e) {
-    console.warn('设置 msaaSamples 失败:', e);
-  }
-}
+    
     // 矢量地图倾斜摄影加载
     addTileLayer()
     camerahistory()
