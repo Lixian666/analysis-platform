@@ -408,7 +408,7 @@ public class VisionLocationMatchTask {
             VisionLocationMatchResult.MatchedLocationPoint matchedPoint = matchedPoints.get(i);
             LocationPoint dropOffPoint = matchedPoint.getLocationPoint();
             VisionEvent visionEvent = matchedPoint.getVisionEvent();
-            if (visionEvent.getId() == 20344L){
+            if (visionEvent.getId() == 27707L){
                 log.info("开始处理卡ID: {} 的第 {} 个上车数据", cardId, i + 1);
             }
 
