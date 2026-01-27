@@ -142,7 +142,7 @@ public class DataAcquisition {
         List<LocationPoint> LocationPoints = new ArrayList<>();
 
         // 基础空值保护：任意一侧为 null 直接返回空列表
-        if (points == null || tagData == null){
+        if (points == null && tagData == null){
             return LocationPoints;
         }
 
