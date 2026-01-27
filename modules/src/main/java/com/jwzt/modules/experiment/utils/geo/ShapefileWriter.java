@@ -1,6 +1,7 @@
 package com.jwzt.modules.experiment.utils.geo;
 
 import com.jwzt.modules.experiment.domain.Coordinate;
+import com.jwzt.modules.experiment.domain.LocationPoint;
 import org.geotools.data.*;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.data.simple.SimpleFeatureStore;
@@ -14,10 +15,13 @@ import org.opengis.feature.simple.SimpleFeatureType;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
+
+import static com.jwzt.modules.experiment.utils.FileUtils.ensureFilePathExists;
 
 public class ShapefileWriter {
 
@@ -77,5 +81,15 @@ public class ShapefileWriter {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /** shp 输出 */
+    public static void outputVectorFiles(List<LocationPoint> points, String shpFilePath) {
+        List<Coordinate> coordinates = new ArrayList<>(points.size());
+        for (LocationPoint p : points) {
+            coordinates.add(new Coordinate(p.getLongitude(), p.getLatitude(), p.getTimestamp()));
+        }
+        ensureFilePathExists(shpFilePath);
+        ShapefileWriter.writeCoordinatesToShapefile(coordinates, shpFilePath);
     }
 }
