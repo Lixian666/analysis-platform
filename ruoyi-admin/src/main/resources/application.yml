@@ -20,7 +20,7 @@ server:
   servlet:
     # 应用的访问路径
     context-path: /analysis-platform-api
-    domain-name: http://192.168.6.8
+    domain-name: http://192.168.9.100
   tomcat:
     # tomcat的URI编码
     uri-encoding: UTF-8
@@ -56,7 +56,7 @@ spring:
     # 默认开发环境
     #    active: druid
     # 激活环境配置：djz-董家镇，可以创建 yuzui、minhang 等其他环境配置
-    active: dameng,djz
+    active: lr
     # 数据库类型
     #    dbType: mysql
     dbType: dameng
