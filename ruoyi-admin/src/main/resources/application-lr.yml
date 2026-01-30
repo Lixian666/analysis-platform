@@ -78,7 +78,7 @@ spring:
     # 端口，默认为6379
     port: 6379
     # 数据库索引
-    database: 0
+    database: 9
     # 密码
     password: jwzt@2020
     # 连接超时时间
@@ -100,8 +100,8 @@ experiment:
   base:
     stay-verify: false
     ranging-verify: true
-    log-enabled: true
-    push-data: true
+    log-enabled: false
+    push-data: false
     output-shp: false
     output-shp-path: ${experiment.platform-dir}/PlatformData/output
     delete-datetime:
