@@ -13,12 +13,8 @@ LOGS_DIR="${DEPLOY_DIR}/logs"
 JAR_PATH="${DEPLOY_DIR}/${JAR_NAME}"
 PID_FILE="${DEPLOY_DIR}/${APP_NAME}.pid"
 
-# ===== 日志文件（按天） =====
-TODAY=$(date +"%Y%m%d")
-CONSOLE_LOG="${LOGS_DIR}/console-${TODAY}.log"
-
 # JVM参数配置
-JVM_OPTS="-Xms512m -Xmx8192m"
+JVM_OPTS="-Xms4096m -Xmx8192m"
 JVM_OPTS="${JVM_OPTS} -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=512m"
 JVM_OPTS="${JVM_OPTS} -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 JVM_OPTS="${JVM_OPTS} -XX:+HeapDumpOnOutOfMemoryError"
@@ -102,12 +98,11 @@ start() {
     echo -e "  配置目录: ${CONFIG_DIR}"
     echo -e "  日志目录: ${LOGS_DIR}"
     echo -e "  监听端口: ${APP_PORT}"
-    echo -e "  日志文件: ${CONSOLE_LOG}"
     echo ""
 
     # 启动应用
     cd "$DEPLOY_DIR"
-    nohup java $JVM_OPTS -jar $JAR_PATH $SPRING_OPTS > "${CONSOLE_LOG}" 2>&1 &
+    nohup java $JVM_OPTS -jar $JAR_PATH $SPRING_OPTS > ${LOGS_DIR}/console.log 2>&1 &
 
     local pid=$!
     echo $pid > "$PID_FILE"
@@ -123,7 +118,7 @@ start() {
             echo -e "PID: ${pid}"
             echo -e "端口: ${APP_PORT}"
             echo -e "访问地址: http://localhost:${APP_PORT}"
-            echo -e "实时日志: tail -f ${CONSOLE_LOG}"
+            echo -e "实时日志: tail -f ${LOGS_DIR}/console.log"
             echo -e "${GREEN}========================================${NC}"
             return 0
         fi
@@ -135,8 +130,8 @@ start() {
     echo -e "${RED}========================================${NC}"
     echo -e "${RED}应用启动失败！${NC}"
     echo -e "${RED}========================================${NC}"
-    echo -e "请查看日志: ${CONSOLE_LOG}"
-    echo -e "查看命令: tail -50 ${CONSOLE_LOG}"
+    echo -e "请查看日志: ${LOGS_DIR}/console.log"
+    echo -e "查看命令: tail -50 ${LOGS_DIR}/console.log"
     rm -f "$PID_FILE"
     exit 1
 }
@@ -215,7 +210,6 @@ status() {
         echo -e "JAR: ${JAR_PATH}"
         echo -e "配置: ${CONFIG_DIR}"
         echo -e "日志: ${LOGS_DIR}"
-        echo -e "当日日志: ${CONSOLE_LOG}"
         echo ""
         echo -e "${BLUE}进程信息:${NC}"
         ps -f -p $pid
@@ -231,26 +225,26 @@ status() {
 
 # 查看日志
 logs() {
-    if [ -f "${CONSOLE_LOG}" ]; then
+    if [ -f "${LOGS_DIR}/console.log" ]; then
         echo -e "${BLUE}========================================${NC}"
         echo -e "${BLUE}实时日志输出 (Ctrl+C 退出)${NC}"
         echo -e "${BLUE}========================================${NC}"
-        tail -f "${CONSOLE_LOG}"
+        tail -f "${LOGS_DIR}/console.log"
     else
-        echo -e "${RED}日志文件不存在: ${CONSOLE_LOG}${NC}"
+        echo -e "${RED}日志文件不存在: ${LOGS_DIR}/console.log${NC}"
     fi
 }
 
 # 查看最近的日志
 tail_logs() {
     local lines=${1:-100}
-    if [ -f "${CONSOLE_LOG}" ]; then
+    if [ -f "${LOGS_DIR}/console.log" ]; then
         echo -e "${BLUE}========================================${NC}"
         echo -e "${BLUE}最近 ${lines} 行日志${NC}"
         echo -e "${BLUE}========================================${NC}"
-        tail -n $lines "${CONSOLE_LOG}"
+        tail -n $lines "${LOGS_DIR}/console.log"
     else
-        echo -e "${RED}日志文件不存在: ${CONSOLE_LOG}${NC}"
+        echo -e "${RED}日志文件不存在: ${LOGS_DIR}/console.log${NC}"
     fi
 }
 
