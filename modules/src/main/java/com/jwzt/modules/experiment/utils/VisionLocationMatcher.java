@@ -431,7 +431,7 @@ public class VisionLocationMatcher {
                 continue;
             }
             // 创建一个集合类型是List<LocationPoint>，其中只能有3个元素，进一个新的元素就删除第一个元素
-            if (beforePoints.size() >= 10) {
+            if (beforePoints.size() >= 5) {
                 beforePoints.remove(0);
             }
             beforePoints.add(locationPoint);
@@ -515,7 +515,7 @@ public class VisionLocationMatcher {
                 true);
         // 获取交通车数
         // 判断是否在交通车上
-        if (theLastTenPointsNotInTOJTCCount >= 6) {
+        if (theLastTenPointsNotInTOJTCCount >= 2) {
             inTheTrafficCar = true;
         } else {
             inTheTrafficCar = false;
