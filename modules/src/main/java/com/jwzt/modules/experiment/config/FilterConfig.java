@@ -20,12 +20,15 @@ public class FilterConfig {
         public static final double MAX_SPEED_MPS = 22.0; // 最大速度，单位 m/s（比如步行 < 2，驾驶 < 17）
         public static final double MIN_SPEED_MPS = 0.0; // 最小速度，单位 m/s（比如步行 < 2，驾驶 < 17）
         public static final double MIN_WALKING_SPEED = 0.7; // 最小步行速度，单位 m/s
-        public static final double MAX_WALKING_SPEED = 2.0; // 最大速度，单位 m/s
-        public static final double MAX_RUNING_SPEED = 3.0; // 最大小跑速度，单位 m/s
+        public static final double MAX_WALKING_SPEED = 2.2; // 最大速度，单位 m/s
+        public static final double MAX_RUNING_SPEED = 4.0; // 最大小跑速度，单位 m/s
         public static final double MAX_LOW_DRIVING_SPEED = 7.0; // 最大低速驾驶速度，单位 m/s
         public static final double MAX_JUMP_DISTANCE = 20.0; // 每点最大跳变距离（米）
         public static final int MIN_TIME_INTERVAL_MS = 1; // 最小时间间隔 （毫秒）
         public static final int WINDOW_STATE_SIZE = 2;      // 行为状态识别窗口大小
+
+        // 面积判定配置
+        public static final double TRIANGLE_AREA_THRESHOLD = 0.2; // 三角形面积阈值（平方米），用于停止状态辅助判断
 
 
     // 时间间隔配置

@@ -123,7 +123,7 @@ public class GroundVehicleLoadingStrategy implements LoadingUnloadingStrategy {
             // 判断到达下车点前5个点状态
             for (int i = 0; i < 5; i++) {
                 LocationPoint point = theFirstTenPoints.get(i);
-                if (point.getSpeed() < FilterConfig.MIN_WALKING_SPEED){
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED){
                     parkTags++;
                 }else {
                     parkTags = 0;
@@ -148,7 +148,9 @@ public class GroundVehicleLoadingStrategy implements LoadingUnloadingStrategy {
                 return new EventState(currentEvent, currentPoint.getTimestamp(), currentPoint.getAcceptTime(), currentPoint.getLongitude(), currentPoint.getLatitude());
             }
         }
-
+        if (currentPoint.getAcceptTime().equals("2026-02-02 12:27:12")){
+            System.out.println("异常日志 ⚠️ TrainLoadingStrategy: " + currentPoint);
+        }
         // 地跑到达下车事件
         // 检测到达下车事件
         if (status == 1
@@ -192,7 +194,7 @@ public class GroundVehicleLoadingStrategy implements LoadingUnloadingStrategy {
             // 判断到达下车点前5个点状态
             for (int i = 0; i < 5; i++) {
                 LocationPoint point = theLastTenPoints.get(i);
-                if (point.getSpeed() < FilterConfig.MIN_WALKING_SPEED){
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED){
                     parkTags++;
                 }else {
                     parkTags = 0;

@@ -15,6 +15,7 @@ public class LocationPoint {
     private Double speed;
     private Double thirdSpeed;
     private MovementAnalyzer.MovementState state;
+    private MovementAnalyzer.MovementState distanceState;
     private String event;
 
     private TagScanUwbData tagScanUwbData;

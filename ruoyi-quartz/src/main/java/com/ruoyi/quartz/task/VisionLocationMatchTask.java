@@ -37,6 +37,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import static com.jwzt.modules.experiment.domain.MovementAnalyzer.observeState;
+
 /**
  * 视觉识别与定位数据匹配定时任务
  * 每分钟执行一次，将视觉识别数据与定位卡数据进行匹配
@@ -307,7 +309,35 @@ public class VisionLocationMatchTask {
      */
     public void executeClean() {
         log.info("开始执行清理历史数据任务");
+        log.info("清理前数据");
+        java.util.Map<String, Object> stats = visionLocationMatcher.getStatistics();
+        log.info("历史数据统计：视觉事件: {}, 定位卡数: {}, 定位点总数: {}, 视觉组数: {}",
+                stats.get("visionEventCount"),
+                stats.get("locationCardCount"),
+                stats.get("totalLocationPoints"),
+                stats.get("visionGroupCount"));
+
+        // 输出各车辆类型的视觉事件统计
+        @SuppressWarnings("unchecked")
+        Map<String, Integer> visionEventsByType = (Map<String, Integer>) stats.get("visionEventsByType");
+        if (visionEventsByType != null && !visionEventsByType.isEmpty()) {
+            visionEventsByType.forEach((type, count) ->
+                    log.info("车辆类型 {} 的视觉事件数: {}", type, count));
+        }
+
         visionLocationMatcher.initHistoryData();
+        log.info("清理后数据");
+        stats = visionLocationMatcher.getStatistics();
+        log.info("历史数据统计：视觉事件: {}, 定位卡数: {}, 定位点总数: {}, 视觉组数: {}",
+                stats.get("visionEventCount"),
+                stats.get("locationCardCount"),
+                stats.get("totalLocationPoints"),
+                stats.get("visionGroupCount"));
+        visionEventsByType = (Map<String, Integer>) stats.get("visionEventsByType");
+        if (visionEventsByType != null && !visionEventsByType.isEmpty()) {
+            visionEventsByType.forEach((type, count) ->
+                    log.info("车辆类型 {} 的视觉事件数: {}", type, count));
+        }
     }
 
     /**
@@ -402,13 +432,17 @@ public class VisionLocationMatchTask {
             log.warn("卡ID: {} 的历史定位数据为空，跳过处理", cardId);
             return;
         }
+
+        if (cardId.equals("1918B300286A")){
+            log.warn("卡ID: {} 的匹配数据数量过多，跳过处理", cardId);
+        }
         
         // 遍历每个匹配点，查找对应的上车点
         for (int i = 0; i < matchedPoints.size(); i++) {
             VisionLocationMatchResult.MatchedLocationPoint matchedPoint = matchedPoints.get(i);
             LocationPoint dropOffPoint = matchedPoint.getLocationPoint();
             VisionEvent visionEvent = matchedPoint.getVisionEvent();
-            if (visionEvent.getId() == 27707L){
+            if (visionEvent.getId() == 42944L){
                 log.info("开始处理卡ID: {} 的第 {} 个上车数据", cardId, i + 1);
             }
 
@@ -466,6 +500,7 @@ public class VisionLocationMatchTask {
                     // 装车逻辑
                     log.info("开始处理卡ID: {} 的第 {} 个装车数据，车辆类型: {}", cardId, i + 1, vehicleType);
                     // 计算数据区间
+                    int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
                     endTimestamp = dropOffPoint.getTimestamp();
 
                     if (i == 0) {
@@ -473,11 +508,11 @@ public class VisionLocationMatchTask {
                         startTimestamp = Math.max(0, endTimestamp - 5 * 60 * 1000L);
                     } else {
                         // 找到上一个匹配点的下一个点作为起点
+                        endTimestamp = dropOffPoint.getTimestamp() + index * 1000;
                         LocationPoint prevDropOffPoint = matchedPoints.get(i - 1).getLocationPoint();
                         long prevTimestamp = prevDropOffPoint.getTimestamp();
                         // 找到历史数据中时间戳 > prevTimestamp 的第一个点
                         startTimestamp = findNextPointTimestamp(historyPoints, prevTimestamp);
-                        int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
                         if (startTimestamp > 0){
                             startTimestamp = startTimestamp - index * 1000;
                         }
@@ -490,7 +525,8 @@ public class VisionLocationMatchTask {
                     // 卸车逻辑
                     log.info("开始处理卡ID: {} 的第 {} 个卸车数据，车辆类型: {}", cardId, i + 1, vehicleType);
                     // startTimestamp 使用当前卸车点的时间戳
-                    startTimestamp = dropOffPoint.getTimestamp();
+                    int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
+                    startTimestamp = dropOffPoint.getTimestamp() - index * 1000;
                     
                     // 判断是否为最后一个点
                     if (i == matchedPoints.size() - 1) {
@@ -502,7 +538,6 @@ public class VisionLocationMatchTask {
                         long nextTimestamp = nextDropOffPoint.getTimestamp();
                         // 找到历史数据中时间戳 < nextTimestamp 的最后一个点
                         long prevTimestamp = findPreviousPointTimestamp(historyPoints, nextTimestamp);
-                        int index = FilterConfig.RECORD_POINTS_SIZE / 2 - 1;
                         if (prevTimestamp > 0) {
                             endTimestamp = prevTimestamp - index * 1000;
                         } else {
@@ -1071,16 +1106,44 @@ public class VisionLocationMatchTask {
     public List<LocationPoint> stateAnalysis(List<LocationPoint> points) {
         List<LocationPoint> result = new ArrayList<>();
         Deque<LocationPoint> window = new ArrayDeque<>();
-        for (LocationPoint point : points){
+        Deque<LocationPoint> areaWindow = new ArrayDeque<>();
+        for (int i = 0; i < points.size(); i++) {
+            LocationPoint point = points.get(i);
             window.addLast(point);
             if (window.size() > 2) {
                 window.removeFirst();
             }
+            areaWindow = new ArrayDeque<>(window);
+            if (i < points.size() - 1){
+                areaWindow.add(points.get(i + 1));
+                if (areaWindow.size() > 3) {
+                    areaWindow.removeFirst();
+                }
+            }else {
+                areaWindow.clear();
+            }
             // 通过windowSize个点判断当前运动状态
             MovementAnalyzer.MovementState state = MovementAnalyzer.analyzeState(new ArrayList<>(window));
-            point.setState(state);
+            MovementAnalyzer.MovementState areaState = observeState(new ArrayList<>(window), new ArrayList<>(areaWindow));
+            point.setState(areaState);
+            point.setDistanceState(state);
             result.add(point);
         }
+//        for (LocationPoint point : points){
+//            window.addLast(point);
+//            if (window.size() > 2) {
+//                window.removeFirst();
+//            }
+//            areaWindow = new ArrayDeque<>(window);
+//            areaWindow.add( points.get(points.size()-1));
+//            if (areaWindow.size() > 3) {
+//                areaWindow.removeFirst();
+//            }
+//            // 通过windowSize个点判断当前运动状态
+//            MovementAnalyzer.MovementState state = MovementAnalyzer.analyzeState(new ArrayList<>(window));
+//            point.setState(state);
+//            result.add(point);
+//        }
         return result;
     }
 }

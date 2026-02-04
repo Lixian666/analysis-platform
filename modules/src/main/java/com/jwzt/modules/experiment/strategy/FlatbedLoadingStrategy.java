@@ -108,6 +108,8 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
             int arrivedDrivingTag = 0;
             int arrivedFirstTag = 0;
             int arrivedLastTag = 0;
+            int parkTags = 0;
+            boolean isParking = false;
 
             // 判断发运上车点前10个点状态
             for (LocationPoint point : theFirstTenPoints) {
@@ -135,11 +137,25 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
                 }
             }
 
+            // 判断到达下车点前5个点状态
+            for (int i = 0; i < 5; i++) {
+                LocationPoint point = theLastTenPoints.get(i);
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED){
+                    parkTags++;
+                }else {
+                    parkTags = 0;
+                }
+                if (!isParking && parkTags >= 2){
+                    isParking = true;
+                }
+            }
+
             // 判断状态标签数量是否满足发运区域上车条件
             if (arrivedFirstTag >= FilterConfig.SEND_BEFORE_UP_STATE_SIZE
                     && arrivedLastTag >= FilterConfig.SEND_AFTER_UP_STATE_SIZE
                     && arrivedStoppedTag >= FilterConfig.STOPPED_STATE_SIZE
-                    && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE) {
+                    && arrivedDrivingTag >= FilterConfig.DRIVING_STATE_SIZE
+                    && isParking) {
                 System.out.println("⚠️ 检测到发运已上车（板车）");
                 curPoint = currentPoint;
                 lastEvent = BoardingDetector.Event.NONE;
@@ -194,7 +210,7 @@ public class FlatbedLoadingStrategy implements LoadingUnloadingStrategy {
             // 判断到达下车点前5个点状态
             for (int i = 0; i < 5; i++) {
                 LocationPoint point = theLastTenPoints.get(i);
-                if (point.getSpeed() < FilterConfig.MIN_WALKING_SPEED){
+                if (point.getState() == MovementAnalyzer.MovementState.STOPPED){
                     parkTags++;
                 }else {
                     parkTags = 0;
