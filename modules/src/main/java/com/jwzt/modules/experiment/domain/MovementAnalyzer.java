@@ -79,13 +79,13 @@ public class MovementAnalyzer {
             double maxDist = maxPairDistance(areaWindow);
 
             boolean veryLowSpeed = avgSpeed < 0.5;
-            boolean lowSpeed = avgSpeed < 1.0;
+            boolean lowSpeed = avgSpeed < 1.5;
 
             if (veryLowSpeed && radius < 1.0 && maxDist < 2.0) {
                 return MovementState.STOPPED;
             }
 
-            if (lowSpeed && radius < 2.0 && maxDist < 3.0) {
+            if (lowSpeed && radius < 3.0 && maxDist < 4.0) {
                 return MovementState.STOPPED;
             }
         }
