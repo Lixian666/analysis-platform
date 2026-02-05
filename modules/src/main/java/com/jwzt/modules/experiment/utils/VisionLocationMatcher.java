@@ -52,7 +52,7 @@ public class VisionLocationMatcher {
     /**
      * 匹配距离阈值（米）：15米
      */
-    private static final double MATCH_DISTANCE_THRESHOLD = 15.0;
+    private static final double MATCH_DISTANCE_THRESHOLD = 20.0;
     
     /**
      * 历史定位数据存储（线程安全）
@@ -342,14 +342,14 @@ public class VisionLocationMatcher {
         Map<String, List<LocationPoint>> locationDataRetry = new HashMap<>(historyLocationData);
         // 遍历所有视觉事件，每个事件只取最优的一个定位点（距离最近，其次时间差最小，完全相同取时间戳更早的定位点）
         for (VisionEvent visionEvent : visionGroup) {
-            if (visionEvent.getId() == 27011L){
+            if (visionEvent.getId() == 42842L){
                 log.info("开始处理视觉数据: {}", visionEvent);
             }
             getBastMatchedResults(visionEvent, locationData, result, timeRange, notMatches, true);
         }
 
         for (VisionEvent visionEvent : notMatches){
-            if (visionEvent.getId() == 27011L){
+            if (visionEvent.getId() == 42842L){
                 log.info("开始处理视觉数据: {}", visionEvent);
             }
             getBastMatchedResults(visionEvent, locationDataRetry, result, timeRange, notMatches, false);
