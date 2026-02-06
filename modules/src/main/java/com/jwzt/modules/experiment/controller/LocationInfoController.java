@@ -1,6 +1,9 @@
 package com.jwzt.modules.experiment.controller;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.jwzt.modules.experiment.config.BaseConfig;
+import com.jwzt.modules.experiment.utils.third.manage.JobData;
+import com.jwzt.modules.experiment.utils.third.manage.domain.VisionEvent;
 import com.jwzt.modules.experiment.utils.third.zq.ZQOpenApi;
 import com.ruoyi.common.utils.file.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +21,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 位置信息Controller
@@ -31,6 +37,12 @@ public class LocationInfoController extends BaseController
 {
     @Autowired
     private ZQOpenApi zqOpenApi;
+
+    @Autowired
+    private JobData jobData;
+
+    @Autowired
+    private BaseConfig baseConfig;
 
     @Value("${experiment.base.joysuch.building-id}")
     private String buildId;
@@ -91,6 +103,71 @@ public class LocationInfoController extends BaseController
         } catch (Exception e) {
             logger.error("导出点位数据失败，类型: " + locationType, e);
             throw new RuntimeException("导出点位数据失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 导出视觉识别事件数据为JSON文件
+     * 
+     * @param cameraIds 摄像机ID列表，多个ID用英文逗号分隔（可选，为空时使用配置文件中的默认值）
+     * @param startTimeStr 开始时间，格式：yyyy-MM-dd HH:mm:ss
+     * @param endTimeStr 结束时间，格式：yyyy-MM-dd HH:mm:ss
+     * @param response HTTP响应对象
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:locationInfo:export')")
+    @Log(title = "视觉识别事件", businessType = BusinessType.EXPORT)
+    @PostMapping("/exportVisionEvents")
+    public void exportVisionEvents(
+            @RequestParam(value = "cameraIds", required = false) String cameraIds,
+            @RequestParam("startTimeStr") String startTimeStr,
+            @RequestParam("endTimeStr") String endTimeStr,
+            HttpServletResponse response) throws IOException
+    {
+        try {
+            List<String> cameraIdList;
+            
+            // 如果前端未传入摄像机ID或为空，则使用配置文件中的默认值
+            if (cameraIds == null || cameraIds.trim().isEmpty()) {
+                cameraIdList = baseConfig.getCardAnalysis().getVisualIdentify().getCameraIds();
+                logger.info("未指定摄像机ID，使用配置文件中的默认值：{}", cameraIdList);
+            } else {
+                // 解析前端传入的摄像机ID列表
+                cameraIdList = Arrays.stream(cameraIds.split(","))
+                        .map(String::trim)
+                        .filter(id -> !id.isEmpty())
+                        .collect(Collectors.toList());
+                logger.info("使用前端指定的摄像机ID：{}", cameraIdList);
+            }
+            
+            if (cameraIdList == null || cameraIdList.isEmpty()) {
+                throw new IllegalArgumentException("摄像机ID列表不能为空，请在前端输入或检查配置文件");
+            }
+            
+            logger.info("导出视觉识别事件数据：cameraIds={}, startTime={}, endTime={}", 
+                    cameraIdList, startTimeStr, endTimeStr);
+            
+            // 调用 JobData 获取视觉识别事件列表
+            List<VisionEvent> visionEvents = jobData.getVisionList(startTimeStr, endTimeStr, cameraIdList);
+            
+            // 生成文件名
+            String fileName = "vision_events_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + ".json";
+            
+            // 将数据转换为格式化的 JSON 字符串
+            String jsonString = com.alibaba.fastjson2.JSON.toJSONString(visionEvents, com.alibaba.fastjson2.JSONWriter.Feature.PrettyFormat);
+            
+            // 设置响应头，返回文件供下载
+            response.setContentType("application/octet-stream");
+            response.setCharacterEncoding("utf-8");
+            FileUtils.setAttachmentResponseHeader(response, fileName);
+            
+            // 直接将 JSON 字符串写入响应流
+            response.getOutputStream().write(jsonString.getBytes("UTF-8"));
+            response.getOutputStream().flush();
+            
+            logger.info("导出视觉识别事件数据成功，共导出 {} 条记录", visionEvents.size());
+        } catch (Exception e) {
+            logger.error("导出视觉识别事件数据失败", e);
+            throw new RuntimeException("导出视觉识别事件数据失败: " + e.getMessage(), e);
         }
     }
 }
