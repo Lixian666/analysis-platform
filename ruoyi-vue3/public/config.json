@@ -14,7 +14,7 @@
   "dongjiazhen_tif": "/Users/lixian/Cache/Platform/PlatformData/img/董家镇tif/TIFDOM/1/1_DOM.tif",
   "dongjiazhen_tiles_local": "http://192.168.7.10:8089/董家镇tif/tiles/{z}/{x}/{y}.png",
   "dongjiazhen_tiles": "http://192.168.6.8:80/dongjiazhen/tiles/{z}/{x}/{y}.png",
-  "data_tiles":"http://192.168.9.100:80/luorong/tiles/{z}/{x}/{y}.png",
+  "data_tiles":"http://172.16.5.101:80/apTiles/{z}/{x}/{y}.png",
   "dongjiazhen_rectangle": {"xmin": 117.25785175068449, "ymin": 36.75709311589477, "xmax": 117.27989964583475, "ymax": 36.76446135333450},
   "rectangle": {"xmin": 109.57848151436542, "ymin": 24.40117569422706, "xmax": 109.59485823555032, "ymax": 24.41130962654648}
 }
