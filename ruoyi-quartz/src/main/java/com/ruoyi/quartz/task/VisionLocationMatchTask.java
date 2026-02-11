@@ -1041,6 +1041,9 @@ public class VisionLocationMatchTask {
     }
 
 
+    /**
+     * 数据预处理
+     */
     private List<LocationPoint> preprocessBatch(List<LocationPoint> batch) {
         List<LocationPoint> normal = new ArrayList<>();
         batch.sort((p1, p2) -> Long.compare(p1.getTimestamp(), p2.getTimestamp()));
