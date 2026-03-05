@@ -39,9 +39,7 @@ public class GenUtils
         column.setTableId(table.getTableId());
         column.setCreateBy(table.getCreateBy());
         // 设置java字段名
-        // 统一转小写，再驼峰化
-        column.setJavaField(StringUtils.toCamelCase(columnName.toLowerCase()));
-//        column.setJavaField(StringUtils.toCamelCase(columnName));
+        column.setJavaField(StringUtils.toCamelCase(columnName));
         // 设置默认类型
         column.setJavaType(GenConstants.TYPE_STRING);
         column.setQueryType(GenConstants.QUERY_EQ);

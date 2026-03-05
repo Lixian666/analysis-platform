@@ -35,7 +35,7 @@ public class CommonController
     @Autowired
     private ServerConfig serverConfig;
 
-    private static final String FILE_DELIMETER = ",";
+    private static final String FILE_DELIMITER = ",";
 
     /**
      * 通用下载请求
@@ -120,10 +120,10 @@ public class CommonController
                 originalFilenames.add(file.getOriginalFilename());
             }
             AjaxResult ajax = AjaxResult.success();
-            ajax.put("urls", StringUtils.join(urls, FILE_DELIMETER));
-            ajax.put("fileNames", StringUtils.join(fileNames, FILE_DELIMETER));
-            ajax.put("newFileNames", StringUtils.join(newFileNames, FILE_DELIMETER));
-            ajax.put("originalFilenames", StringUtils.join(originalFilenames, FILE_DELIMETER));
+            ajax.put("urls", StringUtils.join(urls, FILE_DELIMITER));
+            ajax.put("fileNames", StringUtils.join(fileNames, FILE_DELIMITER));
+            ajax.put("newFileNames", StringUtils.join(newFileNames, FILE_DELIMITER));
+            ajax.put("originalFilenames", StringUtils.join(originalFilenames, FILE_DELIMITER));
             return ajax;
         }
         catch (Exception e)
@@ -148,7 +148,7 @@ public class CommonController
             // 本地资源路径
             String localPath = RuoYiConfig.getProfile();
             // 数据库资源地址
-            String downloadPath = localPath + StringUtils.substringAfter(resource, Constants.RESOURCE_PREFIX);
+            String downloadPath = localPath + FileUtils.stripPrefix(resource);
             // 下载名称
             String downloadName = StringUtils.substringAfterLast(downloadPath, "/");
             response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);

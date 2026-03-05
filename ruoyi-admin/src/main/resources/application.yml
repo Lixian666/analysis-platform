@@ -3,9 +3,9 @@ ruoyi:
   # 名称
   name: Platform
   # 版本
-  version: 3.9.0
+  version: 3.9.1
   # 版权年份
-  copyrightYear: 2025
+  copyrightYear: 2026
   # 文件路径 示例（Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
   profile: /Users/lixian/Cache/Platform/uploadPath
   # 获取ip地址开关
@@ -56,7 +56,7 @@ spring:
     # 默认开发环境
     #    active: druid
     # 激活环境配置：djz-董家镇，可以创建 yuzui、minhang 等其他环境配置
-    active: lr
+    active: dameng
     # 数据库类型
     #    dbType: mysql
     dbType: dameng
@@ -126,6 +126,13 @@ swagger:
   enabled: true
   # 请求前缀
   pathMapping: /dev-api
+
+# 防盗链配置
+referer:
+  # 防盗链开关
+  enabled: false
+  # 允许的域名列表
+  allowed-domains: localhost,127.0.0.1,ruoyi.vip,www.ruoyi.vip
 
 # 防止XSS攻击
 xss:

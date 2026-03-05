@@ -48,7 +48,7 @@
 		</where>
 		order by parent_id, order_num
 	</select>
-
+	
 	<select id="selectMenuTreeAll" resultMap="SysMenuResult">
 		select distinct m.menu_id, m.parent_id, m.menu_name, m.path, m.component, m.query, m.route_name, m.visible, m.status, ifnull(m.perms,'') as perms, m.is_frame, m.is_cache, m.menu_type, m.icon, m.order_num, m.create_time
 		from sys_menu m where m.menu_type in ('M', 'C') and m.status = 0
@@ -130,7 +130,12 @@
 	
 	<select id="checkMenuNameUnique" parameterType="SysMenu" resultMap="SysMenuResult">
 		<include refid="selectMenuVo"/>
-		where menu_name=#{menuName} and parent_id = #{parentId} limit 1
+		where menu_name= #{menuName} and parent_id = #{parentId} limit 1
+	</select>
+	
+	<select id="selectMenusByPathOrRouteName" parameterType="SysMenu" resultMap="SysMenuResult">
+		<include refid="selectMenuVo"/>
+		where menu_type in ('M', 'C') and (path = #{path} or path = #{routeName} or route_name = #{path} or route_name = #{routeName})
 	</select>
 	
 	<update id="updateMenu" parameterType="SysMenu">
