@@ -1,44 +1,55 @@
 <template>
   <div v-if="diagnosisRoles('order:list')" id="body-box">
 
-     <div ref="conment" class="CommercialVehicle">
-       <div class="LibraryLocationName">
-         <p>卡ID：</p>
-         <el-input v-model="listQuery.searcher.cardId" placeholder="请输入卡ID" maxlength="50" clearable />
-       </div>
-       <div class="LibraryLocationName">
-         <p>货场ID：</p>
-         <el-input v-model="listQuery.searcher.yardId" placeholder="请输入货场ID" maxlength="50" clearable />
-       </div>
-       <div class="ArrivalTime">
-         <p>任务日期：</p>
-         <el-date-picker 
-           v-model="listQuery.searcher.taskDate" 
-           type="daterange" 
-           range-separator="至"
-           start-placeholder="开始日期" 
-           end-placeholder="结束日期"
-           value-format="YYYY-MM-DD"
-           clearable
-         />
-       </div>
-       <div class="TopRight TopRight_novw">
-         <el-button type="success" @click="handleQuery">查询</el-button>
-         <el-button type="info" @click="reset">重置</el-button>
-       </div>
-     </div>
+    <div ref="conment" class="CommercialVehicle">
+      <div class="LibraryLocationName">
+        <p>卡ID：</p>
+        <el-input v-model="listQuery.searcher.cardId" placeholder="请输入卡ID" maxlength="50" clearable />
+      </div>
+      <div class="LibraryLocationName">
+        <p>货场ID：</p>
+        <el-input v-model="listQuery.searcher.yardId" placeholder="请输入货场ID" maxlength="50" clearable />
+      </div>
+      <div class="LibraryLocationName">
+        <p>任务类型：</p>
+        <el-select v-model="listQuery.searcher.taskType" placeholder="请选择任务类型" clearable :style="{width: '200px'}">
+          <el-option
+              v-for="dict in taskTypeOptions"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value"
+          />
+        </el-select>
+      </div>
+      <div class="ArrivalTime">
+        <p>任务日期：</p>
+        <el-date-picker
+            v-model="listQuery.searcher.taskDate"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            clearable
+        />
+      </div>
+      <div class="TopRight TopRight_novw">
+        <el-button type="success" @click="handleQuery">查询</el-button>
+        <el-button type="info" @click="reset">重置</el-button>
+      </div>
+    </div>
 
-     <!-- 批量操作按钮 -->
-     <div class="batch-operations">
-       <el-button
-         type="danger"
-         plain
-         icon="Delete"
-         :disabled="multiple"
-         @click="handleDelete()"
-         size="small"
-       >批量删除</el-button>
-     </div>
+    <!-- 批量操作按钮 -->
+    <div class="batch-operations">
+      <el-button
+          type="danger"
+          plain
+          icon="Delete"
+          :disabled="multiple"
+          @click="handleDelete()"
+          size="small"
+      >批量删除</el-button>
+    </div>
 
     <div v-loading="dataTable_loading" class="main main_novw table-container">
       <el-table :data="TaskList" border style="width: 100%" @selection-change="handleSelectionChange">
@@ -118,11 +129,11 @@
         <el-table-column align="center" label="操作" width="150">
           <template v-slot="scope">
             <el-button v-if="diagnosisRoles('vehicle:details') && scope.row.cardId" size="small"
-              @click="handleEdit(scope.row.cardId, scope.row.id, scope.row.startTime, scope.row.endTime)">详情</el-button>
-            <el-button 
-              type="danger"
-              size="small"
-              @click="handleDelete(scope.row)"
+                       @click="handleEdit(scope.row.cardId, scope.row.id, scope.row.startTime, scope.row.endTime)">详情</el-button>
+            <el-button
+                type="danger"
+                size="small"
+                @click="handleDelete(scope.row)"
             >删除</el-button>
           </template>
         </el-table-column>
@@ -130,11 +141,11 @@
     </div>
     <div class="paging">
       <pagination
-        v-show="listQuery.total > 0"
-        :total="listQuery.total"
-        v-model:page="listQuery.pageNum"
-        v-model:limit="listQuery.pageSize"
-        @pagination="search"
+          v-show="listQuery.total > 0"
+          :total="listQuery.total"
+          v-model:page="listQuery.pageNum"
+          v-model:limit="listQuery.pageSize"
+          @pagination="search"
       />
     </div>
 
@@ -166,6 +177,7 @@ const listQuery = ref({
   searcher: {
     cardId: '',      // 卡ID
     yardId: '',      // 货场ID
+    taskType: 1,    // 作业识别来源 0:纯定位 1:视觉
     taskDate: []     // 任务日期范围 [开始日期, 结束日期]
   }
 })
@@ -184,7 +196,7 @@ const TaskList = ref([
   //   partitionNames:'示例1',
   //   positionCodes:1,
   //   getcartype:1,
-  //   recordStatusFun:1, 
+  //   recordStatusFun:1,
   //   vehicleColor:1,
   //   positionCodes:1,
   //   recordThirdId:1
@@ -194,6 +206,13 @@ const TaskList = ref([
 const dataTable_loading = ref(false)
 const ReservoirAreaData = ref([]) // 搜索选择库区
 const seares = ref(true)
+const taskTypeOptions = ref([{
+  "label": "定位数据",
+  "value": 0
+}, {
+  "label": "视觉与定位融合数据",
+  "value": 1
+}])
 //data return end
 
 onMounted(() => {
@@ -266,16 +285,16 @@ async function init() {
 // 格式化日期为 YYYY-MM-DD
 function formatDate(date) {
   if (!date) return ''
-  
+
   // 如果已经是字符串格式，直接返回
   if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
     return date
   }
-  
+
   // 如果是 Date 对象，格式化
   const d = new Date(date)
   if (isNaN(d.getTime())) return ''
-  
+
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -291,43 +310,48 @@ function handleQuery() {
 // 查询功能 - 后端查询
 function search(params) {
   dataTable_loading.value = true
-  
+
   // 如果分页组件传递了参数，更新分页信息
   if (params) {
     listQuery.value.pageNum = params.page
     listQuery.value.pageSize = params.limit
   }
-  
+
   // 构建查询参数
   const queryParams = {
     pageNum: listQuery.value.pageNum,
     pageSize: listQuery.value.pageSize
   }
-  
+
   // 卡ID
   if (listQuery.value.searcher.cardId && listQuery.value.searcher.cardId.trim() !== '') {
     queryParams.cardId = listQuery.value.searcher.cardId.trim()
   }
-  
+
   // 货场ID
   if (listQuery.value.searcher.yardId && listQuery.value.searcher.yardId.trim() !== '') {
     queryParams.yardId = listQuery.value.searcher.yardId.trim()
   }
-  
+
+  // 作业识别来源
+  if (listQuery.value.searcher.taskType !== null) {
+    queryParams.taskType = listQuery.value.searcher.taskType
+  }
+
   // 任务日期范围 - 只在有效值时才添加，并手动格式化
-  if (listQuery.value.searcher.taskDate && 
+  if (listQuery.value.searcher.taskDate &&
       listQuery.value.searcher.taskDate.length === 2 &&
-      listQuery.value.searcher.taskDate[0] && 
+      listQuery.value.searcher.taskDate[0] &&
       listQuery.value.searcher.taskDate[1]) {
     const beginDate = formatDate(listQuery.value.searcher.taskDate[0])
     const endDate = formatDate(listQuery.value.searcher.taskDate[1])
-    
+
     if (beginDate && endDate) {
       queryParams['params[beginDate]'] = beginDate
       queryParams['params[endDate]'] = endDate
     }
   }
-  
+
   // 调用后端查询
   getexperimentuserlist(queryParams).then(res => {
     if ((res.code == 200 || res.code == '200') && res.rows) {
@@ -345,6 +369,7 @@ function search(params) {
 function reset() {
   listQuery.value.searcher.cardId = ''
   listQuery.value.searcher.yardId = ''
+  listQuery.value.searcher.taskType = null
   listQuery.value.searcher.taskDate = []
   listQuery.value.pageNum = 1
   listQuery.value.pageSize = 20
@@ -380,10 +405,10 @@ function handleSelectionChange(selection) {
 function handleDelete(row) {
   // 单行删除：传递单个对象；批量删除：传递对象数组
   const deleteData = row ? [row] : selectedRows.value
-  const message = row 
-    ? `是否确认删除卡号为"${row.cardId}"、货场"${row.yardId}"、日期"${getTaskDate(row.startTime)}"的所有行为记录？此操作将同时删除这些记录的所有详情数据！`
-    : `是否确认删除选中的 ${selectedRows.value.length} 组行为记录？此操作将同时删除这些记录的所有详情数据！`
-  
+  const message = row
+      ? `是否确认删除卡号为"${row.cardId}"、货场"${row.yardId}"、日期"${getTaskDate(row.startTime)}"的所有行为记录？此操作将同时删除这些记录的所有详情数据！`
+      : `是否确认删除选中的 ${selectedRows.value.length} 组行为记录？此操作将同时删除这些记录的所有详情数据！`
+
   ElMessageBox.confirm(message, '警告', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
@@ -423,7 +448,7 @@ function stopTimeLength(row) {
   var time = 0
   if (row.endTime !== null && row.startTime !== null) {
     time =
-      new Date(row.endTime).getTime() - new Date(row.startTime).getTime()
+        new Date(row.endTime).getTime() - new Date(row.startTime).getTime()
   } else if (row.startTime !== null && row.endTime === null) {
     time = new Date().getTime() - new Date(row.startTime).getTime()
   }
@@ -443,15 +468,15 @@ function formatTimeLong(num) {
     }
   }
   var s =
-    parseInt(secondTime) < 10
-      ? '0' + parseInt(secondTime)
-      : parseInt(secondTime)
+      parseInt(secondTime) < 10
+          ? '0' + parseInt(secondTime)
+          : parseInt(secondTime)
   var m =
-    parseInt(minuteTime) < 10
-      ? '0' + parseInt(minuteTime)
-      : parseInt(minuteTime)
+      parseInt(minuteTime) < 10
+          ? '0' + parseInt(minuteTime)
+          : parseInt(minuteTime)
   var h =
-    parseInt(hourTime) < 10 ? '0' + parseInt(hourTime) : parseInt(hourTime)
+      parseInt(hourTime) < 10 ? '0' + parseInt(hourTime) : parseInt(hourTime)
   var result = '00″00″' + s
   if (minuteTime > 0 && hourTime === 0) {
     result = '00″' + m + '″' + s
@@ -577,7 +602,7 @@ function formatTimeLong(num) {
   margin: 5px 0 10px;
   //font-size: 13px;
   font-size: 14px;
-  height: 36px;
+  height: 60px;
   line-height: 36px;
   // border-bottom: 1px solid #5d6777;
   box-sizing: initial;
@@ -760,9 +785,9 @@ function formatTimeLong(num) {
 .TopRight .el-button--success {
   color: #fff;
   background-color: #274df9;
-  ;
+;
   border-color: #274df9;
-  ;
+;
 }
 
 .TopRight .el-button--info {
@@ -905,7 +930,7 @@ function formatTimeLong(num) {
       .el-button {
         font-size: 14px;
         color: #274df9;
-        ;
+      ;
         padding: 0;
       }
     }
@@ -932,7 +957,7 @@ function formatTimeLong(num) {
   // background-color: #83c346;
   // color: #cddebf;
   background-color: #274df9;
-  ;
+;
 
 }
 

@@ -64,7 +64,9 @@ public class JobData {
                     for (int i = 0; i < dataArray.size(); i++) {
                         JSONObject dataObj = dataArray.getJSONObject(i);
                         VisionEvent visionEvent = JSON.parseObject(dataObj.toJSONString(), VisionEvent.class);
-                        visionEvents.add(visionEvent);
+                        if (visionEvent != null && visionEvent.getCarNumber() == null){
+                            visionEvents.add(visionEvent);
+                        }
                     }
                     log.info("获取Vision事件列表-Success-查询成功，本次查询数据条数={}", visionEvents.size());
                 } else {

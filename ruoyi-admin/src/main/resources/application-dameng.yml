@@ -94,7 +94,12 @@ spring:
                 # #连接池最大阻塞等待时间（使用负值表示没有限制）
                 max-wait: -1ms
 
-# 行为分析配置 - 雒容
+# 行为分析配置
+# experiment 配置已迁移至各环境配置文件中（如 application-djz.yml、application-yuzui.yml 等）
+# 每个环境有独立的 experiment 配置，包括：
+# - platform-dir: 平台目录
+# - base: 基础配置（场站名称、joysuch配置、sw-center配置、card-analysis配置等）
+# - file-path: 文件路径配置（各场站的shp文件路径等）
 experiment:
     platform-dir: /Users/lixian/Cache/Platform
     base:
@@ -161,7 +166,7 @@ experiment:
             remove-vehicle: /api/cardAnalysis/removeAssignmentRecord
             # 影像分析
             visual-identify:
-                base-url: http://192.168.9.100:8030/vision-api
+                base-url: http://8.141.22.209:8020/vision-api
                 camera-ids:
                     - "62"
                     - "63"

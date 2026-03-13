@@ -7,6 +7,7 @@ echo "========== 开始一键部署 analysis-platform =========="
 ZIP_FILE="/data/app/deploy.zip"
 DEPLOY_DIR="/data/app/deploy"
 BASE_DIR="/data/app/analysis-platform"
+YARD_NAME="yuzui"
 
 # ===== 校验 deploy.zip =====
 if [ ! -f "$ZIP_FILE" ]; then
@@ -33,7 +34,7 @@ echo ">> 拷贝核心文件..."
 cp -f ${DEPLOY_DIR}/analysis-platform.jar ${BASE_DIR}/
 cp -f ${DEPLOY_DIR}/restart.sh ${BASE_DIR}/
 cp -f ${DEPLOY_DIR}/application.yml ${BASE_DIR}/config
-cp -f ${DEPLOY_DIR}/application-lr.yml ${BASE_DIR}/config
+cp -f ${DEPLOY_DIR}/application-prod.yml ${BASE_DIR}/config
 
 chmod +x ${BASE_DIR}/restart.sh
 
@@ -45,12 +46,12 @@ else
     echo "!! dist.zip 不存在"
 fi
 
-# ===== 解压 luorong.zip =====
-echo ">> 处理 luorong.zip..."
-if [ -f "${DEPLOY_DIR}/luorong.zip" ]; then
-    unzip -oq ${DEPLOY_DIR}/luorong.zip -d ${BASE_DIR}/data/shp
+# ===== 解压 $YARD_NAME.zip =====
+echo ">> 处理 $YARD_NAME.zip..."
+if [ -f "${DEPLOY_DIR}/${YARD_NAME}.zip" ]; then
+    unzip -oq ${DEPLOY_DIR}/${YARD_NAME}.zip -d ${BASE_DIR}/data/shp
 else
-    echo "!! luorong.zip 不存在"
+    echo "!! $YARD_NAME.zip 不存在"
 fi
 
 # ===== 解压 tiles.zip =====
