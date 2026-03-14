@@ -8,6 +8,7 @@ server:
     # 服务器的HTTP端口，默认为8080
     port: 8020
     servlet:
+        context-path: /analysis-platform-api
         domain-name: http://192.168.9.100
 
 # Spring配置
