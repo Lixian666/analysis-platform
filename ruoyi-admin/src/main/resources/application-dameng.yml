@@ -19,8 +19,8 @@ spring:
         druid:
             # 主库数据源
             master:
-#                url: jdbc:dm://127.0.0.1:5236
-                url: jdbc:dm://82.156.69.219:5236
+                url: jdbc:dm://127.0.0.1:5236
+#                url: jdbc:dm://82.156.69.219:5236
                 username: ANALYSIS_PLATFORM
                 password: ApDB@2026
             # 从库数据源
@@ -76,7 +76,8 @@ spring:
     # redis 配置
     redis:
         # 地址
-        host: 82.156.69.219
+        host: 127.0.0.1
+#        host: 82.156.69.219
         # 端口，默认为6379
         port: 6379
         # 数据库索引
