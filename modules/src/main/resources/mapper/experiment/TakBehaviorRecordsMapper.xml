@@ -71,12 +71,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="yardId != null and yardId != '' and yardId != 'null'">
                 AND r.yard_id LIKE CONCAT('%', #{yardId}, '%')
             </if>
-            <if test="params != null and params.taskType != null and params.taskType != '' and params.beginDate != 'null' and params.taskType = 0">
-                AND r.vision_id IS NULL
-            </if>
-            <if test="params != null and params.taskType != null and params.taskType != '' and params.beginDate != 'null' and params.taskType = 1">
-                AND r.vision_id IS NOT NULL
-            </if>
+            <choose>
+                <when test="taskType != null and taskType == '0'.toString()">
+                    AND r.vision_id IS NULL
+                </when>
+                <when test="taskType != null and taskType == '1'.toString()">
+                    AND r.vision_id IS NOT NULL
+                </when>
+            </choose>
             <if test="params != null and params.beginDate != null and params.beginDate != '' and params.beginDate != 'null'">
                 AND TRUNC(r.start_time) &gt;= TO_DATE(#{params.beginDate}, 'YYYY-MM-DD')
             </if>

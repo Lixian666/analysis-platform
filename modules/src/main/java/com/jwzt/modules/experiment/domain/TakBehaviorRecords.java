@@ -148,6 +148,9 @@ public class TakBehaviorRecords extends BaseEntity {
     /** 推送状态：0-已推送，1-未推送 */
     private Integer pushStatus;
 
+    /** 查询条件：任务类型 0-无视觉 1-有视觉 */
+    private String taskType;
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -319,6 +322,9 @@ public class TakBehaviorRecords extends BaseEntity {
 
     public Integer getPushStatus() { return pushStatus; }
     public void setPushStatus(Integer pushStatus) { this.pushStatus = pushStatus; }
+
+    public String getTaskType() { return taskType; }
+    public void setTaskType(String taskType) { this.taskType = taskType; }
 
     @Override
     public String toString() {
