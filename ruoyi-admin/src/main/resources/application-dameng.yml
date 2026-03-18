@@ -19,9 +19,10 @@ spring:
         druid:
             # 主库数据源
             master:
-                url: jdbc:dm://127.0.0.1:5236
+#                url: jdbc:dm://127.0.0.1:5236
+                url: jdbc:dm://82.156.69.219:5236
                 username: ANALYSIS_PLATFORM
-                password: admin123456
+                password: ApDB@2026
             # 从库数据源
             slave:
                 # 从数据源开关/默认关闭
@@ -75,13 +76,13 @@ spring:
     # redis 配置
     redis:
         # 地址
-        host: 127.0.0.1
+        host: 82.156.69.219
         # 端口，默认为6379
         port: 6379
         # 数据库索引
-        database: 9
+        database: 0
         # 密码
-        password:
+        password: RedisDB@2026
         # 连接超时时间
         timeout: 10s
         lettuce:
@@ -167,7 +168,8 @@ experiment:
             remove-vehicle: /api/cardAnalysis/removeAssignmentRecord
             # 影像分析
             visual-identify:
-                base-url: http://8.141.22.209:8020/vision-api
+#                base-url: http://8.141.22.209:8020/vision-api
+                base-url: http://4da77470or14.vicp.fun/vision-api
                 camera-ids:
                     - "62"
                     - "63"
