@@ -22,13 +22,29 @@
               </el-select>
             </el-form-item>
             
-            <el-form-item label="卡片ID" prop="cardId">
+            <el-form-item label="货场ID">
               <el-input
-                v-model="locationForm.cardId"
-                placeholder="请输入卡片ID"
+                v-model="locationForm.buildingId"
+                placeholder="请输入货场ID（不填则使用默认配置）"
                 clearable
                 style="width: 400px"
               />
+            </el-form-item>
+
+            <el-form-item label="卡片ID" prop="cardId">
+              <el-input
+                v-model="locationForm.cardId"
+                placeholder="请输入卡片ID，多个ID用英文逗号分隔"
+                clearable
+                style="width: 300px"
+              />
+              <el-button
+                type="success"
+                icon="MagicStick"
+                style="margin-left: 8px"
+                :loading="loadingCardIds"
+                @click="handleFillEnabledCardIds"
+              >自动填入</el-button>
             </el-form-item>
             
             <el-form-item label="开始时间" prop="startTimeStr">
@@ -114,12 +130,16 @@
 </template>
 
 <script setup name="LocationInfo">
+import { getEnabledCardIds } from '@/api/experiment/locationInfo';
 const { proxy } = getCurrentInstance();
+
+const loadingCardIds = ref(false);
 
 const data = reactive({
   activeTab: 'location',
   locationForm: {
     locationType: 'zq',
+    buildingId: null,
     cardId: null,
     startTimeStr: null,
     endTimeStr: null
@@ -155,6 +175,24 @@ const data = reactive({
 
 const { activeTab, locationForm, locationRules, visionForm, visionRules } = toRefs(data);
 
+/** 自动填入当前货场所有启用的卡ID */
+function handleFillEnabledCardIds() {
+  loadingCardIds.value = true;
+  getEnabledCardIds(locationForm.value.buildingId).then(res => {
+    const ids = res.data;
+    if (!ids || ids.length === 0) {
+      proxy.$modal.msgWarning('未查询到启用的卡ID');
+      return;
+    }
+    locationForm.value.cardId = ids.join(',');
+    proxy.$modal.msgSuccess(`已填入 ${ids.length} 个启用卡ID`);
+  }).catch(() => {
+    proxy.$modal.msgError('查询启用卡ID失败');
+  }).finally(() => {
+    loadingCardIds.value = false;
+  });
+}
+
 /** 导出定位卡数据 */
 function handleLocationExport() {
   proxy.$refs["locationFormRef"].validate(valid => {
@@ -171,9 +209,15 @@ function handleLocationExport() {
         startTimeStr: locationForm.value.startTimeStr,
         endTimeStr: locationForm.value.endTimeStr
       };
+      if (locationForm.value.buildingId) {
+        params.buildingId = locationForm.value.buildingId;
+      }
       
-      // 根据类型生成文件名
-      const fileName = `${locationForm.value.locationType}_points_${new Date().getTime()}.json`;
+      // 根据卡片数量生成文件名（多卡打包为zip）
+      const cardIdList = locationForm.value.cardId.split(',').map(s => s.trim()).filter(s => s);
+      const fileName = cardIdList.length > 1
+        ? `${locationForm.value.locationType}_points_${new Date().getTime()}.zip`
+        : `${locationForm.value.locationType}_points_${new Date().getTime()}.json`;
       
       // 使用 proxy.download 方法下载文件
       proxy.download('experiment/locationInfo/exportPoints', params, fileName)
@@ -210,6 +254,7 @@ function handleVisionExport() {
 function resetLocationForm() {
   locationForm.value = {
     locationType: 'zq',
+    buildingId: null,
     cardId: null,
     startTimeStr: null,
     endTimeStr: null
