@@ -19,7 +19,7 @@
       </template>
     </template>
     <template v-if="unmatch && showValue">
-      {{ unmatchArray | handleArray }}
+      {{ handleArray(unmatchArray) }}
     </template>
   </div>
 </template>
@@ -76,7 +76,7 @@ function handleArray(array) {
 }
 
 function isValueMatch(itemValue) {
-  return this.values.some(val => val == itemValue)
+  return values.value.some(val => val == itemValue)
 }
 </script>
 
