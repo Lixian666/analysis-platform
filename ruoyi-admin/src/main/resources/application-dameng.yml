@@ -115,7 +115,7 @@ experiment:
         output-shp: false
         output-shp-path: ${experiment.platform-dir}/PlatformData/output
         delete-datetime:
-        yard-name: luorong
+        yard-name: luorong # luorong、yuzui
         location-card-type: other
         card-type: car
         # 数据源 zq xrkc
