@@ -19,9 +19,9 @@ spring:
         druid:
             # 主库数据源
             master:
-#                url: jdbc:dm://127.0.0.1:5236
+                url: jdbc:dm://127.0.0.1:5236
 #                url: jdbc:dm://82.156.69.219:5236
-                url: jdbc:dm://82.156.69.219:30236
+#                url: jdbc:dm://82.156.69.219:30236
                 username: ANALYSIS_PLATFORM
                 password: ApDB@2026
             # 从库数据源
@@ -77,11 +77,11 @@ spring:
     # redis 配置
     redis:
         # 地址
-#        host: 127.0.0.1
-        host: 82.156.69.219
+        host: 127.0.0.1
+#        host: 82.156.69.219
         # 端口，默认为6379
-        port: 30379
-#        port: 6379
+#        port: 30379
+        port: 6379
         # 数据库索引
         database: 0
         # 密码
@@ -184,6 +184,36 @@ experiment:
         yard-name: ${experiment.base.yard-name}
         base-path: ${experiment.platform-dir}/PlatformData/shp
         yards:
+            yuzui:
+                driving:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴库区/kuqu.shp
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴道路/daolu.shp
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴货运线J车/huoyunxianjc.shp
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴货运线作业台/huoyunxianzyt.shp
+                parking:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴库区/kuqu.shp
+                road:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴道路/daolu.shp
+                parking2road:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴道路/daolu.shp
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴库区/kuqu.shp
+                yard:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴库区/yard.shp
+                kuqu:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴库区/kuqu.shp
+                huoyunxin:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴货运线J车/huoyunxianjc.shp
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴货运线作业台/huoyunxianzyt.shp
+                huoyunxinzyt:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴货运线作业台/huoyunxianzyt.shp
+                huoyunxinjc:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴货运线J车/huoyunxianjc.shp
+                banche:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴板车作业区/banchezuoyequ.shp
+                zikuqu:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴库区/zikuqu.shp
+                kuwei:
+                    - ${experiment.file-path.base-path}/yuzui/鱼嘴库区/kuwei.shp
             luorong:
                 driving:
                     - ${experiment.file-path.base-path}/luorong/雒容库区/kuqu.shp
@@ -197,6 +227,8 @@ experiment:
                 parking2road:
                     - ${experiment.file-path.base-path}/luorong/雒容道路/zhugandao.shp
                     - ${experiment.file-path.base-path}/luorong/雒容库区/kuqu.shp
+                yard:
+                    - ${experiment.file-path.base-path}/luorong/雒容库区/yard.shp
                 kuqu:
                     - ${experiment.file-path.base-path}/luorong/雒容库区/kuqu.shp
                 huoyunxin:
