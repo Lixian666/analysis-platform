@@ -172,8 +172,7 @@ experiment:
             # 影像分析
             visual-identify:
 #                base-url: http://8.141.22.209:8020/vision-api
-                base-url: http://3929lm95mr66.vicp.fun:36041/vision-admin
-#                base-url: http://192.168.10.7:8040/vision-admin
+                base-url: http://4da77470or14.vicp.fun/vision-api
                 camera-ids:
                     - "62"
                     - "63"

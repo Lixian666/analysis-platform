@@ -103,7 +103,7 @@ experiment:
     log-enabled: false
     push-data: false
     output-shp: false
-    output-shp-path: ${experiment.platform-dir}/ata/output
+    output-shp-path: ${experiment.platform-dir}/data/output
     delete-datetime:
     yard-name: luorong
     location-card-type: other
