@@ -1,6 +1,12 @@
 package com.jwzt.modules.experiment.utils.third.manage;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +56,7 @@ public class JobData {
                 log.error("视觉识别服务地址未配置");
                 return visionEvents;
             }
-            String url = visualIdentifyBaseUrl + "/vision/visionevent/list";
+            String url = visualIdentifyBaseUrl + "/vision/vehicleaccessrecognition/list";
             log.info("获取Vision事件列表-请求地址：{}", url);
             log.info("获取Vision事件列表-请求参数：{}", JSON.toJSONString(map));
             
@@ -81,4 +87,70 @@ public class JobData {
         }
         return visionEvents;
     }
+
+    /**
+     * 获取Vision事件列表
+     * @param startTime 开始时间 yyyy-MM-dd HH:mm:ss
+     * @param endTime 结束时间 yyyy-MM-dd HH:mm:ss
+     * @param cameraIds 摄像机ID列表
+     * @return Vision事件列表
+     */
+    public List<VisionEvent> getVisionList4json(String startTime, String endTime, List<String> cameraIds) {
+        List<VisionEvent> visionEvents = new ArrayList<>();
+        try {
+            log.info("获取Vision事件列表-Start-开始查询：startTime={}, endTime={}, cameraIds={}",
+                    startTime, endTime, cameraIds);
+
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("startTime", startTime);
+            map.put("endTime", endTime);
+            map.put("cameraIds", cameraIds);
+
+            String visualIdentifyBaseUrl = baseConfig.getCardAnalysis().getVisualIdentify().getBaseUrl();
+            if (visualIdentifyBaseUrl == null || visualIdentifyBaseUrl.isEmpty()) {
+                log.error("视觉识别服务地址未配置");
+                return visionEvents;
+            }
+            String url = visualIdentifyBaseUrl + "/vision/vehicleaccessrecognition/list";
+            if (baseConfig.getYardName().equals("luorong")){
+                url = visualIdentifyBaseUrl + "/vision/visionevent/list";
+            }
+            log.info("获取Vision事件列表-请求地址：{}", url);
+            log.info("获取Vision事件列表-请求参数：{}", JSON.toJSONString(map));
+//            String path = "/Users/lixian/IdeaProjects/projectspace/analysis-platform/doc/vision_events_1774232881540.json";
+            String path = "/Users/lixian/IdeaProjects/projectspace/analysis-platform/doc/vision_events_yz_20260324.json";
+            String json = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
+            JSONArray dataArray = JSON.parseArray(json);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            LocalDateTime startDateTime = LocalDateTime.parse(startTime, formatter);
+            LocalDateTime endDateTime = LocalDateTime.parse(endTime, formatter);
+
+            if (dataArray != null && !dataArray.isEmpty()) {
+                for (int i = 0; i < dataArray.size(); i++) {
+                    JSONObject dataObj = dataArray.getJSONObject(i);
+                    VisionEvent visionEvent = JSON.parseObject(dataObj.toJSONString(), VisionEvent.class);
+                    if (visionEvent == null || visionEvent.getEventTime() == null) {
+                        continue;
+                    }
+                    LocalDateTime eventDateTime = LocalDateTime.parse(visionEvent.getEventTime(), formatter);
+                    if ((eventDateTime.isEqual(startDateTime) || eventDateTime.isAfter(startDateTime))
+                            && (eventDateTime.isEqual(endDateTime) || eventDateTime.isBefore(endDateTime))) {
+                        visionEvents.add(visionEvent);
+                    }
+                }
+                log.info("获取Vision事件列表-Success-查询成功，本次查询数据条数={}", visionEvents.size());
+            } else {
+                log.info("获取Vision事件列表-Success-查询成功，但无数据");
+            }
+        } catch (Exception e) {
+            log.error("获取Vision事件列表-Exception-异常：", e);
+            e.printStackTrace();
+        }
+        visionEvents.sort(
+                Comparator.comparing(VisionEvent::getEventTime, Comparator.nullsLast(String::compareTo))
+        );
+        return visionEvents;
+    }
+
 }
