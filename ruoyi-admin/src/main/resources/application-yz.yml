@@ -103,7 +103,7 @@ experiment:
     log-enabled: false
     push-data: false
     output-shp: false
-    output-shp-path: ${experiment.platform-dir}/PlatformData/output
+    output-shp-path: ${experiment.platform-dir}/ata/output
     delete-datetime:
     yard-name: luorong
     location-card-type: other
@@ -168,7 +168,7 @@ experiment:
           - "280"
   file-path:
     yard-name: ${experiment.base.yard-name}
-    base-path: ${experiment.platform-dir}/PlatformData/shp
+    base-path: ${experiment.platform-dir}/data/shp
     yards:
       yuzui:
         driving:
