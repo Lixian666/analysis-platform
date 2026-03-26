@@ -7,7 +7,7 @@ echo "========== 开始一键部署 analysis-platform =========="
 ZIP_FILE="/data/app/deploy.zip"
 DEPLOY_DIR="/data/app/deploy"
 BASE_DIR="/data/app/analysis-platform"
-YARD_NAME="yuzui"
+YARD_NAME="shp"
 
 # ===== 校验 deploy.zip =====
 if [ ! -f "$ZIP_FILE" ]; then

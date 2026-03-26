@@ -1,8 +1,16 @@
 {
-  "center":{"lat":29.620358,"lng":106.733729,"alt":2593.5,"heading":360,"pitch":-70},
+  "center":{"lat":31.0095790,"lng":121.3437577,"alt":2593.5,"heading":360,"pitch":-70},
   "dongjiazhen_center":{"lat":36.751274,"lng":117.270252,"alt":2593.5,"heading":360,"pitch":-70},
   "luorong_center":{"lat":24.405929,"lng":109.586439,"alt":2593.5,"heading":360,"pitch":-70},
+  "yuzui_center":{"lat":29.620358,"lng":106.733729,"alt":2593.5,"heading":360,"pitch":-70},
+  "minhang_center":{"lat":31.0095790,"lng":121.3437577,"alt":2593.5,"heading":360,"pitch":-70},
   "isSw_Order":false,
+  "data_tiles":"http://127.0.0.1:90/apTiles/{z}/{x}/{y}.png",
+  "rectangle": {"xmin": 121.3376814, "ymin": 31.0064018, "xmax": 121.3498341, "ymax": 31.0127563},
+  "dongjiazhen_rectangle": {"xmin": 117.25785175068449, "ymin": 36.75709311589477, "xmax": 117.27989964583475, "ymax": 36.76446135333450},
+  "luorong_rectangle": {"xmin": 109.57848151436542, "ymin": 24.40117569422706, "xmax": 109.59485823555032, "ymax": 24.41130962654648},
+  "yuzui_rectangle": {"xmin": 106.7252994, "ymin": 29.6158627, "xmax": 106.7434251, "ymax": 29.6258003},
+  "minhang_rectangle": {"xmin": 121.3376814, "ymin": 31.0064018, "xmax": 121.3498341, "ymax": 31.0127563},
   "zkyxLogout":"http://192.168.10.6:30000/api/bjjw/openAuth/doLogout?account=",
   "tifimg": "http://ctrl.iptv-soft.com/3D/noblackyz/{z}/{x}/{y}.png",
   "tdt_img": "http://t0.tianditu.gov.cn/img_w/wmts?tk=fcd603de1494edf1fbd5a159cc61c38a",
@@ -13,10 +21,5 @@
   "kuqu_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuqu&outputFormat=application/json",
   "kuwei_yuzui": "http://ctrl.iptv-soft.com/geoserver/yuzui/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=yuzui:kuwei&outputFormat=application/json",
   "dongjiazhen_tif": "/Users/lixian/Cache/Platform/PlatformData/img/董家镇tif/TIFDOM/1/1_DOM.tif",
-  "dongjiazhen_tiles_local": "http://192.168.7.10:8089/董家镇tif/tiles/{z}/{x}/{y}.png",
-  "dongjiazhen_tiles": "http://192.168.6.8:80/dongjiazhen/tiles/{z}/{x}/{y}.png",
-  "data_tiles":"http://192.168.10.7:82/apTiles/{z}/{x}/{y}.png",
-  "dongjiazhen_rectangle": {"xmin": 117.25785175068449, "ymin": 36.75709311589477, "xmax": 117.27989964583475, "ymax": 36.76446135333450},
-  "luorong_rectangle": {"xmin": 109.57848151436542, "ymin": 24.40117569422706, "xmax": 109.59485823555032, "ymax": 24.41130962654648},
-  "rectangle": {"xmin": 106.7252994, "ymin": 29.6158627, "xmax": 106.7434251, "ymax": 29.6258003}
+  "dongjiazhen_tiles": "http://192.168.6.8:80/dongjiazhen/tiles/{z}/{x}/{y}.png"
 }
