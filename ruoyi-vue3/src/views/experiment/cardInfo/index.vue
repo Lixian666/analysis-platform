@@ -39,6 +39,12 @@
         <el-button type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete" v-hasPermi="['experiment:cardInfo:remove']">删除</el-button>
       </el-col>
       <el-col :span="1.5">
+        <el-button type="success" plain icon="CircleCheck" :disabled="multiple" @click="handleBatchEnable" v-hasPermi="['experiment:cardInfo:edit']">批量启用</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button type="warning" plain icon="CircleClose" :disabled="multiple" @click="handleBatchDisable" v-hasPermi="['experiment:cardInfo:edit']">批量禁用</el-button>
+      </el-col>
+      <el-col :span="1.5">
         <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['experiment:cardInfo:export']">导出</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -180,7 +186,8 @@ import {
   delCardInfo,
   addCardInfo,
   updateCardInfo,
-  changeCardStatus
+  changeCardStatus,
+  batchChangeCardStatus
 } from "@/api/experiment/cardInfo";
 
 defineOptions({
@@ -377,7 +384,7 @@ function submitForm() {
 function handleStatusChange(row) {
   const status = row.enabled;
   const original = status === 1 ? 0 : 1;
-  const text = status === 1 ? "启用" : "禁用";
+  const text = status === 0 ? "启用" : "禁用";
   proxy.$modal
     .confirm('确认要' + text + '卡ID为"' + row.cardId + '"的定位卡吗？')
     .then(() => {
@@ -389,6 +396,34 @@ function handleStatusChange(row) {
     .catch(() => {
       row.enabled = original;
     });
+}
+
+function handleBatchEnable() {
+  const text = "启用";
+  proxy.$modal
+    .confirm('确认要批量' + text + '选中的 ' + ids.value.length + ' 条定位卡吗？')
+    .then(() => {
+      return batchChangeCardStatus({ ids: ids.value, enabled: 0 });
+    })
+    .then(() => {
+      proxy.$modal.msgSuccess(text + "成功");
+      getList();
+    })
+    .catch(() => {});
+}
+
+function handleBatchDisable() {
+  const text = "禁用";
+  proxy.$modal
+    .confirm('确认要批量' + text + '选中的 ' + ids.value.length + ' 条定位卡吗？')
+    .then(() => {
+      return batchChangeCardStatus({ ids: ids.value, enabled: 1 });
+    })
+    .then(() => {
+      proxy.$modal.msgSuccess(text + "成功");
+      getList();
+    })
+    .catch(() => {});
 }
 
 function cancel() {

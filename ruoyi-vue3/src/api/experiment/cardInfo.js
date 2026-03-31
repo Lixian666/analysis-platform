@@ -53,6 +53,15 @@ export function changeCardStatus(data) {
   })
 }
 
+// 批量修改定位卡启用状态
+export function batchChangeCardStatus(data) {
+  return request({
+    url: '/experiment/cardInfo/batchStatus',
+    method: 'put',
+    data: data
+  })
+}
+
 // 删除定位卡信息
 export function delCardInfo(id) {
   return request({
