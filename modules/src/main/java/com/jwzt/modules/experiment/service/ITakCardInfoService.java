@@ -85,5 +85,14 @@ public interface ITakCardInfoService {
      * @return 卡ID集合
      */
     List<String> selectTakCardIdList(TakCardInfo takCardInfo);
+
+    /**
+     * 批量修改定位卡启用状态
+     *
+     * @param ids 主键集合
+     * @param enabled 启用状态
+     * @return 结果
+     */
+    int batchUpdateStatus(Long[] ids, Integer enabled);
 }
 

@@ -42,6 +42,9 @@ public class TakCardInfo extends BaseEntity {
     @Excel(name = "是否启用", readConverterExp = "0=启用,1=禁用")
     private Integer enabled;
 
+    /** 主键ID数组（用于批量操作） */
+    private Long[] ids;
+
     public Long getId() {
         return id;
     }
@@ -96,6 +99,14 @@ public class TakCardInfo extends BaseEntity {
 
     public void setEnabled(Integer enabled) {
         this.enabled = enabled;
+    }
+
+    public Long[] getIds() {
+        return ids;
+    }
+
+    public void setIds(Long[] ids) {
+        this.ids = ids;
     }
 
     @Override

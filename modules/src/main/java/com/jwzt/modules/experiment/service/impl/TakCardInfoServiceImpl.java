@@ -112,5 +112,21 @@ public class TakCardInfoServiceImpl implements ITakCardInfoService {
     public List<String> selectTakCardIdList(TakCardInfo takCardInfo) {
         return takCardInfoMapper.selectTakCardIdList(takCardInfo);
     }
+
+    @Override
+    public int batchUpdateStatus(Long[] ids, Integer enabled) {
+        if (ids == null || ids.length == 0) {
+            return 0;
+        }
+        int count = 0;
+        for (Long id : ids) {
+            TakCardInfo takCardInfo = new TakCardInfo();
+            takCardInfo.setId(id);
+            takCardInfo.setEnabled(enabled);
+            takCardInfo.setUpdateTime(DateUtils.getNowDate());
+            count += takCardInfoMapper.updateTakCardInfo(takCardInfo);
+        }
+        return count;
+    }
 }
 

@@ -104,6 +104,22 @@ public class TakCardInfoController extends BaseController {
     }
 
     /**
+     * 批量修改定位卡启用状态
+     */
+    @PreAuthorize("@ss.hasPermi('experiment:cardInfo:edit')")
+    @Log(title = "定位卡信息", businessType = BusinessType.UPDATE)
+    @PutMapping("/batchStatus")
+    public AjaxResult batchChangeStatus(@RequestBody TakCardInfo takCardInfo) {
+        if (takCardInfo.getIds() == null || takCardInfo.getIds().length == 0) {
+            return error("请选择要修改的定位卡");
+        }
+        if (takCardInfo.getEnabled() == null) {
+            return error("启用状态不能为空");
+        }
+        return toAjax(takCardInfoService.batchUpdateStatus(takCardInfo.getIds(), takCardInfo.getEnabled()));
+    }
+
+    /**
      * 删除定位卡信息
      */
     @PreAuthorize("@ss.hasPermi('experiment:cardInfo:remove')")
