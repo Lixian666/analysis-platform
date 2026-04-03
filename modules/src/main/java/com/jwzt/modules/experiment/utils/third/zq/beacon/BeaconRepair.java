@@ -154,7 +154,7 @@ public class BeaconRepair {
         
         System.out.println("开始计算位置...");
         LocationSolver locationSolver = new LocationSolver();
-        DriverLocation result = locationSolver.calculateUserLocation(deviceReport);
+        DriverLocation result = locationSolver.calculateUserLocation(beaconFaultDetector.getBaseLocal(), deviceReport);
         
         System.out.println("计算结果: " + result);
     }

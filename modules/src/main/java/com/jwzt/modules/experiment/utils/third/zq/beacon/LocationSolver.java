@@ -18,17 +18,16 @@ public class LocationSolver {
 
     /**
      * 计算用户当前位置
-     * @param distances Map<信标ID, 距离(米)>
+     *
+     * @param beaconList
+     * @param distances  Map<信标ID, 距离(米)>
      * @return 计算出的经纬度结果
      */
-    public static DriverLocation calculateUserLocation(Map<String, Double> distances) {
+    public static DriverLocation calculateUserLocation(List<TakBeaconInfo> beaconList, Map<String, Double> distances) {
         // 过滤掉没有距离数据的信标
-    	BeaconFaultDetector beaconFaultDetector = new BeaconFaultDetector();
-    	List<TakBeaconInfo> beacons = beaconFaultDetector.getBaseLocal();
-    	
+    	List<TakBeaconInfo> beacons = beaconList;
         List<TakBeaconInfo> validBeacons = new ArrayList<>();
         List<Double> validDistances = new ArrayList<>();
-
         for (TakBeaconInfo b : beacons) {
             if (distances.containsKey(b.getBeaconId())) {
                 validBeacons.add(b);
@@ -180,7 +179,7 @@ public class LocationSolver {
         measuredDistances.put("B3", 70.71);
 
         System.out.println("开始计算位置...");
-        DriverLocation result = calculateUserLocation(measuredDistances);
+        DriverLocation result = calculateUserLocation(beacons, measuredDistances);
         
         System.out.println("计算结果: " + result);
         System.out.println("推测用户位于这三个信标的中心区域。");

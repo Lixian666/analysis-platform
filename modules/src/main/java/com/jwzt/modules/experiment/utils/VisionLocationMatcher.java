@@ -448,10 +448,21 @@ public class VisionLocationMatcher {
                     visionEvent.getLongitude(), visionEvent.getLatitude(),
                     locationPoint.getLongitude(), locationPoint.getLatitude()
             );
+            double uwbDistance = distance;
+            // 距离匹配：计算两点间距离
+            if (locationPoint.getUwbLongitude() != null && locationPoint.getUwbLatitude() != null) {
+                uwbDistance = calculateDistance(
+                        visionEvent.getLongitude(), visionEvent.getLatitude(),
+                        locationPoint.getUwbLongitude(), locationPoint.getUwbLatitude()
+                );
+            }
 
             if (distance > MATCH_DISTANCE_THRESHOLD) {
-//                        log.warn("视觉事件【{}】距离匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
-                continue;
+                if (uwbDistance > MATCH_DISTANCE_THRESHOLD){
+                    //                        log.warn("视觉事件【{}】距离匹配失败。卡ID: {},事件ID: {}，定位时间：{},事件时间：{}, 距离：{}", timeRange, locationPoint.getCardUUID(), visionEvent.getId(), locationPoint.getAcceptTime(), visionEvent.getEventTime(), distance);
+                    continue;
+                }
+                distance = uwbDistance;
             }
 
             boolean inTheTrafficCar = isInTheTrafficCar(beforePoints);

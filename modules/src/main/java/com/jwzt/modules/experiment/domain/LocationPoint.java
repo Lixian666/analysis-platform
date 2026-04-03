@@ -18,6 +18,9 @@ public class LocationPoint {
     private MovementAnalyzer.MovementState distanceState;
     private String event;
 
+    private Double uwbLongitude;
+    private Double uwbLatitude;
+
     private TagScanUwbData tagScanUwbData;
 //    private visualIdentityData visualIdentityData;
 
