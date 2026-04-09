@@ -56,7 +56,7 @@ public class JobData {
                 log.error("视觉识别服务地址未配置");
                 return visionEvents;
             }
-            String url = visualIdentifyBaseUrl + "/vision/vehicleaccessrecognition/list";
+            String url = visualIdentifyBaseUrl + "/vision/visionevent/list";
             log.info("获取Vision事件列表-请求地址：{}", url);
             log.info("获取Vision事件列表-请求参数：{}", JSON.toJSONString(map));
             
@@ -118,7 +118,7 @@ public class JobData {
             log.info("获取Vision事件列表-请求地址：{}", url);
             log.info("获取Vision事件列表-请求参数：{}", JSON.toJSONString(map));
 //            String path = "/Users/lixian/IdeaProjects/projectspace/analysis-platform/doc/vision_events_1774232881540.json";
-            String path = "/Users/lixian/IdeaProjects/projectspace/analysis-platform/doc/vision_events_yz_20260324.json";
+            String path = "/Users/lixian/IdeaProjects/projectspace/analysis-platform/doc/vision_events_mh_20260402.json";
             String json = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
             JSONArray dataArray = JSON.parseArray(json);
 

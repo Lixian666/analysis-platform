@@ -342,14 +342,14 @@ public class VisionLocationMatcher {
         Map<String, List<LocationPoint>> locationDataRetry = new HashMap<>(historyLocationData);
         // 遍历所有视觉事件，每个事件只取最优的一个定位点（距离最近，其次时间差最小，完全相同取时间戳更早的定位点）
         for (VisionEvent visionEvent : visionGroup) {
-            if (visionEvent.getId() == 42842L){
+            if (visionEvent.getId() == 110141L){
                 log.info("开始处理视觉数据: {}", visionEvent);
             }
             getBastMatchedResults(visionEvent, locationData, result, timeRange, notMatches, true);
         }
 
         for (VisionEvent visionEvent : notMatches){
-            if (visionEvent.getId() == 42842L){
+            if (visionEvent.getId() == 110141L){
                 log.info("开始处理视觉数据: {}", visionEvent);
             }
             getBastMatchedResults(visionEvent, locationDataRetry, result, timeRange, notMatches, false);
@@ -375,17 +375,21 @@ public class VisionLocationMatcher {
 //                log.warn("视觉事件缺少经纬度信息，跳过匹配。事件ID: {}", visionEvent.getId());
             return;
         }
-        if (visionEvent.getId() == 27011L){
+        if (visionEvent.getId() == 110149L){
             System.out.println("aaaa");
         }
 
         VisionLocationMatchResult.MatchedLocationPoint bestMatch = null;
         List<VisionLocationMatchResult.MatchedLocationPoint> bestMatchedPoints = new ArrayList<>();
-        if (visionEvent.getId() == 13740L){
+        if (visionEvent.getId() == 121781L){
             System.out.println("aaaa");
         }
         // 遍历所有卡的定位数据
         for (Map.Entry<String, List<LocationPoint>> entry : locationData.entrySet()) {
+            String cardId = entry.getKey();
+            if (entry.getKey().equals("1918B3001305")){
+                System.out.println("aaaa");
+            }
             List<LocationPoint> locationPoints = entry.getValue();
             List<LocationPoint> beforePoints = new LinkedList<>();
             bestMatch = getMatchedLocationPoint(visionEvent, locationPoints, beforePoints, visionTimestamp, bestMatch, result, again);

@@ -180,6 +180,8 @@ experiment:
                     - "131"
                     - "6512"
                     - "6534"
+                event-types: ["load", "unload", "gateCommodityVehicleInput", "gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput"]
+                unmatch-event-types: ["gateCommodityVehicleOutput"]
     file-path:
         yard-name: ${experiment.base.yard-name}
         base-path: ${experiment.platform-dir}/PlatformData/shp
@@ -275,4 +277,34 @@ experiment:
                     - ${experiment.file-path.base-path}/luorong/雒容库区/zikuqu.shp
                 kuwei:
                     - ${experiment.file-path.base-path}/luorong/雒容库区/kuwei.shp
+            dongjiazhen:
+                driving:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuqu.shp
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇道路/zhugandao.shp
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线J车/huoyunxianjc.shp
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线作业台/huoyunxianzyt.shp
+                parking:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuqu.shp
+                road:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇道路/zhugandao.shp
+                parking2road:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇道路/zhugandao.shp
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuqu.shp
+                yard:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/yard.shp
+                kuqu:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuqu.shp
+                huoyunxin:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线J车/huoyunxianjc.shp
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线作业台/huoyunxianzyt.shp
+                huoyunxinzyt:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线作业台/huoyunxianzyt.shp
+                huoyunxinjc:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇货运线J车/huoyunxianjc.shp
+                banche:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇板车作业区/banchezuoyequ.shp
+                zikuqu:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/zikuqu.shp
+                kuwei:
+                    - ${experiment.file-path.base-path}/dongjiazhen/董家镇库区/kuwei.shp
 

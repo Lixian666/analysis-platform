@@ -130,10 +130,15 @@ public class VisionLocationMatchTask {
                 return;
             }
             
-            // 4. 获取cameraIds
+            // 4. 获取cameraIds、eventTypes
             List<String> cameraIds = baseConfig.getCardAnalysis().getVisualIdentify().getCameraIds();
             if (cameraIds == null || cameraIds.isEmpty()) {
                 log.warn("cameraIds为空，无法获取视觉识别数据");
+                return;
+            }
+            List<String> eventTypes = baseConfig.getCardAnalysis().getVisualIdentify().getEventTypes();
+            if (eventTypes == null || eventTypes.isEmpty()) {
+                log.warn("eventTypes为空，无法获取视觉识别数据");
                 return;
             }
             log.info("获取到摄像机ID列表，共 {} 个摄像机", cameraIds.size());
@@ -211,12 +216,7 @@ public class VisionLocationMatchTask {
             List<VisionEvent> newVisionEvents = newVisionEventList.stream()
                     .filter(event -> {
                         String eventType = event.getEventType();
-                        return "load".equals(eventType) 
-                                || "unload".equals(eventType)
-                                || "gateCommodityVehicleInput".equals(eventType)
-                                || "gateCommodityVehicleOutput".equals(eventType)
-                                || "gateBancheInput".equals(eventType)
-                                || "gateBancheOutput".equals(eventType);
+                        return eventType != null && eventTypes.contains(eventType);
                     })
                     .collect(Collectors.toList());
             // 将新视觉事件的 matched 字段全部置为 1
@@ -444,7 +444,7 @@ public class VisionLocationMatchTask {
             VisionLocationMatchResult.MatchedLocationPoint matchedPoint = matchedPoints.get(i);
             LocationPoint dropOffPoint = matchedPoint.getLocationPoint();
             VisionEvent visionEvent = matchedPoint.getVisionEvent();
-            if (visionEvent.getId() == 42944L){
+            if (visionEvent.getId() == 112317l){
                 log.info("开始处理卡ID: {} 的第 {} 个上车数据", cardId, i + 1);
             }
 
