@@ -133,7 +133,7 @@ experiment:
             username: client
             password: JoySuch@client10
             licence: ld63a6557aa5fe703cefc5cc50f846895
-            base-url: http://172.30.17.116/zqapi
+            base-url: http://10.4.230.17:8300/zqapi
 #            base-url: http://61.50.136.180:46000
             api:
                 # 获取建筑列表
