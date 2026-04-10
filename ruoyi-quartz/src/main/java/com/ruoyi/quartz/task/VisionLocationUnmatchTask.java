@@ -206,7 +206,9 @@ public class VisionLocationUnmatchTask {
                 sess.startTime = eventTime;
                 sess.endTime = eventTime;
                 sess.vin = visionEvent.getVin();
-
+                if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED){
+                    sess.plateNum = visionEvent.getCarNumber();
+                }
                 int pushStatus = 1;
                 RealTimeDriverTracker.VehicleType pushVehicleType = convertToPushVehicleType(vehicleType);
                 
@@ -219,10 +221,30 @@ public class VisionLocationUnmatchTask {
                     }else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE){
                         sess.kind = RealTimeDriverTracker.EventKind.CAR_SEND;
                     }
-                    JSONObject outParkPushResult = dataSender.outParkPush(sess, pushVehicleType);
-                    JSONObject outYardPushResult = dataSender.outYardPush(sess, pushVehicleType);
-                    if (outParkPushResult.getIntValue("code") == 20000 && outYardPushResult.getIntValue("code") == 20000){
-                        pushStatus = 0;
+                    if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED){
+                        if (visionEvent.getCommodityVehicleCount() > 0){
+                            for (int j = 0; j < visionEvent.getCommodityVehicleCount(); j++) {
+                                sess.sessionId = trackId;
+                                JSONObject outParkPushResult = dataSender.outParkPush(sess, pushVehicleType);
+                                JSONObject outYardPushResult = dataSender.outYardPush(sess, pushVehicleType);
+                                trackId = IdUtils.fastSimpleUUID();
+                                if (outParkPushResult.getIntValue("code") == 20000 && outYardPushResult.getIntValue("code") == 20000){
+                                    pushStatus = 0;
+                                }
+                            }
+                        }else {
+                            JSONObject outParkPushResult = dataSender.outParkPush(sess, pushVehicleType);
+                            JSONObject outYardPushResult = dataSender.outYardPush(sess, pushVehicleType);
+                            if (outParkPushResult.getIntValue("code") == 20000 && outYardPushResult.getIntValue("code") == 20000){
+                                pushStatus = 0;
+                            }
+                        }
+                    }else {
+                        JSONObject outParkPushResult = dataSender.outParkPush(sess, pushVehicleType);
+                        JSONObject outYardPushResult = dataSender.outYardPush(sess, pushVehicleType);
+                        if (outParkPushResult.getIntValue("code") == 20000 && outYardPushResult.getIntValue("code") == 20000){
+                            pushStatus = 0;
+                        }
                     }
                 } else {
                     // 卸车（到达）
@@ -233,11 +255,32 @@ public class VisionLocationUnmatchTask {
                     }else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE){
                         sess.kind = RealTimeDriverTracker.EventKind.CAR_ARRIVED;
                     }
-                    JSONObject inYardPushResult = dataSender.inYardPush(sess, pushVehicleType);
-                    JSONObject inParkPushResult = dataSender.inParkPush(sess, pushVehicleType);
-                    if (inYardPushResult.getIntValue("code") == 20000 && inParkPushResult.getIntValue("code") == 20000){
-                        pushStatus = 0;
+                    if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED){
+                        if (visionEvent.getCommodityVehicleCount() > 0){
+                            for (int j = 0; j < visionEvent.getCommodityVehicleCount(); j++) {
+                                sess.sessionId = trackId;
+                                JSONObject inYardPushResult = dataSender.inYardPush(sess, pushVehicleType);
+                                JSONObject inParkPushResult = dataSender.inParkPush(sess, pushVehicleType);
+                                trackId = IdUtils.fastSimpleUUID();
+                                if (inYardPushResult.getIntValue("code") == 20000 && inParkPushResult.getIntValue("code") == 20000){
+                                    pushStatus = 0;
+                                }
+                            }
+                        }else {
+                            JSONObject inYardPushResult = dataSender.inYardPush(sess, pushVehicleType);
+                            JSONObject inParkPushResult = dataSender.inParkPush(sess, pushVehicleType);
+                            if (inYardPushResult.getIntValue("code") == 20000 && inParkPushResult.getIntValue("code") == 20000){
+                                pushStatus = 0;
+                            }
+                        }
+                    }else {
+                        JSONObject inYardPushResult = dataSender.inYardPush(sess, pushVehicleType);
+                        JSONObject inParkPushResult = dataSender.inParkPush(sess, pushVehicleType);
+                        if (inYardPushResult.getIntValue("code") == 20000 && inParkPushResult.getIntValue("code") == 20000){
+                            pushStatus = 0;
+                        }
                     }
+
                 }
 
                 // 更新推送状态
@@ -266,7 +309,7 @@ public class VisionLocationUnmatchTask {
         } else if (vehicleType == LoadingStrategyFactory.VehicleType.GROUND_VEHICLE) {
             return RealTimeDriverTracker.VehicleType.CAR;
         } else if (vehicleType == LoadingStrategyFactory.VehicleType.FLATBED) {
-            return RealTimeDriverTracker.VehicleType.CAR;
+            return RealTimeDriverTracker.VehicleType.TRUCK;
         }
         return RealTimeDriverTracker.VehicleType.CAR;
     }

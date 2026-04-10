@@ -47,7 +47,8 @@ public class DataSender {
             request.setThrough(String.valueOf(sess.startLongitude));
             request.setWeft(String.valueOf(sess.startLatitude));
             request.setRegionType(getBusinessType(sess));
-            request.setCarType("car");
+            request.setCarType("transportCar");
+            request.setVehicleThirdBrand(sess.plateNum);
         }
         if (vehicleType == RealTimeDriverTracker.VehicleType.CAR) {
             request.setType(0);
@@ -92,6 +93,16 @@ public class DataSender {
             request.setRegionType(getBusinessType(sess));
             request.setCarType("car");
             request.setVehicleCode(sess.vin);
+        } else if (vehicleType == RealTimeDriverTracker.VehicleType.TRUCK) {
+            request.setType(1);
+            request.setVehicleThirdId(sess.sessionId);
+            request.setVehicleTime(DateTimeUtils.timestampToDateTimeSSSStr(sess.endTime));
+            request.setCameraId(sess.cardId);
+            request.setThrough(String.valueOf(sess.endLongitude));
+            request.setWeft(String.valueOf(sess.endLatitude));
+            request.setRegionType(getBusinessType(sess));
+            request.setCarType("transportCar");
+            request.setVehicleThirdBrand(sess.plateNum);
         }
         JSONObject result = centerWorkHttpUtils.vehicleEntryAndExit(request);
         System.out.println("推送车辆出场信息：" + result);
@@ -123,8 +134,8 @@ public class DataSender {
             request.setThrough(String.valueOf(sess.endLongitude));
             request.setWeft(String.valueOf(sess.endLatitude));
             request.setRegionType(getBusinessType(sess));
-            request.setCarType("car");
-            request.setVehicleCode(sess.vin);
+            request.setCarType("transportCar");
+            request.setVehicleThirdBrand(sess.plateNum);
         }
         if (vehicleType == RealTimeDriverTracker.VehicleType.CAR){
             if (sess.kind == RealTimeDriverTracker.EventKind.CAR_ARRIVED || sess.kind == RealTimeDriverTracker.EventKind.CAR_SEND){
@@ -183,6 +194,16 @@ public class DataSender {
             request.setRegionType(getBusinessType(sess));
             request.setCarType("car");
             request.setVehicleCode(sess.vin);
+        } else if (vehicleType == RealTimeDriverTracker.VehicleType.TRUCK) {
+            request.setType(1);
+            request.setVehicleThirdId(sess.sessionId);
+            request.setVehicleTime(DateTimeUtils.timestampToDateTimeSSSStr(sess.startTime));
+            request.setCameraId(sess.cardId);
+            request.setThrough(String.valueOf(sess.startLongitude));
+            request.setWeft(String.valueOf(sess.startLatitude));
+            request.setRegionType(getBusinessType(sess));
+            request.setCarType("transportCar");
+            request.setVehicleThirdBrand(sess.plateNum);
         }
         JSONObject result = centerWorkHttpUtils.assignmentRecord(request);
         System.out.println("推送车辆出库信息：" + result);

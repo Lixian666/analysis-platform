@@ -131,6 +131,7 @@ public class RealTimeDriverTracker {
         public String rfidName; // 最常命中的信标RFID名称
         public String area; // 最常命中的信标区域
         public String vin; // 车辆vin码
+        public String plateNum; // 车牌号
         public final List<LocationPoint> points = new ArrayList<>();
     }
 

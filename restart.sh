@@ -103,8 +103,8 @@ start() {
         mkdir -p "$LOGS_DIR"
     fi
 
-    # 启动前归档旧日志
-    archive_log_file()
+    # 归档旧日志文件
+    archive_log_file
 
     # 显示启动参数
     echo -e "${BLUE}启动参数:${NC}"
@@ -205,6 +205,8 @@ restart() {
     echo -e "${YELLOW}正在重启 ${APP_NAME}...${NC}"
     echo -e "${BLUE}========================================${NC}"
 
+    # 归档旧日志文件
+    archive_log_file
     stop
     sleep 3
     start

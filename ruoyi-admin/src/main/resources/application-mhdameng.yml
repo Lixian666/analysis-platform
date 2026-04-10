@@ -181,7 +181,7 @@ experiment:
                     - "6512"
                     - "6534"
                 event-types: [ "load", "unload", "gateCommodityVehicleInput", "gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput" ]
-                unmatch-event-types: [ "gateCommodityVehicleOutput" ]
+                unmatch-event-types: [ "gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput" ]
     file-path:
         yard-name: ${experiment.base.yard-name}
         base-path: ${experiment.platform-dir}/PlatformData/shp
