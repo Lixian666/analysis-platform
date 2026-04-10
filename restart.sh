@@ -61,6 +61,17 @@ is_running() {
     fi
 }
 
+# 归档旧日志文件
+archive_log_file() {
+    local log_file="${LOGS_DIR}/console.log"
+
+    if [ -f "$log_file" ]; then
+        local archived_log_file="${LOGS_DIR}/console_$(date +%Y%m%d%H%M%S).log"
+        mv "$log_file" "$archived_log_file"
+        echo -e "${YELLOW}旧日志已归档: ${archived_log_file}${NC}"
+    fi
+}
+
 # 启动应用
 start() {
     echo -e "${BLUE}========================================${NC}"
@@ -91,6 +102,9 @@ start() {
         echo -e "${YELLOW}创建日志目录: ${LOGS_DIR}${NC}"
         mkdir -p "$LOGS_DIR"
     fi
+
+    # 启动前归档旧日志
+    archive_log_file()
 
     # 显示启动参数
     echo -e "${BLUE}启动参数:${NC}"
