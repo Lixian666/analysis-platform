@@ -19,7 +19,7 @@ spring:
       # 主库数据源
       master:
         url: jdbc:dm://192.168.9.101:5236
-        username: ANALYSIS_PLATFORM
+        username: ANALYSIS_PLATFORM_TEST
         password: LR@2025.dxy0217
       # 从库数据源
       slave:
@@ -78,7 +78,7 @@ spring:
     # 端口，默认为6379
     port: 6379
     # 数据库索引
-    database: 9
+    database: 0
     # 密码
     password: jwzt@2020
     # 连接超时时间
@@ -96,12 +96,12 @@ spring:
 
 # 行为分析配置 - 雒容
 experiment:
-  platform-dir: /Users/lixian/Cache/Platform
+  platform-dir: /data/app/analysis-platform
   base:
     stay-verify: false
     ranging-verify: true
-    log-enabled: false
-    push-data: false
+    log-enabled: true
+    push-data: true
     output-shp: false
     output-shp-path: ${experiment.platform-dir}/PlatformData/output
     delete-datetime:
@@ -122,9 +122,8 @@ experiment:
       building-id: 210327
       username: client
       password: JoySuch@client10
-      licence: ld63a6557aa5fe703cefc5cc50f846895
-#      base-url: http://10.4.230.17:8300/zqapi
-      base-url: http://61.50.136.180:46000
+      base-url: http://10.4.230.17:8300/zqapi
+      #   base-url: http://61.50.136.180:46000
       api:
         # 获取建筑列表
         build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
@@ -141,7 +140,7 @@ experiment:
         # 获取标签和uwb扫描历史（测距）
         tag-scan-uwb-history: ${experiment.base.joysuch.base-url}/api/v1/device/tagScanUwbHistory
     sw-center:
-      tenant-id: 10001
+      tenant-id: 10003
       # 中心服务地址
       status: 1
       center-ip: http://172.30.17.116:8001/sw-centralOpen-api
@@ -169,9 +168,11 @@ experiment:
           - "67"
           - "6512"
           - "6534"
+        event-types: ["load", "unload", "gateCommodityVehicleInput", "gateBancheInput", "gateBancheOutput"]
+        unmatch-event-types: ["gateCommodityVehicleOutput"]
   file-path:
     yard-name: ${experiment.base.yard-name}
-    base-path: ${experiment.platform-dir}/PlatformData/shp
+    base-path: ${experiment.platform-dir}/data/shp
     yards:
       luorong:
         driving:
