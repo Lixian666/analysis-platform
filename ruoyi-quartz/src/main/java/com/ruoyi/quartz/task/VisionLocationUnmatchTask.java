@@ -115,9 +115,9 @@ public class VisionLocationUnmatchTask {
             log.info("获取到摄像机ID列表，共 {} 个摄像机", cameraIds.size());
             
             // 6. 获取新的视觉识别数据
-//            List<VisionEvent> newVisionEventList = jobData.getVisionList(startTimeStrFinal, endTimeStrFinal, cameraIds);
+            List<VisionEvent> newVisionEventList = jobData.getVisionList(startTimeStrFinal, endTimeStrFinal, cameraIds);
             // debug使用json文件
-            List<VisionEvent> newVisionEventList = jobData.getVisionList4json(startTimeStrFinal, endTimeStrFinal, cameraIds);
+//            List<VisionEvent> newVisionEventList = jobData.getVisionList4json(startTimeStrFinal, endTimeStrFinal, cameraIds);
 
             // 过滤出装卸车数据
             // 火车：load/unload
