@@ -321,8 +321,7 @@ public class ZQOpenApi {
         if (accessToken.getLicence() == null){
             accessToken= new AccessTokenReq(getLicence(username, password));
         }
-        AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessToken.getLicence()).getAccessToken();
-        return AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessToken.getLicence()).refreshAccessToken();
+        return AccessTokenApi.of(baseConfig.getJoysuch().getBaseUrl(), accessToken.getLicence()).getAccessToken();
     }
 
     public JoySuchResponse<TokenEntity> refreshAccessToken() {
