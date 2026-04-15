@@ -108,31 +108,42 @@ spring:
 experiment:
     platform-dir: /Users/lixian/Cache/Platform
     base:
+        # 是否进行停留点验证
         stay-verify: false
+        # 行为识别以测距为第一优先级
         ranging-verify: true
+        # 是否输出日志
         log-enabled: false
+        # 是否推送数据
         push-data: false
+        # 是否输出定位点shp文件
         output-shp: false
+        # 输出文件路径
         output-shp-path: ${experiment.platform-dir}/PlatformData/output
+        # 数据删除时间
         delete-datetime:
+        # 货场名称
         yard-name: luorong # luorong、yuzui、minhang
+        # 定位卡类型
         location-card-type: other
+        # 定位卡业务类型
         card-type: car
         # 数据源 zq xrkc
         locate-data-sources: zq
 
-        data-match:
-            time-interval-seconds: null
-            ignore-matched: true
-            update-match-status: true
-            save-rfid-data: true
-
+        # 真趣配置
         joysuch:
+            # 货场名
             building-name: 雒容 # 鱼嘴、雒容、闵行
+            # 货场ID
             building-id: 210327 # 209885、210327、210556
+            # 真趣用户名
             username: client
+            # 真趣密码
             password: JoySuch@client10
+            # 真趣授权码
             licence: ld63a6557aa5fe703cefc5cc50f846895
+            # 真趣接口
             #      base-url: http://172.30.17.116/zqapi
             base-url: http://61.50.136.180:46000
             api:
@@ -180,8 +191,11 @@ experiment:
                     - "131"
                     - "6512"
                     - "6534"
+                # 事件类型
                 event-types: ["load", "unload", "gateCommodityVehicleInput", "gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput"]
-                unmatch-event-types: ["gateCommodityVehicleOutput"]
+                # 定位未匹配事件类型
+                unmatch-event-types: ["gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput"]
+    # 各场站的shp文件路径，shp初始化时使用
     file-path:
         yard-name: ${experiment.base.yard-name}
         base-path: ${experiment.platform-dir}/PlatformData/shp

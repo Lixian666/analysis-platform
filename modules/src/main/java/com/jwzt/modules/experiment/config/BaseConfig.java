@@ -26,7 +26,7 @@ public class BaseConfig {
 
     // 定位卡类型
     private String locationCardType;
-    // 定位卡类型
+    // 定位卡业务类型
     private String cardType;
     // 定位数据来源
     private String locateDataSources;
