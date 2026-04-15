@@ -74,6 +74,11 @@ public class ZQOpenApi {
             buildingID = baseConfig.getJoysuch().getBuildingId();
         }
         headers.put("X-BuildId", buildingID);
+        if (baseConfig.isLogEnabled()){
+            String accessToken = redisCache.getCacheObject(TOKEN_KEY);
+            log.info("卡ID: {}, 获取信标点accessToken：【{}】", tagID, accessToken);
+            log.info("卡ID: {}, 获取信标点headers：【{}】", tagID, headers);
+        }
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
             put("mac", tagID);
             put("startTime", startTimestamp);
@@ -170,6 +175,11 @@ public class ZQOpenApi {
     public String getListOfPoints(String cardId, String buildId, String startTime, String endTime) {
         Map<String, String> headers = getHeaders();
         headers.put("X-BuildId", buildId);
+        if (baseConfig.isLogEnabled()){
+            String accessToken = redisCache.getCacheObject(TOKEN_KEY);
+            log.info("卡ID: {}, 获取位置点accessToken：【{}】", cardId, accessToken);
+            log.info("卡ID: {}, 获取位置点headers：【{}】", cardId, headers);
+        }
         String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
             put("mac", cardId);
             put("startTime", DateTimeUtils.convertToTimestamp(startTime));
