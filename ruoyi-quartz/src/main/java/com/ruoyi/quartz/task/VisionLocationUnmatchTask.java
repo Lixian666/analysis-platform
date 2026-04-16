@@ -85,14 +85,6 @@ public class VisionLocationUnmatchTask {
             } else {
                 log.info("查询时间范围：{} - {}", startTimeStr, endTimeStr);
             }
-            final String startTimeStrFinal = startTimeStr;
-            final String endTimeStrFinal = endTimeStr;
-
-            // 计算定位数据的时间范围（视觉数据时间范围前后各延展5分钟）
-            Date startTimeTag = sdf.parse(startTimeStr);
-            Date endTimeTag = sdf.parse(endTimeStr);
-            String startTimeStrTag = sdf.format(new Date(startTimeTag.getTime() - 5 * 60 * 1000L)); // 开始时间前推5分钟
-            String endTimeStrTag = sdf.format(new Date(endTimeTag.getTime() + 5 * 60 * 1000L));   // 结束时间后延5分钟
             
             // 2. 获取buildId
             String buildId = baseConfig.getJoysuch().getBuildingId();
@@ -102,22 +94,22 @@ public class VisionLocationUnmatchTask {
             }
             
             // 3. 获取cameraIds、eventTypes
-            List<String> cameraIds = baseConfig.getCardAnalysis().getVisualIdentify().getCameraIds();
-            if (cameraIds == null || cameraIds.isEmpty()) {
-                log.warn("cameraIds为空，无法获取视觉识别数据");
+            List<String> unmatchCameraIds = baseConfig.getCardAnalysis().getVisualIdentify().getUnmatchCameraIds();
+            List<String> unmatchEventTypes = baseConfig.getCardAnalysis().getVisualIdentify().getUnmatchEventTypes();
+            if (unmatchCameraIds == null || unmatchCameraIds.isEmpty()){
+                log.warn("unmatchCameraIds为空，无法获取视觉识别数据");
                 return;
             }
-            List<String> unmatchEventTypes = baseConfig.getCardAnalysis().getVisualIdentify().getUnmatchEventTypes();
             if (unmatchEventTypes == null || unmatchEventTypes.isEmpty()) {
                 log.warn("unmatchEventTypes为空，无法获取视觉识别数据");
                 return;
             }
-            log.info("获取到摄像机ID列表，共 {} 个摄像机", cameraIds.size());
+            log.info("获取到摄像机ID列表，共 {} 个摄像机", unmatchCameraIds.size());
             
             // 6. 获取新的视觉识别数据
-            List<VisionEvent> newVisionEventList = jobData.getVisionList(startTimeStrFinal, endTimeStrFinal, cameraIds);
+            List<VisionEvent> newVisionEventList = jobData.getVisionList(startTimeStr, endTimeStr, unmatchCameraIds);
             // debug使用json文件
-//            List<VisionEvent> newVisionEventList = jobData.getVisionList4json(startTimeStrFinal, endTimeStrFinal, cameraIds);
+//            List<VisionEvent> newVisionEventList = jobData.getVisionList4json(startTimeStr, endTimeStr, unmatchCameraIds);
 
             // 过滤出装卸车数据
             // 火车：load/unload
@@ -129,7 +121,6 @@ public class VisionLocationUnmatchTask {
                         return eventType != null && unmatchEventTypes.contains(eventType);
                     })
                     .collect(Collectors.toList());
-            // 将新视觉事件的 matched 字段全部置为 1
             if (newVisionEvents == null && newVisionEvents.isEmpty()) {
                 log.warn("newVisionEvents为空，无法获取视觉识别数据");
                 return;
