@@ -147,6 +147,8 @@ experiment:
             #      base-url: http://172.30.17.116/zqapi
             base-url: http://61.50.136.180:46000
             api:
+                # 获取token
+                access-token: ${experiment.base.joysuch.base-url}/api/v3/getAccessToken
                 # 获取建筑列表
                 build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
                 # 获取设备列表

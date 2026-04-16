@@ -57,6 +57,7 @@ public class BaseConfig {
 
         @Data
         public class Api {
+            private String accessToken;
             private String buildList;
             private String cards;
             private String beacons;

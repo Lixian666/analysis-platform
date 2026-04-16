@@ -150,7 +150,7 @@ public class VisionLocationMatchTask {
                 // 预热：提前获取一次token，避免并发冲突
                 try {
                     System.out.println("正在预热，获取AccessToken...");
-                    zqOpenApi.getHeaders();
+                    zqOpenApi.getHeadersHttp();
                     System.out.println("✓ AccessToken预热成功");
                     // 等待200ms确保token已缓存
                     Thread.sleep(200);

@@ -13,7 +13,7 @@
   "minhang_rectangle": {"xmin": 121.3376814, "ymin": 31.0064018, "xmax": 121.3498341, "ymax": 31.0127563},
   "zkyxLogout":"http://192.168.10.6:30000/api/bjjw/openAuth/doLogout?account=",
   "tifimg": "http://ctrl.iptv-soft.com/3D/noblackyz/{z}/{x}/{y}.png",
-  "tdt_img": "http://t0.tianditu.gov.cn/img_w/wmts?tk=fcd603de1494edf1fbd5a159cc61c38a",
+  "tdt_img": "http://t0.tianditu.gov.cn/img_w/wmts?tk=xxxxxx",
   "tdt": "http://ctrl.iptv-soft.com/3D/tdt/{z}/{x}/{y}.png",
   "model_car": "http://ctrl.iptv-soft.com/3D/1.glb",
   "model_dongjiazhen": "/data/dongjiazheng-3D/tileset.jso 'n",

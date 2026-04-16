@@ -1,10 +1,12 @@
 package com.jwzt.modules.experiment.utils.third.zq;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.joysuch.open.api.AccessTokenApi;
 import com.joysuch.open.bo.AccessTokenReq;
 import com.joysuch.open.bo.UserReq;
+import com.joysuch.open.utils.MapKeyUtil;
 import com.joysuch.open.utils.Md5Util;
 import com.joysuch.open.vo.JoySuchResponse;
 import com.joysuch.open.vo.TokenEntity;
@@ -28,6 +30,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -256,6 +259,43 @@ public class ZQOpenApi {
         return headers;
     }
 
+    /**
+     * 核心：构建请求头，使用 Redis 缓存 token
+     */
+    public Map<String, String> getHeadersHttp() {
+        long timestamp = System.currentTimeMillis();
+
+        // 从Redis取
+        String accessToken = redisCache.getCacheObject(TOKEN_KEY);
+        String signId = redisCache.getCacheObject(SIGNID_KEY);
+
+        // 如果为空或已过期，重新获取
+        if (accessToken == null || signId == null) {
+            JoySuchResponse<TokenEntity> response = getAccessTokenHttp(baseConfig.getJoysuch().getUsername(), baseConfig.getJoysuch().getPassword());
+            if (response == null || response.getData() == null) {
+                throw new RuntimeException("获取AccessToken失败");
+            }
+            accessToken = response.getData().getAccessToken();
+            signId = response.getData().getSignId();
+            long expireAt = response.getData().getExpireAt();
+
+//            // 提前60秒过期，避免临界点失效
+//            long ttl = expireAt - System.currentTimeMillis() - 60 * 1000;
+//            if (ttl < 0) ttl = 60 * 1000; // 最少缓存1分钟
+            long ttl = 3 * 60 * 1000;
+            redisCache.setCacheObject(TOKEN_KEY, accessToken, (int)(ttl/1000), TimeUnit.SECONDS);
+            redisCache.setCacheObject(SIGNID_KEY, signId, (int)(ttl/1000), TimeUnit.SECONDS);
+        }
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("X-Token", getXToken(accessToken, signId, timestamp));
+        headers.put("X-Timestamp", String.valueOf(timestamp));
+        headers.put("X-SignId", signId);
+        headers.put("Accept-Charset", "utf-8");
+        headers.put("contentType", "utf-8");
+        return headers;
+    }
+
     // X-Token生成
     public static String getXToken(String accessToken, String signId, Long timestamp){
         return Md5Utils.md5(accessToken + Md5Util.md5(signId + Md5Util.md5(accessToken)).toLowerCase() +
@@ -315,6 +355,27 @@ public class ZQOpenApi {
             licence = baseConfig.getJoysuch().getLicence();
         }
         return licence;
+    }
+
+    public JoySuchResponse<TokenEntity> getAccessTokenHttp(String username, String password) {
+        String accessTokenUrl = baseConfig.getJoysuch().getApi().getAccessToken();
+        long timestamp = System.currentTimeMillis();
+        String url = accessTokenUrl + "?t=" + timestamp;
+        if (accessToken.getLicence() == null){
+            accessToken= new AccessTokenReq(getLicence(username, password));
+        }
+        String jsonBody = JSONObject.toJSONString(new HashMap<String, Object>() {{
+            put("licence", accessToken.getLicence());
+        }});
+        String result = sendPost(url, null, jsonBody);
+        JoySuchResponse joySuchResponse = (JoySuchResponse)JSON.parseObject(result, JoySuchResponse.class);
+        ConcurrentHashMap<String, TokenEntity> licenceToToken = new ConcurrentHashMap();
+        if (joySuchResponse.getErrorCode() == 0) {
+            TokenEntity tokenEntity = (TokenEntity)JSON.parseObject(JSON.toJSONString(joySuchResponse.getData()), TokenEntity.class);
+            licenceToToken.put(MapKeyUtil.baseUrlAndLicence(url, accessToken.getLicence()), tokenEntity);
+            joySuchResponse.setData(tokenEntity);
+        }
+        return joySuchResponse;
     }
 
     public JoySuchResponse<TokenEntity> getAccessToken(String username, String password) {
