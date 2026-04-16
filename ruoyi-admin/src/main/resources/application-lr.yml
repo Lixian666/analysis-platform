@@ -161,14 +161,9 @@ experiment:
       # 影像分析
       visual-identify:
         base-url: http://192.168.9.100:8030/vision-api
-        camera-ids:
-          - "62"
-          - "63"
-          - "66"
-          - "67"
-          - "6512"
-          - "6534"
+        camera-ids: ["62", "63", "66", "67", "6512", "6534"]
         event-types: ["load", "unload", "gateCommodityVehicleInput", "gateBancheInput", "gateBancheOutput"]
+        unmatch-camera-ids: ["66", "67"]
         unmatch-event-types: ["gateCommodityVehicleOutput"]
   file-path:
     yard-name: ${experiment.base.yard-name}
