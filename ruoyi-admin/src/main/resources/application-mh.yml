@@ -20,8 +20,6 @@ spring:
             # 主库数据源
             master:
                 url: jdbc:dm://192.168.2.101:5236
-#                url: jdbc:dm://82.156.69.219:5236
-#                url: jdbc:dm://82.156.69.219:30236
                 username: ANALYSIS_PLATFORM
                 password: MH@2025.dxy0217
             # 从库数据源
@@ -78,9 +76,7 @@ spring:
     redis:
         # 地址
         host: 192.168.2.101
-#        host: 82.156.69.219
         # 端口，默认为6379
-#        port: 30379
         port: 6379
         # 数据库索引
         database: 0
@@ -133,8 +129,8 @@ experiment:
             username: client
             password: JoySuch@client10
             licence: ld63a6557aa5fe703cefc5cc50f846895
-            base-url: http://10.4.230.17:8300/zqapi
-#            base-url: http://61.50.136.180:46000
+            base-url: http://172.30.17.116/zqapi
+            #            base-url: http://61.50.136.180:46000
             api:
                 # 获取token
                 access-token: ${experiment.base.joysuch.base-url}/api/v3/getAccessToken
@@ -174,14 +170,14 @@ experiment:
             # 影像分析
             visual-identify:
                 base-url: http://192.168.2.104:8030/vision-api
-#                base-url: http://3929lm95mr66.vicp.fun:36041/vision-admin
-                camera-ids:
-                    - "62"
-                    - "63"
-                    - "66"
-                    - "131"
-                    - "6512"
-                    - "6534"
+                # 摄像头id
+                camera-ids: ["9", "11", "41", "42", "43", "44", "45", "46", "47", "48"]
+                # 事件类型
+                event-types: ["load", "unload", "gateCommodityVehicleInput", "gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput"]
+                # 定位未匹配摄像头id
+                unmatch-camera-ids: ["9", "11", "41", "42", "43", "44", "45", "46", "47", "48"]
+                # 定位未匹配事件类型
+                unmatch-event-types: ["gateBancheInput", "gateBancheOutput"]
     file-path:
         yard-name: ${experiment.base.yard-name}
         base-path: ${experiment.platform-dir}/data/shp
