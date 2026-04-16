@@ -100,12 +100,12 @@ experiment:
   base:
     stay-verify: false
     ranging-verify: true
-    log-enabled: false
-    push-data: false
+    log-enabled: true
+    push-data: true
     output-shp: false
-    output-shp-path: ${experiment.platform-dir}/data/output
+    output-shp-path: ${experiment.platform-dir}/PlatformData/output
     delete-datetime:
-    yard-name: luorong
+    yard-name: yuzui
     location-card-type: other
     card-type: car
     # 数据源 zq xrkc
@@ -124,7 +124,7 @@ experiment:
       password: JoySuch@client10
       licence: ld63a6557aa5fe703cefc5cc50f846895
       base-url: http://10.4.230.17:8300/zqapi
-      # base-url: http://61.50.136.180:46000
+#      base-url: http://61.50.136.180:46000
       api:
         # 获取建筑列表
         build-list: ${experiment.base.joysuch.base-url}/api/v1/buildList
@@ -148,7 +148,7 @@ experiment:
       # RFID识别记录列表
       get-list: /api/station/getCompleteRfidList
     card-analysis:
-      push-ip: http://172.16.5.101/sw-fusion-api/
+      push-ip: http://192.168.10.7/sw-fusion-api/
       # 车辆进场、出场推送
       vehicle-entry-exit: /api/cardAnalysis/vehicleEntryAndExit
       # 车辆停放车位、车辆离开车位
@@ -166,6 +166,8 @@ experiment:
           - "146"
           - "279"
           - "280"
+        event-types: ["load", "unload", "gateCommodityVehicleInput", "gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput"]
+        unmatch-event-types: ["gateCommodityVehicleOutput"]
   file-path:
     yard-name: ${experiment.base.yard-name}
     base-path: ${experiment.platform-dir}/data/shp
