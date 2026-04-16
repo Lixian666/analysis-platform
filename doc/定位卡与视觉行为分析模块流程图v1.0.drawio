@@ -1,0 +1,201 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="exec" name="executeMatch流程图">
+    <mxGraphModel dx="2828" dy="1588" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="2200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="开始：执行视觉-定位匹配" vertex="1">
+          <mxGeometry height="50" width="320" x="620" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="确定本轮时间窗口&#xa;默认前20~前10分钟；若传入参数则覆盖" vertex="1">
+          <mxGeometry height="70" width="440" x="560" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="定位查询窗口扩展：起止各+5分钟" vertex="1">
+          <mxGeometry height="55" width="360" x="600" y="185" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="加载可用定位卡列表(type=1)" vertex="1">
+          <mxGeometry height="50" width="340" x="610" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="卡列表为空？" vertex="1">
+          <mxGeometry height="90" width="220" x="670" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="结束：无可处理卡" vertex="1">
+          <mxGeometry height="55" width="180" x="1000" y="347" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="读取基础配置：楼栋标识 + 摄像头列表 + 事件白名单" vertex="1">
+          <mxGeometry height="55" width="520" x="520" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="配置完整？" vertex="1">
+          <mxGeometry height="90" width="220" x="670" y="525" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="结束：配置缺失" vertex="1">
+          <mxGeometry height="55" width="180" x="1000" y="542" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="若定位源为zq：预热访问令牌" vertex="1">
+          <mxGeometry height="50" width="440" x="560" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="并行逐卡取定位点&#xa;异常重试最多3次(200/400/800ms)&#xa;成功后做预处理：排序、间隔过滤、速度/跳点过滤、时间戳去重" vertex="1">
+          <mxGeometry height="95" width="560" x="500" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="拉取视觉事件并按白名单过滤&#xa;保留业务事件并标记为待处理" vertex="1">
+          <mxGeometry height="70" width="480" x="540" y="825" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="新数据并入历史缓存：定位(按卡) + 视觉(按事件)" vertex="1">
+          <mxGeometry height="55" width="480" x="540" y="915" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" value="执行视觉-定位匹配算法" vertex="1">
+          <mxGeometry height="50" width="320" x="620" y="990" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="统计输出：匹配组、历史池规模、车辆类型分布" vertex="1">
+          <mxGeometry height="55" width="440" x="560" y="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="匹配点按卡分组，组内按时间升序" vertex="1">
+          <mxGeometry height="55" width="400" x="580" y="1135" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="存在可处理分组？" vertex="1">
+          <mxGeometry height="90" width="220" x="670" y="1210" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="逐卡处理匹配结果（见又侧子流程）" vertex="1">
+          <mxGeometry height="55" width="420" x="1000" y="1310" as="geometry" />
+        </mxCell>
+        <mxCell id="d4" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="当前时间=凌晨3点？" vertex="1">
+          <mxGeometry height="90" width="220" x="670" y="1395" as="geometry" />
+        </mxCell>
+        <mxCell id="n14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="清理历史缓存（每日一次）" vertex="1">
+          <mxGeometry height="55" width="200" x="1110" y="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="end" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" value="结束：本轮任务完成" vertex="1">
+          <mxGeometry height="60" width="320" x="620" y="1650" as="geometry" />
+        </mxCell>
+        <mxCell id="lane" parent="1" style="swimlane;whiteSpace=wrap;html=1;horizontal=0;fillColor=#f5f5f5;strokeColor=#666666;" value="单卡处理子流程（横向扩展）" vertex="1">
+          <mxGeometry height="740" width="280" x="1490" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="读取该卡历史定位并预处理" vertex="1">
+          <mxGeometry height="50" width="200" x="50" y="22.5" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="遍历每个匹配点" vertex="1">
+          <mxGeometry height="50" width="200" x="50" y="87.5" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="解析车辆类型与作业方向&#xa;(火车/地跑/板车 + 发运/到达)" vertex="1">
+          <mxGeometry height="70" width="200" x="50" y="152.5" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="计算时间区间&#xa;发运向前找起点；到达向后找终点" vertex="1">
+          <mxGeometry height="80" width="200" x="50" y="237.5" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="区间点提取 + 乘车点识别&#xa;窗口策略检测，失败走区域兜底" vertex="1">
+          <mxGeometry height="85" width="190" x="55" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="se1" edge="1" parent="lane" source="s1" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="se2" edge="1" parent="lane" source="s2" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="se3" edge="1" parent="lane" source="s3" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="se4" edge="1" parent="lane" source="s4" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="会话轨迹生成&#xa;起止截取 + 时间去重" vertex="1">
+          <mxGeometry height="65" width="190" x="55" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="se5" edge="1" parent="lane" source="s5" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s7" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="落库：主记录 + 轨迹明细" vertex="1">
+          <mxGeometry height="50" width="190" x="55" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="se6" edge="1" parent="lane" source="s6" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="s9" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="更新状态：推送状态 + 视觉处理标记" vertex="1">
+          <mxGeometry height="50" width="190" x="55" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="s8" parent="lane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="推送业务事件与轨迹" vertex="1">
+          <mxGeometry height="50" width="190" x="55" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="se7" edge="1" parent="lane" source="s7" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="se8" edge="1" parent="lane" source="s8" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="s9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e01" edge="1" parent="1" source="n1" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e02" edge="1" parent="1" source="n2" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e03" edge="1" parent="1" source="n3" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e04" edge="1" parent="1" source="n4" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="d1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e05" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="e1" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e06" edge="1" parent="1" source="d1" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n5" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e07" edge="1" parent="1" source="n5" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="d2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e08" edge="1" parent="1" source="d2" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="e2" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e09" edge="1" parent="1" source="d2" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n6" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="n6" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="n7" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="n8" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="n9" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="n10" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="n11" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="n12" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="d3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="d3" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n13" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="d3" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="d4" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" edge="1" parent="1" source="n13" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="d4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" edge="1" parent="1" source="d4" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="n14" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" edge="1" parent="1" source="d4" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="end" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" edge="1" parent="1" source="n14" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;" target="end">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" edge="1" parent="1" source="n13" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9673a6;endArrow=block;html=1;" target="lane">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1490" y="1340" />
+              <mxPoint x="1490" y="1340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
