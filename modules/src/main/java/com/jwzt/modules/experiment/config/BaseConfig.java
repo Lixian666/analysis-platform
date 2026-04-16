@@ -87,6 +87,7 @@ public class BaseConfig {
             private String baseUrl;
             private List<String> cameraIds = new ArrayList<>();
             private List<String> eventTypes = new ArrayList<>();
+            private List<String> unmatchCameraIds = new ArrayList<>();
             private List<String> unmatchEventTypes = new ArrayList<>();
         }
     }

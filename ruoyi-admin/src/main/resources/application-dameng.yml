@@ -184,15 +184,12 @@ experiment:
             visual-identify:
 #                base-url: http://8.141.22.209:8020/vision-api
                 base-url: http://4da77470or14.vicp.fun/vision-api
-                camera-ids:
-                    - "62"
-                    - "63"
-                    - "66"
-                    - "131"
-                    - "6512"
-                    - "6534"
+                # 摄像头id
+                camera-ids: ["62", "63", "66", "67", "131", "6512", "6534"]
                 # 事件类型
                 event-types: ["load", "unload", "gateCommodityVehicleInput", "gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput"]
+                # 定位未匹配摄像头id
+                unmatch-camera-ids: ["66", "67"]
                 # 定位未匹配事件类型
                 unmatch-event-types: ["gateCommodityVehicleOutput", "gateBancheInput", "gateBancheOutput"]
     # 各场站的shp文件路径，shp初始化时使用
